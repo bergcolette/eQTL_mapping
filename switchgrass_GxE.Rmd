@@ -1,0 +1,183 @@
+---
+title: "switchgrass_GbyE"
+author: "Colette Berg"
+date: "2025-05-29"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Switchgrass G*E / eQTL analyses
+
+# Many switchgrass genotypes were grown in two environments, MI and TX
+
+# RNASeq on all genotypes in two environments
+
+# goal: map eQTLs 
+
+```{r loading required packages}
+
+library(edgeR)
+library(dplyr)
+library(reshape2)
+library(ggplot2)
+library(MatrixEQTL)
+library(qqman)
+library(DESeq2)
+
+```
+
+## read in the data and filter out indvs we won't use 
+
+```{r read}
+# read in and format the count data 
+counts <- read.csv("data/switchgrass_counts_medFilt.txt", sep = "\t")
+counts_filt <- dplyr::select(counts, -c("HYYUB", "NASNY", "HYYUC", "NASNZ"))
+rownames(counts_filt) <- counts_filt$GeneID
+counts_filt <- dplyr::select(counts_filt, -GeneID)
+
+# read in and format the colData
+
+coldata <- read.csv("data/sample_names.csv")
+rownames(coldata) <- coldata$X
+coldata <- dplyr::select(coldata, -X)
+
+```
+
+## make a dds object 
+
+```{r dds}
+
+
+# making a DESeq object
+dds <- DESeqDataSetFromMatrix(countData = counts_filt,
+                              colData = coldata,
+                              design = ~ Site,
+                              tidy=FALSE)
+
+
+```
+
+## normalize the RNA libraries
+
+```{r normalize}
+# variance stabilizing function to normalize
+vsd <- vst(dds, blind = FALSE)
+
+
+# make it a dataframe -- now going to split by habitat 
+t_counts <- as.data.frame(t(as.data.frame(assay(vsd))))
+
+```
+## plot PCAs of gene expression 
+
+```{r PCA}
+
+# plot PCA of gene expression variance
+plotPCA(vsd, intgroup=c("subpop", "Site")) +
+  scale_color_manual(values = c("grey",
+                                "grey",
+                                "brown",
+                                "brown1",
+                                "darkorange",
+                                "darkorange3",
+                                "dodgerblue2", 
+                                "dodgerblue4",
+                                "white",
+                                "white")) +
+  theme_bw()
+
+```
+## merge gene counts with ID and habitat; split data by habitat 
+
+```{r initial merge}
+# add back habitat and plant ID
+merge <- cbind(coldata, t_counts)
+
+# make one dataframe for Michigan reads
+MI_normalized <- filter(merge, Site == "M")
+
+# make one dataframe for Texas reads
+TX_normalized <- filter(merge, Site == "P")
+
+```
+
+## read in the .fam data from the bed files and number the rows 
+
+```{r processing}
+
+# process the fam file 
+# this part ensures that gene counts are in the same order as in the vcf 
+
+famDat <- read.csv("~/Dropbox/sample_fam.csv", header = FALSE)
+
+colnames(famDat) <- c("SRR1", 
+                     "SRR2", 
+                     "plantID", 
+                     "V4", 
+                     "V5", 
+                     "V6", 
+                     "V7")
+
+famDat <- mutate(famDat, num = row_number(famDat))
+
+```
+
+## merge fam files with gene counts (this takes a while)
+
+```{r merge}
+
+# merging fam file with the TX expression data, blank lines allowed (needs the exact same # of lines as the fam file.)
+
+phen_fam_merged_TX <- merge(famDat, 
+      TX_normalized, 
+      all.x = TRUE,
+      ID.vars = c("plantID"))
+
+# merging fam file with the MI expression data, blank lines allowed (needs the exact same # of lines as the fam file.)
+
+phen_fam_merged_MI <- merge(famDat, 
+      MI_normalized, 
+      all.x = TRUE,
+      ID.vars = c("plantID"))
+```
+
+## re-order the merged files, take out unnecessary columns, and write to .csv
+
+```{r ordering}
+
+# order so it's the exact same order as the fam file 
+order_TX <- phen_fam_merged_TX[order(phen_fam_merged_TX$num),]
+order_MI <- phen_fam_merged_TX[order(phen_fam_merged_MI$num),]
+
+# next step involves moving these to the cluster with fileZilla and changing the name to chrom-by-chrom (since each chrom needs a fam file)
+# taking out the columns you don't need for matrix eQTL for MI & TX 
+
+fam_MI <- dplyr::select(order_MI, 
+                 -plantID,
+                 -V7,
+                 -Site,
+                 -num)
+
+
+fam_TX <- dplyr::select(order_TX, 
+                        -SRR1,
+                        -V4,
+                        -V5,,
+                        -V6,
+                        -subpop,
+                 -plantID,
+                 -V7,
+                 -Site,
+                 -num)
+
+# writing the expression data as a matrix (for matrix eQTL)
+#write.csv(setNames(data.frame(t(fam_TX[,-1])), fam_TX[,1]),
+        #  "data/genes_TX_matrix.csv")
+
+#write.csv(setNames(data.frame(t(fam_MI[,-1])), fam_MI[,1]),
+        # "data/genes_MI_matrix.csv")
+
+```

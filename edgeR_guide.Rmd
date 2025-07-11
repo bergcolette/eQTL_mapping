@@ -1,0 +1,141 @@
+---
+title: "processing_read_counts"
+author: "Colette Berg"
+date: "2025-06-06"
+output: html_document
+---
+
+## Using edgeR to process read counts 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+## first, load your required packages 
+
+```{r load packages}
+library(dplyr)
+library(tidyverse)
+library(reshape2)
+library(edgeR)
+```
+
+## Load your data
+
+
+```{r data}
+
+# read count data. columns should be unique individual names and rows should be genes. 
+
+dat <- read.csv("gene_expression.csv")
+
+# then take gene name out of the count data for now 
+
+dat <- select(dat, -gene)
+
+# sample information. The names should be in the exact same order & the exact same format as the gene expression datasheet. I'd recommend a column called "group" which contains genotype_treatment. ie, AP13_0 or DAC6_24. That way you can easily do pairwise comparisons between different gentoypes and/or different treatments. 
+
+metadat <- read.csv("genotype_treatment.csv")
+
+# gene annotation. This is a dataframe with the chromosome, start site, stop site, and name of each gene. 
+# make sure the genes in your annotation are the exact same as the genes in your read counts (and in the same order.)
+
+annotation <- read.csv("gene_annotation.csv")
+```
+
+## Make a DGE object 
+
+EdgeR has a specific data format called DGE. The following steps create pieces of a DGE object. 
+
+```{r}
+
+# first designate your treatment groups. this is a column from the metadata form. 
+Groups <- metadat$group
+
+# create the DGElist object 
+dat_DGE <- DGEList(counts=dat,
+                   group=factor(Groups), 
+                   genes=annotation)
+```
+
+## Filter the data  
+
+```{r}
+
+# you don't need to keep genes that are not very highly expressed, so you can filter them out. In this case we're only keeping genes with at least 100 counts per million, but you can adjust that depending on your data 
+
+# selecting genes to keep
+keep <- rowSums(cpm(dat_DGE)>100) >= 2
+
+# filtering out genes that aren't in the keep list 
+dat_DGE <- dat_DGE[keep,]
+```
+
+## Normalize by library size 
+
+```{r}
+# you need to normalize the data to avoid getting spurious differences in read counts that are actually due to library size difference. edgeR has a built in function for this called calcNormFactors
+
+dat_DGE <- calcNormFactors(dat_DGE)
+
+
+```
+
+## make MDS plots 
+
+```{r}
+# this is similar to a PCA, it's a way of looking at the clustering patterns in your data. (but this time it's normalized data)
+
+# at this point you can also take the normalized data and plug it into your PCA scripts 
+
+plotMDS(dat_DGE , method="bcv", col=as.numeric(dat_DGE $samples$group))
+```
+
+## Estimating dispersion 
+```{r}
+# before you measure differential gene expression, you need to get a sense of the inter-library variation for a particular tag. First you estimate dispersion assuming that it's the same for all tags (this is called "common dispersion" and you do it first before estimating tagwise dispersion)
+
+# calc. common dispersion: 
+dat_DGE1 <- estimateCommonDisp(dat_DGE, verbose=T)
+
+# calc. tagwise dispersion: 
+dat_DGE1 <- estimateTagwiseDisp(dat_DGE, verbose=T)
+
+# make a plot comparing common dispersion to tagwise dispersion. 
+  
+# this will plot counts per million against the biological coefficient of variation, for both of the dispersion estimates we just calculated 
+
+# if the lines for common and tagwise are very similar, you can just use common dispersion. but if they have very different slopes, you should use tagwise dispersion. 
+
+plotBCV(dat_DGE1)
+
+# there's also a way to use a GLM to estimate dispersion -- I haven't dug into that much yet 
+```
+
+## calculating differential expression 
+
+```{r}
+# this is the fun part!! 
+
+et12 <- exactTest(d1, pair=c(1,2)) # compare groups 1 and 2. ie, AP13 at hour 0 and AP13 at hour 2. or whichever! 
+et13 <- exactTest(d1, pair=c(1,3)) # compare groups 1 and 3
+et23 <- exactTest(d1, pair=c(2,3)) # compare groups 2 and 3 
+
+# this will make a dataframe with log fold change and p-values, which can be plotted on volcano plots or across the genome using gene position 
+
+```
+
+## make a plot 
+
+```{r}
+
+# this is edgeR's built-in function, it's similar to a volcano plot. 
+
+de1tags12 <- rownames(d1)[as.logical(de1)] 
+plotSmear(et12, de.tags=de1tags12)
+abline(h = c(-2, 2), col = "blue")
+
+```
+
+

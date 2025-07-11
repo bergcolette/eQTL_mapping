@@ -1,0 +1,125 @@
+---
+title: "matrixeQTL"
+author: "Colette Berg"
+date: "2025-06-26"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+# loading in necessary packages 
+
+knitr::opts_chunk$set(echo = TRUE)
+
+library(MatrixEQTL)
+library(dplyr)
+library(ggplot2)
+library(VariantAnnotation)
+library(vcfR)
+library(adegenet)
+library(eQTLpipeline)
+base.dir = find.package("MatrixEQTL")
+
+# set the working directory
+setwd("~/Dropbox/lowryLab")
+```
+
+## setting up matrix eQTL settings
+
+```{r matrix eQTL settings, echo=FALSE}
+
+# setting up matrix eQTL settings
+useModel = modelLINEAR; # modelANOVA or modelLINEAR or modelLINEAR_CROSS
+output_file_name = tempfile();
+pvOutputThreshold = 1e-8;
+errorCovariance = numeric();
+
+```
+
+## read in genotype data
+
+```{r load genotype data, echo=FALSE}
+
+# setting genotype matrices 
+# these were generated in awk on the MSU HPCC, from vcfs 
+allChroms = "~/Dropbox/lowryLab/data/allChroms.txt"
+
+# loading genotype data 
+allsnps = SlicedData$new();
+allsnps$fileDelimiter = "\t";       # denote missing values;
+allsnps$fileSkipRows = 1;          # one column of row labels
+allsnps$fileSliceSize = 2000;      # read file in pieces of 2,000 rows
+allsnps$LoadFile(allChroms)
+
+
+```
+
+## read in gene expression data
+
+```{r expression }
+
+# reading in gene expression data 
+
+gene = SlicedData$new()
+gene$fileDelimiter = ",";    
+gene$LoadFile("data/genes_TX_matrix.csv")
+
+
+```
+
+## load the covariates file
+
+```{r covariates}
+
+## Load covariates file. in this case it's the first 2 PC's (plink)
+
+cvrt = SlicedData$new();
+cvrt$fileDelimiter = "\t";      # the TAB character
+cvrt$fileOmitCharacters = "NA"; # denote missing values;
+cvrt$fileSkipRows = 1;          # one row of column labels
+cvrt$fileSkipColumns = 1;       # one column of row labels
+cvrt$LoadFile("data/matrix_eQTL_covariates.txt");
+
+```
+
+## read in gene location and snp location file 
+
+```{r snps_genes}
+
+gene_location_file_name = "data/AP13_gene_position.txt"
+snps_location_file_name = "data/positions.txt"
+
+snpspos = read.table(snps_location_file_name, 
+                     header = FALSE, 
+                     stringsAsFactors = FALSE,
+                     sep="\t")
+
+genepos = read.table(gene_location_file_name, 
+                     header = TRUE, 
+                     stringsAsFactors = FALSE,
+                     sep="\t")
+
+```
+
+## run matrix eQTL
+
+```{r run matrix eQTL}
+# running matrix eQTL for Chr01K 
+
+me = Matrix_eQTL_engine(
+  snps = snps,
+  gene = gene,
+  cvrt = cvrt,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = output_file_name,
+  pvOutputThreshold = pvOutputThreshold,
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = TRUE,
+  min.pv.by.genesnp = FALSE,
+  noFDRsaveMemory = TRUE)
+
+```
+

@@ -1,0 +1,266 @@
+---
+title: "eQTL_post_processing"
+author: "Colette Berg"
+date: "2025-07-10"
+output: html_document
+---
+
+```{r package loading, include=FALSE}
+
+# loading required packages for data processing 
+
+library(dplyr)
+library(ggplot2)
+library(reshape2)
+library(gridExtra)
+
+```
+
+
+```{r data }
+
+# read in the trans eQTL output 
+Chr01K_trans <- read.csv("data/TX_1K.txt", sep = "\t")
+Chr01N_trans <- read.csv("data/TX_1N.txt", sep = "\t")
+Chr02K_trans <- read.csv("data/TX_2K.txt", sep = "\t")
+Chr02N_trans <- read.csv("data/TX_2N.txt", sep = "\t")
+Chr03K_trans <- read.csv("data/TX_3K.txt", sep = "\t")
+Chr03N_trans <- read.csv("data/TX_3N.txt", sep = "\t")
+Chr04K_trans <- read.csv("data/TX_4K.txt", sep = "\t")
+Chr04N_trans <- read.csv("data/TX_4N.txt", sep = "\t")
+Chr05K_trans <- read.csv("data/TX_5K.txt", sep = "\t")
+Chr05N_trans <- read.csv("data/TX_5N.txt", sep = "\t")
+Chr06K_trans <- read.csv("data/TX_6K.txt", sep = "\t")
+Chr06N_trans <- read.csv("data/TX_6N.txt", sep = "\t")
+Chr07K_trans <- read.csv("data/TX_7K.txt", sep = "\t")
+Chr07N_trans <- read.csv("data/TX_7N.txt", sep = "\t")
+Chr08K_trans <- read.csv("data/TX_8K.txt", sep = "\t")
+Chr08N_trans <- read.csv("data/TX_8N.txt", sep = "\t")
+Chr09K_trans <- read.csv("data/TX_9K.txt", sep = "\t")
+Chr09N_trans <- read.csv("data/TX_9N.txt", sep = "\t")
+
+
+# read in the cis eQTL output
+Chr01K_cis <- read.csv("data/TX_1K_cis.txt", sep = "\t")
+Chr01N_cis <- read.csv("data/TX_1N_cis.txt", sep = "\t")
+Chr02K_cis <- read.csv("data/TX_2K_cis.txt", sep = "\t")
+Chr02N_cis <- read.csv("data/TX_2N_cis.txt", sep = "\t")
+Chr03K_cis <- read.csv("data/TX_3K_cis.txt", sep = "\t")
+Chr03N_cis <- read.csv("data/TX_3N_cis.txt", sep = "\t")
+Chr04K_cis <- read.csv("data/TX_4K_cis.txt", sep = "\t")
+Chr04N_cis <- read.csv("data/TX_4N_cis.txt", sep = "\t")
+Chr05K_cis <- read.csv("data/TX_5K_cis.txt", sep = "\t")
+Chr05N_cis <- read.csv("data/TX_5N_cis.txt", sep = "\t")
+Chr06K_cis <- read.csv("data/TX_6K_cis.txt", sep = "\t")
+Chr06N_cis <- read.csv("data/TX_6N_cis.txt", sep = "\t")
+Chr07K_cis <- read.csv("data/TX_7K_cis.txt", sep = "\t")
+Chr07N_cis <- read.csv("data/TX_7N_cis.txt", sep = "\t")
+Chr08K_cis <- read.csv("data/TX_8K_cis.txt", sep = "\t")
+Chr08N_cis <- read.csv("data/TX_8N_cis.txt", sep = "\t")
+Chr09K_cis <- read.csv("data/TX_9K_cis.txt", sep = "\t")
+Chr09N_cis <- read.csv("data/TX_9N_cis.txt", sep = "\t")
+
+
+```
+
+
+```{r cis processing, echo=FALSE}
+
+# adding a column that says "cis" to the cis eQTLs
+Chr01K_cis$type <- "cis"
+Chr01N_cis$type <- "cis"
+Chr02K_cis$type <- "cis"
+Chr02N_cis$type <- "cis"
+Chr03K_cis$type <- "cis"
+Chr03N_cis$type <- "cis"
+Chr04K_cis$type <- "cis"
+Chr04N_cis$type <- "cis" 
+Chr05K_cis$type <- "cis"
+Chr05N_cis$type <- "cis" 
+Chr06K_cis$type <- "cis" 
+Chr06N_cis$type <- "cis"
+Chr07K_cis$type <- "cis" 
+Chr07N_cis$type <- "cis" 
+Chr08K_cis$type <- "cis" 
+Chr08N_cis$type <- "cis" 
+Chr09K_cis$type <- "cis"
+Chr09N_cis$type <- "cis"
+
+# adding a chrom column 
+Chr01K_cis$chrom <- "1K"
+Chr01N_cis$chrom <- "1N"
+Chr02K_cis$chrom <- "2K"
+Chr02N_cis$chrom <- "2N"
+Chr03K_cis$chrom <- "3K"
+Chr03N_cis$chrom <- "3N"
+Chr04K_cis$chrom <- "4K"
+Chr04N_cis$chrom <- "4N" 
+Chr05K_cis$chrom <- "5K"
+Chr05N_cis$chrom <- "5N" 
+Chr06K_cis$chrom <- "6K" 
+Chr06N_cis$chrom <- "6N"
+Chr07K_cis$chrom <- "7K" 
+Chr07N_cis$chrom <- "7N" 
+Chr08K_cis$chrom <- "8K" 
+Chr08N_cis$chrom <- "8N" 
+Chr09K_cis$chrom <- "9K"
+Chr09N_cis$chrom <- "9N"
+
+# adding all the cis-eQTLs into a lost 
+allCis <- rbind(Chr01K_cis,
+      Chr01N_cis,
+      Chr02K_cis,
+      Chr02N_cis,
+      Chr03K_cis,
+      Chr03N_cis,
+      Chr04K_cis,
+      Chr04N_cis,
+      Chr05K_cis,
+      Chr05N_cis,
+      Chr06K_cis,
+      Chr06N_cis,
+      Chr07K_cis,
+      Chr07N_cis,
+      Chr08K_cis,
+      Chr08N_cis,
+      Chr09K_cis,
+      Chr09N_cis)
+
+
+# now filtering to a more stringent p-value
+allCis_filt <- filter(allCis, -log10(p.value) > 13)
+
+# many genes are regulated in cis by multiple variants (LD is likely going on)
+# so let's check how many unique genes are regulated in cis
+length(unique(allCis$gene))
+
+# writing a dataframe of unique cis regulated genes 
+cisRegGenes <- as.data.frame(unique(allCis_filt$gene))
+
+# now I'm going to merge that with gene position, so I can look at the distribution of cis regulated genes 
+
+# adding a gene column
+cisRegGenes$gene <- cisRegGenes$`unique(allCis_filt$gene)`
+
+# merging 
+cisReg_positions <- merge(cisRegGenes,
+      genePos,
+      ID.vars = c("gene"),
+      all.x = TRUE)
+
+
+# plotting the cis-regulated genes 
+ggplot(cisReg_positions,
+       aes(x=chr,
+           y=s1)) +
+  geom_point() +
+  theme_bw() +
+  ggtitle("map of genes regulated in cis (TX)") +
+  ylab("position (bp)") +
+  theme(axis.text.x=element_text(angle=70,
+                                 vjust = 0.6))
+
+```
+
+```{r trans processing}
+
+# adding a column that says "trans" to the trans eQTLs
+Chr01K_trans$type <- "trans"
+Chr01N_trans$type <- "trans"
+Chr02K_trans$type <- "trans"
+Chr02N_trans$type <- "trans"
+Chr03K_trans$type <- "trans"
+Chr03N_trans$type <- "trans"
+Chr04K_trans$type <- "trans"
+Chr04N_trans$type <- "trans" 
+Chr05K_trans$type <- "trans"
+Chr05N_trans$type <- "trans" 
+Chr06K_trans$type <- "trans" 
+Chr06N_trans$type <- "trans"
+Chr07K_trans$type <- "trans" 
+Chr07N_trans$type <- "trans" 
+Chr08K_trans$type <- "trans" 
+Chr08N_trans$type <- "trans" 
+Chr09K_trans$type <- "trans"
+Chr09N_trans$type <- "trans"
+
+# adding a chrom column 
+Chr01K_trans$chrom <- "1K"
+Chr01N_trans$chrom <- "1N"
+Chr02K_trans$chrom <- "2K"
+Chr02N_trans$chrom <- "2N"
+Chr03K_trans$chrom <- "3K"
+Chr03N_trans$chrom <- "3N"
+Chr04K_trans$chrom <- "4K"
+Chr04N_trans$chrom <- "4N" 
+Chr05K_trans$chrom <- "5K"
+Chr05N_trans$chrom <- "5N" 
+Chr06K_trans$chrom <- "6K" 
+Chr06N_trans$chrom <- "6N"
+Chr07K_trans$chrom <- "7K" 
+Chr07N_trans$chrom <- "7N" 
+Chr08K_trans$chrom <- "8K" 
+Chr08N_trans$chrom <- "8N" 
+Chr09K_trans$chrom <- "9K"
+Chr09N_trans$chrom <- "9N"
+
+# adding all the trans-eQTLs into a lost 
+
+alltrans <- rbind(Chr01K_trans,
+      Chr01N_trans,
+      Chr02K_trans,
+      Chr02N_trans,
+      Chr03K_trans,
+      Chr03N_trans,
+      Chr04K_trans,
+      Chr04N_trans,
+      Chr05K_trans,
+      Chr05N_trans,
+      Chr06K_trans,
+      Chr06N_trans,
+      Chr07K_trans,
+      Chr07N_trans,
+      Chr08K_trans,
+      Chr08N_trans,
+      Chr09K_trans,
+      Chr09N_trans)
+
+
+# now filtering to a more stringent p-value
+alltrans_filt <- filter(alltrans, -log10(p.value) > 13)
+
+# many genes are regulated in trans by multiple variants (LD is likely going on)
+# so let's check how many unique genes are regulated in trans
+length(unique(alltrans$gene))
+
+# writing a dataframe of unique trans regulated genes 
+transRegGenes <- as.data.frame(unique(alltrans_filt$gene))
+
+# now I'm going to merge that with gene position, so I can look at the distribution of trans regulated genes 
+
+# adding a gene column
+transRegGenes$gene <- transRegGenes$`unique(alltrans_filt$gene)`
+
+# merging 
+transReg_positions <- merge(transRegGenes,
+      genePos,
+      ID.vars = c("gene"),
+      all.x = TRUE)
+
+
+# plotting the trans-regulated genes 
+ggplot(transReg_positions,
+       aes(x=chr,
+           y=s1)) +
+  geom_point() +
+  theme_bw() +
+  ggtitle("map of genes regulated in trans (TX)") +
+  ylab("position (bp)") +
+  theme(axis.text.x=element_text(angle=70,
+                                 vjust = 0.6))
+
+
+```
+
+
+

@@ -1,0 +1,86 @@
+#!/bin/bash --login
+# Job name:
+#SBATCH --job-name=aligning_switchgrass_samples
+
+# Number of nodes
+#SBATCH --nodes=1
+#
+# Number of tasks to run on each node
+#SBATCH --ntasks-per-node=16
+#
+#
+# Wall time (e.g. "minutes", "hours:minutes:seconds", "days-hours", "days-hours:minutes"):
+#SBATCH --time=4:00:00
+#
+# Mail type:
+#SBATCH --mail-type=ALL
+#
+# Mail user:
+#SBATCH --mail-user=bergcole@msu.edu
+#
+# Standard out and error:
+#SBATCH --output=%x-%j.SLURMout
+
+echo "JobID: $SLURM_JOB_ID"
+echo "Running on node: `hostname`"
+
+# first purging modules, then loading what you need 
+# load in Trimmomatic, bwa, samtools, gatk, picard 
+module purge 
+module load bwa-mem2/2.2.1-intel-compilers-2023.1.0 Trimmomatic/0.39-Java-11  SAMtools/1.18-GCC-12.3.0  picard/2.25.1-Java-11
+
+# naming variables for the directories
+vcfDir="path/to/vcfs"
+outDir="path/to/outDir"
+
+# sample name of your file (this can be edited to use an array to call many samples at once)
+
+# set the reference genome
+genome="path/to/genome"
+
+
+# trim the adapter reads with Trimmomatic 
+# this takes paired end samples in the vcfDir and outputs paired fastqs
+
+java -jar $EBROOTTRIMMOMATIC/trimmomatic-0.39.jar \
+    PE \
+    -threads 12 \
+    -phred33 \
+    -trimlog ${outDir}/trimlog.txt \
+    ${vcfDir}/${sampleName}_1.fq.gz  ${vcfDir}/${sampleName}_2.fq.gz \
+    ${outDir}/${sampleName}.1.paired.fastq ${outDir}/${sampleName}.1.unpaired.fastq  \
+    ${outDir}/${sampleName}.2.paired.fastq ${outDir}/${sampleName}.2.unpaired.fastq  \
+    $EBROOTTRIMMOMATIC/adapters/TruSeq3-PE.fa:2:30:7  # you may need to adjust this depending on how they were sequenced
+
+# align the trimmed reads to the genome 
+
+bwa-mem2 -t 12 ${genome} ${outDir}/${sampleName}.1.paired.fastq ${outDir}/${samplename}.2.paired.fastq > ${outDir}/${sampleName}.sam 
+
+# filter to minimum quality of 29 with samtools view 
+samtools view -bS ${outDir}/${sampleName}.sam -q 29 > ${outDir}/${sampleName}.bam
+
+# sort the resulting bam 
+samtools sort -T ${sampleName} -o ${outDir}/${sampleName}.sort.bam ${outDir}/${sampleName}.bam
+
+# label read groups with picard 
+java -jar $EBROOTPICARD/picard.jar AddOrReplaceReadGroups \
+    INPUT=${outDir}/${sampleName}.sort.bam OUTPUT = ${outDir}/${sampleName}.RG.sort.bam
+    RGSM=${sampleName}
+
+# index the bam file 
+samtools index ${outDir}/${sampleName}.RG.sort.bam
+
+# rename the bam 
+mv ${outDir}/${sampleName}.RG.sort.bam.realigned ${outDir}/${sampleName}.unsorted.bam
+
+# sort the bam 
+samtools sort -T ${sampleName} -o ${outDir}/${sampleName}.bam ${outDir}/${sampleName}.unsorted.bam
+
+# index the bam
+samtools index ${outDir}/${sampleName}.bam
+
+# remove intermediate files 
+rm ${outDir}/${sampleName}.sam
+rm ${outDir}/${sampleName}*paired*
+rm ${outDir}/${sampleName}*sort*
+rm ${outDir}/${sampleName}*rmdup_metrix_fix*
