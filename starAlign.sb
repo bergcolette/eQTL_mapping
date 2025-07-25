@@ -1,0 +1,40 @@
+#!/bin/bash --login
+#SBATCH --job-name=starAlign_fastqs
+#SBATCH --nodes=1
+#SBATCH --time=6:00:00
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=bergcole@msu.edu
+#SBATCH --output=%x-%j.SLURMout
+#SBATCH --array=1-43
+#SBATCH --mem=96GB                         # Total memory limit
+
+# call to the RNA fastq array
+sampleID=$(awk -v ArrayTaskID=$SLURM_ARRAY_TASK_ID '$1==ArrayTaskID {print $2}' fastq.array)
+
+echo "JobID: $SLURM_JOB_ID"
+echo "Running on node: `hostname`"
+
+# purge & load necessary modules 
+module purge 
+module load STAR
+
+# set working directory
+
+fastqDir="/mnt/scratch/bergcole/data"
+genomeDir="/mnt/scratch/bergcole/referenceGenome/GenomeDir"
+
+gunzip ${fastqDir}/${sampleID}.prepped.R1.fastq.gz
+gunzip ${fastqDir}/${sampleID}.prepped.R2.fastq.gz
+
+STAR \
+    --genomeDir ${genomeDir}  \
+    --readFilesIn ${fastqDir}/${sampleID}.prepped.R1.fastq ${fastqDir}/${sampleID}.prepped.R1.fastq \
+    --sjdbGTFfile /mnt/scratch/bergcole/referenceGenome/AP13_DAC6_pseudoref.gtf  \
+    --outMultimapperOrder Random \
+    --outSAMtype BAM Unsorted \
+    --outFileNamePrefix ${fastqDir}/${sampleID} \
+    --outFilterScoreMinOverLread 0.5 \
+    --outFilterMatchNminOverLread 0.5 \
+
+gzip ${fastqDir}/${sampleID}.prepped.R1.fastq
+gzip ${fastqDir}/${sampleID}.prepped.R1.fastq

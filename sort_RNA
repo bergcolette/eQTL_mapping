@@ -1,0 +1,25 @@
+#!/bin/bash --login
+#SBATCH --job-name=sort_RNA
+#SBATCH --nodes=1
+#SBATCH --time=1:00:00
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=bergcole@msu.edu
+#SBATCH --output=%x-%j.SLURMout
+#SBATCH --array=1-43
+#SBATCH --mem=96GB                         # Total memory limit
+
+# call to the RNA fastq array
+sampleID=$(awk -v ArrayTaskID=$SLURM_ARRAY_TASK_ID '$1==ArrayTaskID {print $2}' fastq.array)
+
+echo "JobID: $SLURM_JOB_ID"
+echo "Running on node: `hostname`"
+
+# purge & load necessary modules 
+module purge 
+module load  SAMtools/1.19.2-GCC-13.2.0
+
+# set working directory
+
+bamDir="/mnt/scratch/bergcole/data"
+
+samtools sort ${bamDir}/${sampleID}Aligned.out.bam > ${bamDir}/${sampleID}.sort.bam 
