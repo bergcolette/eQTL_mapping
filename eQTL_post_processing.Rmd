@@ -10,81 +10,86 @@ output: html_document
 # loading required packages for data processing 
 
 library(dplyr)
+library(stringr)
 library(ggplot2)
 library(reshape2)
 library(gridExtra)
+library(tidyr)
 
 ```
+
+
+
+
+```{r}
+# read in gene position for later
+genePos <- read.csv("data/AP13_gene_position.txt",
+                   sep="\t")
+
+genePos$gene <- genePos$geneid
+
+# read in the SNP position for later
+snpsPos <- read.csv("data/positions.txt",
+                    sep="\t",
+                    header=FALSE)
+
+snpsPos$SNP <- snpsPos$V1
+```
+
+
 
 
 ```{r data }
 
 # read in the trans eQTL output 
-Chr01K_trans <- read.csv("data/TX_1K.txt", sep = "\t")
-Chr01N_trans <- read.csv("data/TX_1N.txt", sep = "\t")
-Chr02K_trans <- read.csv("data/TX_2K.txt", sep = "\t")
-Chr02N_trans <- read.csv("data/TX_2N.txt", sep = "\t")
-Chr03K_trans <- read.csv("data/TX_3K.txt", sep = "\t")
-Chr03N_trans <- read.csv("data/TX_3N.txt", sep = "\t")
-Chr04K_trans <- read.csv("data/TX_4K.txt", sep = "\t")
-Chr04N_trans <- read.csv("data/TX_4N.txt", sep = "\t")
-Chr05K_trans <- read.csv("data/TX_5K.txt", sep = "\t")
-Chr05N_trans <- read.csv("data/TX_5N.txt", sep = "\t")
-Chr06K_trans <- read.csv("data/TX_6K.txt", sep = "\t")
-Chr06N_trans <- read.csv("data/TX_6N.txt", sep = "\t")
-Chr07K_trans <- read.csv("data/TX_7K.txt", sep = "\t")
-Chr07N_trans <- read.csv("data/TX_7N.txt", sep = "\t")
-Chr08K_trans <- read.csv("data/TX_8K.txt", sep = "\t")
-Chr08N_trans <- read.csv("data/TX_8N.txt", sep = "\t")
-Chr09K_trans <- read.csv("data/TX_9K.txt", sep = "\t")
-Chr09N_trans <- read.csv("data/TX_9N.txt", sep = "\t")
+Chr01K_trans <- read.csv("data/TX_lowland_1K.txt", sep = "\t")
+Chr01N_trans <- read.csv("data/TX_lowland_1N.txt", sep = "\t")
+Chr02K_trans <- read.csv("data/TX_lowland_2K.txt", sep = "\t")
+Chr02N_trans <- read.csv("data/TX_lowland_2N.txt", sep = "\t")
+Chr03K_trans <- read.csv("data/TX_lowland_3K.txt", sep = "\t")
+Chr03N_trans <- read.csv("data/TX_lowland_3N.txt", sep = "\t")
+Chr04K_trans <- read.csv("data/TX_lowland_4K.txt", sep = "\t")
+Chr04N_trans <- read.csv("data/TX_lowland_4N.txt", sep = "\t")
+Chr05K_trans <- read.csv("data/TX_lowland_5K.txt", sep = "\t")
+Chr05N_trans <- read.csv("data/TX_lowland_5N.txt", sep = "\t")
+Chr06K_trans <- read.csv("data/TX_lowland_6K.txt", sep = "\t")
+Chr06N_trans <- read.csv("data/TX_lowland_6N.txt", sep = "\t")
+Chr07K_trans <- read.csv("data/TX_lowland_7K.txt", sep = "\t")
+Chr07N_trans <- read.csv("data/TX_lowland_7N.txt", sep = "\t")
+Chr08K_trans <- read.csv("data/TX_lowland_8K.txt", sep = "\t")
+Chr08N_trans <- read.csv("data/TX_lowland_8N.txt", sep = "\t")
+Chr09K_trans <- read.csv("data/TX_lowland_9K.txt", sep = "\t")
+Chr09N_trans <- read.csv("data/TX_lowland_9N.txt", sep = "\t")
 
 
 # read in the cis eQTL output
-Chr01K_cis <- read.csv("data/TX_1K_cis.txt", sep = "\t")
-Chr01N_cis <- read.csv("data/TX_1N_cis.txt", sep = "\t")
-Chr02K_cis <- read.csv("data/TX_2K_cis.txt", sep = "\t")
-Chr02N_cis <- read.csv("data/TX_2N_cis.txt", sep = "\t")
-Chr03K_cis <- read.csv("data/TX_3K_cis.txt", sep = "\t")
-Chr03N_cis <- read.csv("data/TX_3N_cis.txt", sep = "\t")
-Chr04K_cis <- read.csv("data/TX_4K_cis.txt", sep = "\t")
-Chr04N_cis <- read.csv("data/TX_4N_cis.txt", sep = "\t")
-Chr05K_cis <- read.csv("data/TX_5K_cis.txt", sep = "\t")
-Chr05N_cis <- read.csv("data/TX_5N_cis.txt", sep = "\t")
-Chr06K_cis <- read.csv("data/TX_6K_cis.txt", sep = "\t")
-Chr06N_cis <- read.csv("data/TX_6N_cis.txt", sep = "\t")
-Chr07K_cis <- read.csv("data/TX_7K_cis.txt", sep = "\t")
-Chr07N_cis <- read.csv("data/TX_7N_cis.txt", sep = "\t")
-Chr08K_cis <- read.csv("data/TX_8K_cis.txt", sep = "\t")
-Chr08N_cis <- read.csv("data/TX_8N_cis.txt", sep = "\t")
-Chr09K_cis <- read.csv("data/TX_9K_cis.txt", sep = "\t")
-Chr09N_cis <- read.csv("data/TX_9N_cis.txt", sep = "\t")
+Chr01K_cis <- read.csv("data/TX_lowland_1K_cis.txt", sep = "\t")
+Chr01N_cis <- read.csv("data/TX_lowland_1N_cis.txt", sep = "\t")
+Chr02K_cis <- read.csv("data/TX_lowland_2K_cis.txt", sep = "\t")
+Chr02N_cis <- read.csv("data/TX_lowland_2N_cis.txt", sep = "\t")
+Chr03K_cis <- read.csv("data/TX_lowland_3K_cis.txt", sep = "\t")
+Chr03N_cis <- read.csv("data/TX_lowland_3N_cis.txt", sep = "\t")
+Chr04K_cis <- read.csv("data/TX_lowland_4K_cis.txt", sep = "\t")
+Chr04N_cis <- read.csv("data/TX_lowland_4N_cis.txt", sep = "\t")
+Chr05K_cis <- read.csv("data/TX_lowland_5K_cis.txt", sep = "\t")
+Chr05N_cis <- read.csv("data/TX_lowland_5N_cis.txt", sep = "\t")
+Chr06K_cis <- read.csv("data/TX_lowland_6K_cis.txt", sep = "\t")
+Chr06N_cis <- read.csv("data/TX_lowland_6N_cis.txt", sep = "\t")
+Chr07K_cis <- read.csv("data/TX_lowland_7K_cis.txt", sep = "\t")
+Chr07N_cis <- read.csv("data/TX_lowland_7N_cis.txt", sep = "\t")
+Chr08K_cis <- read.csv("data/TX_lowland_8K_cis.txt", sep = "\t")
+Chr08N_cis <- read.csv("data/TX_lowland_8N_cis.txt", sep = "\t")
+Chr09K_cis <- read.csv("data/TX_lowland_9K_cis.txt", sep = "\t")
+Chr09N_cis <- read.csv("data/TX_lowland_9N_cis.txt", sep = "\t")
 
 
 ```
 
 
+
+
 ```{r cis processing, echo=FALSE}
 
-# adding a column that says "cis" to the cis eQTLs
-Chr01K_cis$type <- "cis"
-Chr01N_cis$type <- "cis"
-Chr02K_cis$type <- "cis"
-Chr02N_cis$type <- "cis"
-Chr03K_cis$type <- "cis"
-Chr03N_cis$type <- "cis"
-Chr04K_cis$type <- "cis"
-Chr04N_cis$type <- "cis" 
-Chr05K_cis$type <- "cis"
-Chr05N_cis$type <- "cis" 
-Chr06K_cis$type <- "cis" 
-Chr06N_cis$type <- "cis"
-Chr07K_cis$type <- "cis" 
-Chr07N_cis$type <- "cis" 
-Chr08K_cis$type <- "cis" 
-Chr08N_cis$type <- "cis" 
-Chr09K_cis$type <- "cis"
-Chr09N_cis$type <- "cis"
 
 # adding a chrom column 
 Chr01K_cis$chrom <- "1K"
@@ -106,7 +111,7 @@ Chr08N_cis$chrom <- "8N"
 Chr09K_cis$chrom <- "9K"
 Chr09N_cis$chrom <- "9N"
 
-# adding all the cis-eQTLs into a lost 
+# adding all the cis-eQTLs into a list 
 allCis <- rbind(Chr01K_cis,
       Chr01N_cis,
       Chr02K_cis,
@@ -126,63 +131,14 @@ allCis <- rbind(Chr01K_cis,
       Chr09K_cis,
       Chr09N_cis)
 
+allCis$type <- "cis"
 
-# now filtering to a more stringent p-value
-allCis_filt <- filter(allCis, -log10(p.value) > 13)
-
-# many genes are regulated in cis by multiple variants (LD is likely going on)
-# so let's check how many unique genes are regulated in cis
-length(unique(allCis$gene))
-
-# writing a dataframe of unique cis regulated genes 
-cisRegGenes <- as.data.frame(unique(allCis_filt$gene))
-
-# now I'm going to merge that with gene position, so I can look at the distribution of cis regulated genes 
-
-# adding a gene column
-cisRegGenes$gene <- cisRegGenes$`unique(allCis_filt$gene)`
-
-# merging 
-cisReg_positions <- merge(cisRegGenes,
-      genePos,
-      ID.vars = c("gene"),
-      all.x = TRUE)
-
-
-# plotting the cis-regulated genes 
-ggplot(cisReg_positions,
-       aes(x=chr,
-           y=s1)) +
-  geom_point() +
-  theme_bw() +
-  ggtitle("map of genes regulated in cis (TX)") +
-  ylab("position (bp)") +
-  theme(axis.text.x=element_text(angle=70,
-                                 vjust = 0.6))
 
 ```
 
-```{r trans processing}
 
-# adding a column that says "trans" to the trans eQTLs
-Chr01K_trans$type <- "trans"
-Chr01N_trans$type <- "trans"
-Chr02K_trans$type <- "trans"
-Chr02N_trans$type <- "trans"
-Chr03K_trans$type <- "trans"
-Chr03N_trans$type <- "trans"
-Chr04K_trans$type <- "trans"
-Chr04N_trans$type <- "trans" 
-Chr05K_trans$type <- "trans"
-Chr05N_trans$type <- "trans" 
-Chr06K_trans$type <- "trans" 
-Chr06N_trans$type <- "trans"
-Chr07K_trans$type <- "trans" 
-Chr07N_trans$type <- "trans" 
-Chr08K_trans$type <- "trans" 
-Chr08N_trans$type <- "trans" 
-Chr09K_trans$type <- "trans"
-Chr09N_trans$type <- "trans"
+
+```{r trans processing}
 
 # adding a chrom column 
 Chr01K_trans$chrom <- "1K"
@@ -204,63 +160,117 @@ Chr08N_trans$chrom <- "8N"
 Chr09K_trans$chrom <- "9K"
 Chr09N_trans$chrom <- "9N"
 
-# adding all the trans-eQTLs into a lost 
+allTrans <- rbind(Chr01K_trans,
+                  Chr01N_trans,
+                  Chr02K_trans,
+                  Chr02N_trans,
+                  Chr03K_trans,
+                  Chr03N_trans,
+                  Chr04K_trans,
+                  Chr04N_trans,
+                  Chr05K_trans,
+                  Chr05N_trans,
+                  Chr06K_trans,
+                  Chr06N_trans,
+                  Chr07K_trans,
+                  Chr07N_trans,
+                  Chr08K_trans,
+                  Chr08N_trans,
+                  Chr09K_trans,
+                  Chr09N_trans)
 
-alltrans <- rbind(Chr01K_trans,
-      Chr01N_trans,
-      Chr02K_trans,
-      Chr02N_trans,
-      Chr03K_trans,
-      Chr03N_trans,
-      Chr04K_trans,
-      Chr04N_trans,
-      Chr05K_trans,
-      Chr05N_trans,
-      Chr06K_trans,
-      Chr06N_trans,
-      Chr07K_trans,
-      Chr07N_trans,
-      Chr08K_trans,
-      Chr08N_trans,
-      Chr09K_trans,
-      Chr09N_trans)
+allTrans$type <- "trans"
 
-
-# now filtering to a more stringent p-value
-alltrans_filt <- filter(alltrans, -log10(p.value) > 13)
-
-# many genes are regulated in trans by multiple variants (LD is likely going on)
-# so let's check how many unique genes are regulated in trans
-length(unique(alltrans$gene))
-
-# writing a dataframe of unique trans regulated genes 
-transRegGenes <- as.data.frame(unique(alltrans_filt$gene))
-
-# now I'm going to merge that with gene position, so I can look at the distribution of trans regulated genes 
-
-# adding a gene column
-transRegGenes$gene <- transRegGenes$`unique(alltrans_filt$gene)`
-
-# merging 
-transReg_positions <- merge(transRegGenes,
-      genePos,
-      ID.vars = c("gene"),
-      all.x = TRUE)
-
-
-# plotting the trans-regulated genes 
-ggplot(transReg_positions,
-       aes(x=chr,
-           y=s1)) +
-  geom_point() +
-  theme_bw() +
-  ggtitle("map of genes regulated in trans (TX)") +
-  ylab("position (bp)") +
-  theme(axis.text.x=element_text(angle=70,
-                                 vjust = 0.6))
-
+all_eQTLs <- rbind(allCis, allTrans)
 
 ```
+
+
+
+```{r}
+
+datLab <- all_eQTLs %>% 
+  separate(SNP, into = c("Chrom", "Pos"), sep = "_", remove = FALSE)
+
+
+TX_eQTLs <- merge(datLab, genePos, all.x = TRUE,
+      id.vars = c("gene"))
+
+```
+
+
+
+```{r}
+# binding together the TX and MI eQTLs so we can plot the relative location of the eQTLs 
+
+# add garden category
+TX_eQTLs$garden <- "TX"
+MI_eQTLs$garden <- "MI"
+
+# add log10 p value for plotting 
+TX_eQTLs$forPlot <- -log10(TX_eQTLs$p.value)
+MI_eQTLs$forPlot <- log10(MI_eQTLs$p.value)
+
+# paste
+eQTLs_bothGardens <- rbind(TX_eQTLs,
+                           MI_eQTLs)
+
+
+ggplot(filter(eQTLs_bothGardens,
+              chrom == "5K"),
+       aes(x=V3,
+           y=forPlot)) +
+  geom_point(size = 0.8) +
+  theme_bw()
+```
+
+
+```{r}
+## labeling by subgenome to plot the number of cis & trans eQTLs in each 
+
+K_sub <- filter(allcis_filt,
+                chrom=="1K" |
+                chrom == "2K" |
+                chrom == "3K" |
+                  chrom == "4K" |
+                  chrom == "5K" |
+                  chrom == "6K" |
+                  chrom == "7K" |
+                  chrom == "8K" |
+                  chrom == "9K" )
+
+K_sub$sub <-"K"
+
+N_sub <- filter(allcis_filt,
+                chrom=="1N" |
+                chrom == "2N" |
+                chrom == "3N" |
+                  chrom == "4N" |
+                  chrom == "5N" |
+                  chrom == "6N" |
+                  chrom == "7N" |
+                  chrom == "8N" |
+                  chrom == "9N" )
+N_sub$sub <- "N"
+
+cis_sub <- rbind(K_sub, N_sub)
+
+ggplot(cis_sub,
+       aes(x = chrom,
+           fill = sub)) +
+  geom_bar() +
+  scale_fill_manual(values=c("yellow",
+                             "purple4")) +
+  theme_bw() +
+  ggtitle("# of TX cis-eQTLs")
+
+```
+
+
+
+
+
+
 
 
 

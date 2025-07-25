@@ -25,17 +25,6 @@ base.dir = find.package("MatrixEQTL")
 setwd("~/Dropbox/lowryLab")
 ```
 
-## setting up matrix eQTL settings
-
-```{r matrix eQTL settings, echo=FALSE}
-
-# setting up matrix eQTL settings
-useModel = modelLINEAR; # modelANOVA or modelLINEAR or modelLINEAR_CROSS
-output_file_name = tempfile();
-pvOutputThreshold = 1e-8;
-errorCovariance = numeric();
-
-```
 
 ## read in genotype data
 
@@ -43,56 +32,25 @@ errorCovariance = numeric();
 
 # setting genotype matrices 
 # these were generated in awk on the MSU HPCC, from vcfs 
-chrom2K = "~/Dropbox/lowryLab/data/Chr02K_genotype_matrix.txt"
+chrom1K = "~/Dropbox/lowryLab/data/Chr01K_Midwest_genotype_matrix.txt"
 
 # loading genotype data 
 allsnps = SlicedData$new();
 allsnps$fileDelimiter = "\t";       # denote missing values;
 allsnps$fileSkipColumns = 1;          # one column of row labels
 allsnps$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
-allsnps$LoadFile(chrom2K)
+allsnps$LoadFile(chrom1K)
 
 
 ```
 
 
 
-## read in gene expression data
 
-```{r expression, message = FALSE}
-
-# reading in gene expression data
-
-# TX
-geneTX = SlicedData$new()
-geneTX$fileDelimiter = ",";    
-geneTX$LoadFile("data/genes_TX_matrix.csv")
-
-# MI
-geneMI = SlicedData$new()
-geneMI$fileDelimiter = ",";    
-geneMI$LoadFile("data/genes_MI_matrix.csv")
-
-# GxE
-# geneGxE = SlicedData$new()
-# geneGxE$fileDelimiter = ",";    
-# geneGxE$LoadFile("data/genes_GxE_matrix.csv")
-```
 
 ## load the covariates file
 
-```{r covariates}
 
-## Load covariates file. in this case it's the first 2 PC's (plink)
-
-cvrt = SlicedData$new();
-cvrt$fileDelimiter = "\t";      # the TAB character
-cvrt$fileOmitCharacters = "NA"; # denote missing values;
-cvrt$fileSkipRows = 1;          # one row of column labels
-cvrt$fileSkipColumns = 1;       # one column of row labels
-cvrt$LoadFile("data/cov.txt");
-
-```
 
 ## read in gene location and snp location file 
 
@@ -118,14 +76,41 @@ genepos = read.table(gene_location_file_name,
 
 ```
 
+```{r}
+
+# run the matrix eQTL function, scanning for cis and trans eQTLs 
+me_MI_midwest = Matrix_eQTL_main(
+  snps = allsnps,
+  gene = geneMI_Midwest,
+  cvrt = cvrt,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "data/MI_Midwest_1K.txt",
+  output_file_name.cis = "data/MI_Midwest_1K_cis.txt",
+  pvOutputThreshold = pvOutputThreshold,
+  pvOutputThreshold.cis = pvOutputThreshold,
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = FALSE,
+  noFDRsaveMemory = TRUE)
+
+```
+
+
+
+
+
 
 ```{r making maps of TX trans QTLs}
 
 # read in the SNPs position as a dataframe 
 
-#snpsPos <- read.csv("data/positions.txt",
-#                    sep="\t",
-#                    header=FALSE)
+snpsPos <- read.csv("data/positions.txt",
+                    sep="\t",
+                    header=FALSE)
 
 # adding an extra column to SNPs pos for merging 
 snpsPos$SNP <- snpsPos$V1
@@ -138,25 +123,13 @@ output1K <- read.csv("data/TX_1K.txt",
 genePos$gene <- genePos$geneid
 
 # merging eQTLs with gene position 
-posMerge_1K <- merge(output1K, 
-      genePos,
-      ID.vars = c("gene"),
-      all.x = TRUE)
+posMerge_1K <- merge(Chr01K_trans, genePos, ID.vars = c("gene"), all.x = TRUE)
 
 # merging eQTLs with gene position and SNP position 
-allMerge <- merge(posMerge_1K,
-      snpsPos,
-      ID.vars = SNP,
-      all.x=TRUE)
+allMerge <- merge(posMerge_1K, snpsPos, ID.vars = SNP, all.x=TRUE)
 
 # filtering out columns I don't need 
-mergeFilt <- dplyr::select(allMerge,
-       SNP,
-       gene,
-       p.value,
-       chr,
-       s1,
-       V3)
+mergeFilt <- dplyr::select(allMerge, SNP, gene, p.value, chr, s1, V3)
 
 # plotting! 1 chrom at a time for npw 
 ggplot(filter(mergeFilt,
@@ -176,26 +149,7 @@ ggplot(filter(mergeFilt,
 ```
 
 
-```{r}
-me_TX_1K$cis$neqtls
-me_TX_1N$cis$neqtls
-me_TX_2K$cis$neqtls
-me_TX_2N$trans$neqtls
-me_TX_3K$cis$neqtls
-me_TX_3N$cis$neqtls
-me_TX_4K$cis$neqtls
-me_TX_4N$cis$neqtls
-me_TX_5K$cis$neqtls
-me_TX_5N$cis$neqtls
-me_TX_6K$cis$neqtls
-me_TX_6N$cis$neqtls
-me_TX_7K$cis$neqtls
-me_TX_7N$cis$neqtls
-me_TX_8K$cis$neqtls
-me_TX_8N$cis$neqtls
-me_TX_9K$cis$neqtls
-me_TX_9N$cis$neqtls
-```
+
 
 ## run matrix eQTL (this will take many hours)
 
@@ -235,9 +189,6 @@ me_TX_4N = Matrix_eQTL_main(
 ```
 
 
-```{r}
-plot(me_TX, pch = 16, cex = 0.7)
-```
 
 ```{r}
 dat <- read.csv("data/num_cis_trans_eQTLs.csv")

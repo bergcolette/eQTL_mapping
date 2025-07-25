@@ -1,8 +1,132 @@
+library(viridis)
+
+ggplot(dplyr::filter(GxE_eQTLs,
+              chr == "Chr01K" |
+                chr == "Chr01N" |
+                chr == "Chr02K" |
+                chr == "Chr02N" |
+                chr == "Chr03K" |
+                chr == "Chr03N" |
+                chr == "Chr04K" |
+                chr == "Chr04N" |
+                chr == "Chr05K" |
+                chr == "Chr05N" |
+                chr == "Chr06K" |
+                chr == "Chr06N" |
+                chr == "Chr07K" |
+                chr == "Chr07N" |
+                chr == "Chr08K" |
+                chr == "Chr08N" |
+                chr == "Chr09K" |
+                chr == "Chr09N"),
+       aes(x = as.numeric(Pos)/1000000,
+           y = as.numeric(s1)/1000000,
+           color=-log10(p.value),
+           alpha = -log10(p.value))) +
+  facet_grid(Chrom ~ chr) +
+  geom_point() +
+  theme_bw() +
+  scale_color_viridis() +
+  ylab("Gene Position (Mb)") +
+  xlab("Genome Position (Mb)") +
+  theme(strip.background = element_rect(fill="white"),
+        panel.spacing = unit(0, "lines"),
+        legend.position = "none") +
+  ggtitle("GxE eQTLs, Midwest Only")
+
+
+GxE_eQTLs$chr <- factor(GxE_eQTLs$chr,levels = c("Chr09N",
+                                     "Chr09K",
+                                     "Chr08N",
+                                     "Chr08K",
+                                     "Chr07N",
+                                     "Chr07K",
+                                     "Chr06N",
+                                     "Chr06K",
+                                     "Chr05N",
+                                     "Chr05K",
+                                     "Chr04N",
+                                     "Chr04K",
+                                     "Chr03N",
+                                     "Chr03K",
+                                     "Chr02N",
+                                     "Chr02K",
+                                     "Chr01N",
+                                     "Chr01K"))
+
+
+
+
+
+
+ggplot(filter(GxE_summ,
+              median > 0.25,
+              chr != "scaffold_19"),
+       aes(x=s1/1000000,
+           y = median)) +
+  facet_wrap(~chr,
+             ncol=2,
+             strip.position="left") + 
+  geom_point(size = 0.8) +
+  theme_bw()
+
+
+
+
+cisTest <- read.csv("data/TX_2N_cis.txt",
+                    sep= "\t")
+
+ggplot(cisTest, 
+       aes(x = SNP,
+           y = p.value))
+
+MI_exp <- read.csv("MI_median.csv")
+
+
+ggplot(filter(MI_exp,
+              Chrom != "scaffold_19",
+              Chrom != "scaffold_34",
+              Chrom != "scaffold_390",
+              Chrom != "scaffold_174"),
+       aes(x=Chrom,
+           y=median,
+           fill = subgenome)) +
+  geom_boxplot() +
+  theme_bw() +
+  scale_fill_manual(values=c( "mediumpurple",
+                              "yellow"))
+
+# read in the data output (one chrom at a time for now)
+output1K <- read.csv("data/TX_2N_cis.txt",
+                     sep="\t")
+
+# merging eQTLs with gene position 
+posMerge_1K <- merge(output1K, 
+                     genePos,
+                     ID.vars = c("gene"),
+                     all.x = TRUE)
+
+# merging eQTLs with gene position and SNP position 
+allMerge <- merge(posMerge_1K,
+                  snpsPos,
+                  ID.vars = SNP,
+                  all.x=TRUE)
+
+# filtering out columns I don't need 
+mergeFilt <- dplyr::select(allMerge,
+                           SNP,
+                           gene,
+                           p.value,
+                           chr,
+                           s1,
+                           V3)
+
 # this is a scratch area for plotting 
 
 ggplot(filter(mergeFilt,
               chr != "scaffold_19",
-              chr != "scaffold_34"),
+              chr != "scaffold_34",
+              -log10(p.value) > 13),
        aes(x = V3/1000000,
            y = s1/1000000,
            color=-log10(p.value),
@@ -11,13 +135,18 @@ ggplot(filter(mergeFilt,
   theme_bw() +
   scale_color_viridis() +
   facet_wrap(~chr,
-             nrow = 9) +
+             nrow = 9,
+             strip.position = "left") +
   ylab("Gene Position (Mb)") +
   xlab("Chr 01K Position (Mb)") +
-  theme(
-    strip.background = element_blank(),
-    strip.text.x = element_blank()
-  )
+  theme(legend.position = "none",
+        strip.background = element_rect(fill="white"))
+
+
+
+
+
+
 
 
 ggplot(summTX,
