@@ -1,0 +1,34 @@
+#!/bin/bash --login
+#SBATCH --job-name=starAlign_fastqs_pairTest
+#SBATCH --nodes=1
+#SBATCH --time=6:00:00
+#SBATCH --mem=96GB 
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=bergcole@msu.edu
+#SBATCH --output=%x-%j.SLURMout\
+
+echo "JobID: $SLURM_JOB_ID"
+echo "Running on node: `hostname`"
+
+# purge & load necessary modules 
+module purge 
+module load STAR
+
+# set working directory
+
+fastqDir="/mnt/scratch/bergcole/data"
+genomeDir="/mnt/scratch/bergcole/referenceGenome/genomeDir_noPseudo"
+
+gunzip ${fastqDir}/BUWNW.prepped.R1.fastq.paired.fq.gz
+gunzip ${fastqDir}/BUWNW.prepped.R2.fastq.paired.fq.gz
+
+STAR \
+    --genomeDir ${genomeDir}  \
+    --readFilesIn ${fastqDir}/BUWNW.prepped.R1.fastq.paired.fq ${fastqDir}/BUWNW.prepped.R2.fastq.paired.fq \
+    --outMultimapperOrder Random \
+    --outSAMmultNmax 1 \
+    --outSAMtype BAM Unsorted \
+    --outFileNamePrefix ${fastqDir}/BUWNW_pairTest
+
+gzip ${fastqDir}/BUWNW.prepped.R1.fastq.paired.fq
+gzip ${fastqDir}/BUWNW.prepped.R2.fastq.paired.fq

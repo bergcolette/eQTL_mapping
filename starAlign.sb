@@ -21,7 +21,7 @@ module load STAR
 # set working directory
 
 fastqDir="/mnt/scratch/bergcole/data"
-genomeDir="/mnt/scratch/bergcole/referenceGenome/GenomeDir"
+genomeDir="/mnt/scratch/bergcole/referenceGenome/genomeDir_noPseudo"
 
 gunzip ${fastqDir}/${sampleID}.prepped.R1.fastq.gz
 gunzip ${fastqDir}/${sampleID}.prepped.R2.fastq.gz
@@ -29,12 +29,12 @@ gunzip ${fastqDir}/${sampleID}.prepped.R2.fastq.gz
 STAR \
     --genomeDir ${genomeDir}  \
     --readFilesIn ${fastqDir}/${sampleID}.prepped.R1.fastq ${fastqDir}/${sampleID}.prepped.R1.fastq \
-    --sjdbGTFfile /mnt/scratch/bergcole/referenceGenome/AP13_DAC6_pseudoref.gtf  \
     --outMultimapperOrder Random \
+    --outSAMmultNmax 1 \
     --outSAMtype BAM Unsorted \
-    --outFileNamePrefix ${fastqDir}/${sampleID} \
-    --outFilterScoreMinOverLread 0.5 \
-    --outFilterMatchNminOverLread 0.5 \
+    -outFilterScoreMinOverLread 0.3 \
+    --outFilterMatchNminOverLread 0.3 \
+    --outFileNamePrefix ${fastqDir}/${sampleID} 
 
 gzip ${fastqDir}/${sampleID}.prepped.R1.fastq
 gzip ${fastqDir}/${sampleID}.prepped.R1.fastq

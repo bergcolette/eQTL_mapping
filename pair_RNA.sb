@@ -1,0 +1,33 @@
+#!/bin/bash --login
+#SBATCH --job-name=starAlign_fastqs
+#SBATCH --nodes=1
+#SBATCH --time=6:00:00
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=bergcole@msu.edu
+#SBATCH --output=%x-%j.SLURMout
+#SBATCH --array=1-43
+#SBATCH --mem=96GB                         # Total memory limit
+
+# load required modules 
+module purge
+module load Miniforge3
+
+# activate the python environment
+conda activate switchgrass_eGWAS
+
+# call to the RNA fastq array
+sampleID=$(awk -v ArrayTaskID=$SLURM_ARRAY_TASK_ID '$1==ArrayTaskID {print $2}' fastq.array)
+
+# unzip the required files 
+gunzip ${fastqDir}/${sampleID}.prepped.R1.fastq.gz
+gunzip ${fastqDir}/${sampleID}.prepped.R2.fastq.gz
+
+# define the fastq directory
+fastqDir="/mnt/scratch/bergcole/data"
+
+# run fastq-pair (this will put the reads in the same order)
+fastq_pair ${fastqDir}/${sampleID}.prepped.R1.fastq ${fastqDir}/${sampleID}.prepped.R2.fastq 
+
+# zip up the files again
+#gzip ${fastqDir}/${sampleID}.prepped.R1.fastq
+#gzip ${fastqDir}/${sampleID}.prepped.R2.fastq
