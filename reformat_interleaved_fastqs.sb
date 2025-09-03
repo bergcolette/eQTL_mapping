@@ -1,0 +1,13 @@
+#!/bin/bash --login
+#SBATCH --job-name=reformatting_interleaved_fastq
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --time=4:00:00
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=bergcole@msu.edu
+#SBATCH --output=%x-%j.SLURMout
+
+module purge
+module load BBMap
+
+reformat.sh in=/mnt/scratch/bergcole/ASE/SRR3709212.fastq out=/mnt/scratch/bergcole/ASE/SRR3709212_2.fastq out2=/mnt/scratch/bergcole/ASE/SRR3709212_1.fastq tossbrokenreads=t

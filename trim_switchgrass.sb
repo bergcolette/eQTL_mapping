@@ -1,0 +1,41 @@
+#!/bin/bash --login
+#SBATCH --job-name=aligning_AP13_DAC6
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --time=4:00:00
+#SBATCH --mail-type=ALL
+#SBATCH --mem=96GB 
+#SBATCH --mail-user=bergcole@msu.edu
+#SBATCH --output=%x-%j.SLURMout
+#SBATCH --array=1-2
+
+echo "JobID: $SLURM_JOB_ID"
+echo "Running on node: `hostname`"
+
+# first purging modules, then loading what you need 
+# load in Trimmomatic, bwa, samtools, gatk, picard 
+module purge 
+module load bwa-mem2/2.2.1-intel-compilers-2023.1.0 Trimmomatic/0.39-Java-11  SAMtools/1.18-GCC-12.3.0  picard/2.25.1-Java-11
+
+# call to the fastq array
+sampleID=$(awk -v ArrayTaskID=$SLURM_ARRAY_TASK_ID '$1==ArrayTaskID {print $2}' AP13_DAC6_WGS.array)
+
+# naming variables for the directories
+fastqDir="/mnt/scratch/bergcole/ASE"
+
+# set the reference genome
+genome="/mnt/scratch/bergcole/referenceGenome/Pvirgatumvar_AP13HAP1_772_v6.0.fa"
+
+
+# trim the adapter reads with Trimmomatic 
+# this takes paired end samples in the vcfDir and outputs paired fastqs
+
+java -jar $EBROOTTRIMMOMATIC/trimmomatic-0.39.jar \
+    PE \
+    -threads 12 \
+    -phred33 \
+    -trimlog ${outDir}/trimlog.txt \
+    ${fastqDir}/${sampleID}_1.fastq  ${fastqDir}/${sampleID}_2.fastq \
+    ${fastqDir}/${sampleID}.1.paired.fastq ${fastqDir}/${sampleID}.1.unpaired.fastq  \
+    ${fastqDir}/${sampleID}.2.paired.fastq ${fastqDir}/${sampleID}.2.unpaired.fastq  \
+    ILLUMINACLIP:$EBROOTTRIMMOMATIC/adapters/TruSeq3-PE.fa LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36  # you may need to adjust this depending on how they were sequenced

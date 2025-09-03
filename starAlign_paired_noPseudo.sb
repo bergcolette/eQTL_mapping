@@ -8,6 +8,7 @@
 #SBATCH --output=%x-%j.SLURMout
 #SBATCH --array=1-43
 
+# re-running the RNA to compare results with and without a pseudo-reference 
 echo "JobID: $SLURM_JOB_ID"
 echo "Running on node: `hostname`"
 
@@ -21,7 +22,7 @@ sampleID=$(awk -v ArrayTaskID=$SLURM_ARRAY_TASK_ID '$1==ArrayTaskID {print $2}' 
 # set working directory
 
 fastqDir="/mnt/scratch/bergcole/data"
-genomeDir="/mnt/scratch/bergcole/referenceGenome/GenomeDir"
+genomeDir="/mnt/scratch/bergcole/referenceGenome/genomeDir_noPseudo"
 
 STAR \
     --genomeDir ${genomeDir}  \
@@ -29,5 +30,5 @@ STAR \
     --outMultimapperOrder Random \
     --outSAMmultNmax 1 \
     --outSAMtype BAM Unsorted \
-    --outFileNamePrefix ${fastqDir}/${sampleID}
+    --outFileNamePrefix ${fastqDir}/${sampleID}_AP13Aligned
 

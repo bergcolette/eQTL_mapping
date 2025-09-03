@@ -7,6 +7,9 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+# set working directory
+root.dir = "~/Dropbox/LowryLab/data/"
 ```
 
 ## Switchgrass G*E / eQTL analyses
@@ -24,973 +27,28 @@ library(DESeq2)
 
 ```
 
-## read in the data and filter out indvs we won't use 
 
-```{r read}
+
+## read in the data and only retain the vetted individuals
+
+```{r read lowland}
 # read in and format the count data 
-counts <- read.csv("data/switchgrass_counts_medFilt.txt", sep = "\t")
+counts <- read.csv("~/Dropbox/LowryLab/data/expression/switchgrass_counts_medFilt_lowland.csv")
 
-# exclude individuals that were vetted in the population structure exploration
-# these indvs. didn't match their putative population, putative RNA clone in the paired habitat, putative DNA clone, or all three 
-counts_filt <- dplyr::select(counts, -c("HYYUB", "NASNY", "HYYUC", "NASNZ",
-                                        "HYCAT",
-"NASPY",
-"HYASN",
-"HYAUP",
-"HYBWZ",
-"HYCSS",
-"HZOYG",
-"HYBAB",
-"HYBXA",
-"HYSXS",
-"HYSBO",
-"HYSUB",
-"HYBOT",
-"HYZHA",
-"HYCSO",
-"HYSPN",
-"HYAUZ",
-"HYAYB",
-"HYYCX",
-"NASUC",
-"HYBWX",
-"HYBNG",
-"HYCWA",
-"HYCBP",
-"HYCXS",
-"NABAP",
-"NASTU"))
-
-
-
-counts_filt_Midwest <- dplyr::select(counts, c("GeneID",
-  "HYAHU",
-"HYANA",
-"HYANO",
-"HYANS",
-"NASHH",
-"HYAOH",
-"HYAPH",
-"HYASP",
-"NASHP",
-"HYASX",
-"HYATX",
-"HYAUB",
-"HYAUY",
-"HYAWB",
-"HYAWO",
-"HYAXA",
-"HYAXU",
-"NASHY",
-"HYAYH",
-"HYAYW",
-"HYAZO",
-"HYBAP",
-"HYBAU",
-"HYBBC",
-"HYBBS",
-"HYCUA",
-"HYCWP",
-"HYCWT",
-"HYCWW",
-"HYCWX",
-"HYCXB",
-"HYBHU",
-"HYBHX",
-"HYBNW",
-"HYBNY",
-"HYBOA",
-"HYBOC",
-"HYBOG",
-"HYBOZ",
-"NASNG",
-"HYBPU",
-"HYBSB",
-"HYBSP",
-"HYBSX",
-"HYBTU",
-"HYSCA",
-"NASNO",
-"HYSCZ",
-"NASNP",
-"HYSGC",
-"HYSGP",
-"HYSGZ",
-"NASNT",
-"HYSHY",
-"HYSNN",
-"HYSOH",
-"HYSOT",
-"HYSOZ",
-"HYSPB",
-"HYSPP",
-"NASOA",
-"NASON",
-"NASOS",
-"NASOU",
-"NASOY",
-"NASPA",
-"NASPO",
-"NASPU",
-"NASSH",
-"NASSS",
-"HYYUX",
-"NASTB",
-"NASTT",
-"HYYWN",
-"HYXZS",
-"HYXZU",
-"HYYAC",
-"HYYAG",
-"HYYAP",
-"HYYBB",
-"HYYBO",
-"HYYCH",
-"HYYGG",
-"HYYGH",
-"HYYGN",
-"HYYGP",
-"HYYGS",
-"NABAW",
-"NABAY",
-"NASUP",
-"HZOTB",
-"HZOTO",
-"HZOUA",
-"HZOUG",
-"HZOUS",
-"HZOUX",
-"HZOUY",
-"HZOWC",
-"HZOWN",
-"HZOWW",
-"HZOWZ",
-"HZOXG",
-"HZOXT",
-"HZOYC",
-"HZOYY",
-"HYBUW",
-"HYBWB",
-"HYBXG",
-"HYBXS",
-"HYBXX",
-"HYBXY",
-"HYBXZ",
-"HYBYG",
-"HYBYN",
-"HYBYP",
-"HYBYX",
-"HYBZH",
-"HYBZN",
-"HYCAB",
-"HYCAU",
-"HYCBG",
-"HYCBN",
-"HYCBS",
-"HYCBT",
-"NASUT",
-"HYSTO",
-"HYSTY",
-"HYSWS",
-"HYSWX",
-"HYSXG",
-"HYSXP",
-"HYSXY",
-"HYSXZ",
-"HYSYA",
-"HYSYG",
-"HYSYH",
-"HYPHZ",
-"HYPNB",
-"HYPNG",
-"NASUN",
-"HYPNU",
-"HYYYX",
-"HYYZP",
-"HYZAH",
-"HYZBH",
-"HYZBO",
-"HYZBT",
-"HYZBU",
-"HYZBW",
-"HYZCY",
-"HYZGB",
-"HYZGP",
-"HYZGS",
-"HYZGT",
-"HYZGU",
-"HYZHC"))
-
-
-
-counts_filt_lowland <- dplyr::select(counts, c("GeneID",
-                                               "HYAHN",
-"HYAHO",
-"HYAHP",
-"HYAHT",
-"HYAHW",
-"HYAHX",
-"HYAHY",
-"HYAHZ",
-"HYANB",
-"HYANC",
-"HYANG",
-"HYANH",
-"HYANN",
-"HYANP",
-"HYANT",
-"HYANU",
-"HYANX",
-"HYANZ",
-"HYAOB",
-"HYAOC",
-"HYAOG",
-"HYAOO",
-"HYAOP",
-"HYAOS",
-"HYAOT",
-"HYAOU",
-"HYAOW",
-"NASHN",
-"NASHO",
-"HYAOZ",
-"HYAPA",
-"HYAPB",
-"HYAPC",
-"HYAPG",
-"HYAPN",
-"HYAPP",
-"HYAPS",
-"HYAPT",
-"HYAPU",
-"HYAPW",
-"HYAPX",
-"HYAPY",
-"HYAPZ",
-"HYASA",
-"HYASB",
-"HYASC",
-"HYASG",
-"HYASH",
-"HYASO",
-"HYASS",
-"HYAST",
-"HYASW",
-"HYASY",
-"HYASZ",
-"HYATA",
-"HYATB",
-"HYATC",
-"HYATG",
-"HYATH",
-"HYATN",
-"HYATO",
-"NASHS",
-"HYATS",
-"HYATT",
-"HYATU",
-"NASHT",
-"HYATY",
-"HYAUC",
-"HYAUH",
-"HYAUN",
-"HYAUO",
-"HYAUS",
-"HYAUT",
-"HYAUU",
-"HYAUW",
-"HYAUX",
-"HYAWA",
-"HYAWC",
-"HYAWG",
-"HYAWH",
-"HYAWN",
-"HYAWP",
-"HYAWS",
-"HYAWT",
-"HYAWU",
-"HYAWW",
-"HYAWX",
-"NASHW",
-"HYAWZ",
-"HYAXB",
-"HYAXC",
-"HYAXG",
-"HYAXH",
-"HYAXN",
-"HYAXO",
-"HYAXP",
-"HYAXS",
-"HYAXW",
-"HYAXX",
-"HYAXY",
-"HYAXZ",
-"HYAYA",
-"HYAYS",
-"HYAYT",
-"HYAYU",
-"HYAYY",
-"HYAYZ",
-"HYAZA",
-"HYAZB",
-"HYAZG",
-"HYAZH",
-"HYAZN",
-"HYAZP",
-"HYAZS",
-"HYAZT",
-"HYAZU",
-"HYAZW",
-"HYAZX",
-"HYAZY",
-"HYAZZ",
-"HYBAA",
-"HYBAC",
-"HYBAG",
-"HYBAN",
-"HYBAO",
-"HYBAS",
-"HYBAT",
-"HYBAW",
-"HYBAY",
-"HYBAZ",
-"HYBBA",
-"HYBBB",
-"HYBBG",
-"HYBBH",
-"HYBBN",
-"HYBBO",
-"HYBBP",
-"HYCPC",
-"HYCPG",
-"HYCPH",
-"HYCPN",
-"HYCPO",
-"HYCPS",
-"HYCPT",
-"HYCPU",
-"HYCPW",
-"HYCPX",
-"HYCPY",
-"HYCPZ",
-"HYCSB",
-"HYCSC",
-"HYCSG",
-"HYCSH",
-"HYCSN",
-"HYCSP",
-"HYCST",
-"HYCSU",
-"HYCSW",
-"HYCSX",
-"HYCSY",
-"HYCSZ",
-"HYCTA",
-"HYCTC",
-"HYCTG",
-"HYCTH",
-"HYCTN",
-"HYCTO",
-"HYCTP",
-"NASHZ",
-"HYCTT",
-"HYCTW",
-"HYCTY",
-"HYCTZ",
-"HYCUB",
-"HYCUC",
-"HYCUG",
-"HYCUH",
-"HYCUN",
-"NASNA",
-"HYCUS",
-"HYCUT",
-"HYCUU",
-"HYCUW",
-"HYCUX",
-"HYCUY",
-"HYCUZ",
-"HYCWC",
-"HYCWH",
-"HYCWO",
-"HYCWS",
-"HYCWU",
-"HYCWY",
-"HYCWZ",
-"HYCXA",
-"HYCXC",
-"HYCXG",
-"HYCXH",
-"HYCXN",
-"HYCXO",
-"HYCXP",
-"HYCXT",
-"HYCXU",
-"HYCXW",
-"HYCXX",
-"HYCXY",
-"HYCXZ",
-"HYCYA",
-"HYCYB",
-"HYCYC",
-"HYBHP",
-"HYBHS",
-"HYBHT",
-"HYBHW",
-"HYBHY",
-"HYBHZ",
-"HYBNB",
-"HYBNC",
-"HYBNH",
-"HYBNN",
-"HYBNO",
-"HYBNP",
-"HYBNS",
-"HYBNT",
-"HYBNU",
-"HYBNZ",
-"HYBOB",
-"HYBOH",
-"HYBON",
-"HYBOO",
-"HYBOS",
-"HYBOU",
-"HYBOW",
-"HYBOX",
-"HYBOY",
-"HYBPA",
-"HYBPB",
-"NASNC",
-"HYBPG",
-"HYBPH",
-"HYBPN",
-"HYBPP",
-"HYBPS",
-"HYBPT",
-"HYBPW",
-"HYBPX",
-"HYBPY",
-"HYBPZ",
-"HYBSA",
-"HYBSC",
-"HYBSG",
-"HYBSH",
-"HYBSN",
-"HYBSO",
-"HYBST",
-"HYBSU",
-"NASNH",
-"HYBSY",
-"HYBSZ",
-"HYBTA",
-"HYBTB",
-"HYBTC",
-"HYBTG",
-"HYBTH",
-"HYBTN",
-"HYBTO",
-"HYBTP",
-"HYBTS",
-"HYBTT",
-"HYBTW",
-"NASNN",
-"HYBTY",
-"HYBTZ",
-"HYBUA",
-"HYBUC",
-"HYBUG",
-"HYBUH",
-"HYBUN",
-"HYBUO",
-"HYBUP",
-"HYSBP",
-"HYSBS",
-"HYSBT",
-"HYSBU",
-"HYSBW",
-"HYSBX",
-"HYSBZ",
-"HYSCC",
-"HYSCG",
-"HYSCH",
-"HYSCN",
-"HYSCO",
-"HYSCS",
-"HYSCU",
-"HYSCX",
-"HYSCY",
-"HYSGA",
-"HYSGH",
-"HYSGN",
-"HYSGO",
-"HYSGS",
-"NASNS",
-"HYSGU",
-"HYSGW",
-"HYSGX",
-"HYSGY",
-"HYSHA",
-"HYSHB",
-"HYSHH",
-"HYSHN",
-"HYSHO",
-"HYSHP",
-"HYSHS",
-"NASNU",
-"HYSHW",
-"HYSHX",
-"HYSHZ",
-"HYSNA",
-"HYSNB",
-"HYSNC",
-"HYSNH",
-"HYSNO",
-"HYSNP",
-"HYSNS",
-"HYSNT",
-"HYSNU",
-"HYSNW",
-"HYSNY",
-"HYSOA",
-"HYSOC",
-"HYSOG",
-"HYSON",
-"HYSOO",
-"HYSOP",
-"HYSOS",
-"HYSOW",
-"HYSOX",
-"HYSOY",
-"HYSPA",
-"HYSPC",
-"HYSPG",
-"HYSPH",
-"HYSPO",
-"NASNW",
-"NASNX",
-"NASOB",
-"NASOC",
-"NASOG",
-"NASOH",
-"NASOP",
-"NASOT",
-"HYYUG",
-"NASOW",
-"NASOX",
-"NASOZ",
-"NASPB",
-"HYYUH",
-"HYYUN",
-"NASPG",
-"HYYUP",
-"NASPP",
-"HYYUS",
-"HYYUT",
-"NASPS",
-"NASPT",
-"NASPW",
-"NASPZ",
-"NASSA",
-"NASSB",
-"NASSC",
-"HYYUU",
-"HYYUW",
-"NASSG",
-"NASSO",
-"NASSP",
-"NASST",
-"NASSU",
-"NASSW",
-"NASSX",
-"NASSY",
-"NASSZ",
-"NASTA",
-"NASTC",
-"NASTG",
-"NASTH",
-"NASTN",
-"HYYUY",
-"HYYUZ",
-"NASTP",
-"NASTS",
-"HYYWA",
-"HYYWC",
-"NASTW",
-"HYYWG",
-"HYYWH",
-"NASTY",
-"HYYWO",
-"NASTZ",
-"NASUA",
-"HYYWS",
-"NASUG",
-"HYYWT",
-"HYYWU",
-"HYXZA",
-"HYXZC",
-"HYXZG",
-"HYXZH",
-"HYXZN",
-"HYXZO",
-"HYXZP",
-"HYXZT",
-"HYXZW",
-"HYXZX",
-"NABAN",
-"HYXZZ",
-"HYYAA",
-"HYYAB",
-"HYYAH",
-"HYYAN",
-"HYYAO",
-"NABAO",
-"HYYAT",
-"HYYAU",
-"HYYAW",
-"HYYAX",
-"HYYAY",
-"HYYBA",
-"HYYBC",
-"HYYBG",
-"HYYBH",
-"HYYBN",
-"HYYBP",
-"HYYBT",
-"HYYBU",
-"NABAS",
-"HYYBX",
-"HYYBY",
-"HYYBZ",
-"HYYCA",
-"HYYCB",
-"HYYCC",
-"HYYCG",
-"HYYCN",
-"HYYCP",
-"HYYCS",
-"HYYCT",
-"HYYCU",
-"NABAT",
-"HYYCY",
-"HYYCZ",
-"HYYGA",
-"HYYGB",
-"NABAU",
-"HYYGO",
-"HYYGT",
-"HYYGU",
-"HYYGX",
-"HYYGY",
-"HYYHC",
-"HYYHG",
-"HYYHH",
-"HYYHN",
-"HYYHO",
-"HYYHP",
-"HYYHS",
-"HYYHT",
-"HYYHU",
-"NABAX",
-"HYYHX",
-"HYYNA",
-"HZOST",
-"HZOSW",
-"HZOSX",
-"HZOSY",
-"HZOSZ",
-"HZOTA",
-"HZOTC",
-"HZOTG",
-"HZOTH",
-"HZOTP",
-"HZOTS",
-"HZOTT",
-"HZOTU",
-"HZOTX",
-"HZOTY",
-"HZOTZ",
-"HZOUB",
-"HZOUC",
-"HZOUH",
-"HZOUN",
-"HZOUO",
-"HZOUP",
-"HZOUT",
-"HZOUU",
-"HZOUW",
-"HZOUZ",
-"HZOWA",
-"HZOWB",
-"HZOWH",
-"HZOWO",
-"HZOWP",
-"HZOWS",
-"HZOWT",
-"HZOWU",
-"NASUS",
-"HZOWY",
-"HZOXA",
-"HZOXB",
-"HZOXC",
-"HZOXH",
-"HZOXN",
-"HZOXO",
-"HZOXP",
-"HZOXS",
-"HZOXU",
-"HZOXW",
-"HZOXX",
-"HZOXY",
-"HZOYA",
-"HZOYH",
-"HZOYO",
-"HZOYS",
-"HZOYT",
-"HZOYU",
-"HZOYW",
-"HZOYX",
-"HZOYZ",
-"HZOZA",
-"HZOZB",
-"HZOZC",
-"HZOZG",
-"HZOZH",
-"HZOZO",
-"HZOZP",
-"HYBUS",
-"HYBUU",
-"HYBUX",
-"HYBUY",
-"HYBUZ",
-"HYBWA",
-"HYBWC",
-"HYBWG",
-"HYBWH",
-"HYBWN",
-"HYBWP",
-"HYBWT",
-"HYBWU",
-"HYBWW",
-"HYBWY",
-"HYBXB",
-"HYBXC",
-"HYBXH",
-"HYBXN",
-"HYBXO",
-"HYBXP",
-"HYBXT",
-"HYBXU",
-"HYBXW",
-"HYBYA",
-"HYBYB",
-"HYBYC",
-"HYBYH",
-"HYBYO",
-"HYBYS",
-"HYBYT",
-"HYBYU",
-"HYBYW",
-"HYBYZ",
-"HYBZA",
-"HYBZB",
-"HYBZC",
-"HYBZG",
-"HYBZO",
-"HYBZP",
-"HYBZT",
-"HYBZU",
-"HYBZW",
-"HYBZX",
-"HYBZY",
-"HYBZZ",
-"HYCAA",
-"HYCAC",
-"HYCAH",
-"HYCAN",
-"HYCAO",
-"HYCAP",
-"HYCAS",
-"HYCAY",
-"HYCAZ",
-"HYCBA",
-"HYCBB",
-"HYCBC",
-"HYCBH",
-"HYCBO",
-"HYSPS",
-"HYSPT",
-"HYSPX",
-"HYSPY",
-"HYSSA",
-"HYSSC",
-"NASUU",
-"HYSSH",
-"HYSSN",
-"HYSSO",
-"HYSSP",
-"NASUW",
-"HYSST",
-"HYSSU",
-"HYSSW",
-"HYSSX",
-"HYSSZ",
-"HYSTA",
-"HYSTB",
-"HYSTC",
-"HYSTG",
-"HYSTH",
-"HYSTN",
-"HYSTP",
-"HYSTS",
-"HYSTT",
-"HYSTW",
-"HYSTX",
-"HYSTZ",
-"HYSUA",
-"HYSUC",
-"HYSUH",
-"HYSUN",
-"HYSUO",
-"HYSUP",
-"HYSUS",
-"HYSUT",
-"HYSUW",
-"HYSUY",
-"HYSUZ",
-"HYSWA",
-"HYSWC",
-"HYSWG",
-"HYSWH",
-"HYSWO",
-"HYSWP",
-"HYSWT",
-"HYSWU",
-"HYSWW",
-"NASUX",
-"HYSWZ",
-"HYSXB",
-"HYSXC",
-"HYSXH",
-"HYSXN",
-"NASUY",
-"HYSXT",
-"HYSXU",
-"HYSXW",
-"HYSXX",
-"HYSYN",
-"HYSYO",
-"HYSYS",
-"HYSYT",
-"HYPGB",
-"HYPGC",
-"HYPGH",
-"HYPGN",
-"HYPGO",
-"HYPGP",
-"HYPGS",
-"HYPGT",
-"HYPGU",
-"HYPGW",
-"HYPGX",
-"HYPGY",
-"HYPGZ",
-"HYPHA",
-"HYPHB",
-"HYPHC",
-"HYPHG",
-"HYPHH",
-"HYPHN",
-"HYPHO",
-"HYPHP",
-"HYPHS",
-"HYPHT",
-"HYPHX",
-"HYPHY",
-"HYPNA",
-"HYPNC",
-"NASUH",
-"HYPNO",
-"HYPNP",
-"HYPNT",
-"HYPNW",
-"HYYYY",
-"HYYYZ",
-"HYYZA",
-"HYYZB",
-"HYYZC",
-"HYYZG",
-"HYYZH",
-"HYYZN",
-"HYYZO",
-"HYYZW",
-"HYYZX",
-"HYYZY",
-"HYZAA",
-"HYZAB",
-"HYZAC",
-"HYZAG",
-"HYZAN",
-"HYZAO",
-"HYZAP",
-"HYZAS",
-"HYZAT",
-"HYZAU",
-"HYZAW",
-"HYZAX",
-"HYZAY",
-"HYZAZ",
-"HYZBB",
-"HYZBC",
-"HYZBG",
-"HYZBN",
-"HYZBP",
-"HYZBS",
-"HYZBX",
-"HYZBY",
-"HYZCA",
-"HYZCB",
-"HYZCC",
-"HYZCH",
-"HYZCN",
-"HYZCO",
-"HYZCP",
-"HYZCS",
-"HYZCT",
-"HYZCW",
-"HYZCX",
-"HYZCZ",
-"HYZGA",
-"HYZGC",
-"HYZGG",
-"HYZGH",
-"HYZGN",
-"HYZGO",
-"HYZGW",
-"HYZGX",
-"HYZGZ",
-"HYZHB",
-"HYZHG",
-"HYZHH",
-"HYZHN",
-"HYZHP",
-"HYZHS",
-"HYZHT",
-"NASUZ",
-"HYZHW",
-"HYZHX",
-"HYZHY"))
-
-
-rownames(counts_filt_Midwest) <- counts_filt_Midwest$GeneID
-counts_filt_Midwest <- dplyr::select(counts_filt_Midwest, -GeneID)
+# format
+rownames(counts) <- counts$GeneID
+counts <- dplyr::select(counts, -GeneID)
 
 # read in and format the colData
-
-coldata <- read.csv("data/RNA_sample_metadata_Midwest.csv")
+coldata <- read.csv("~/Dropbox/LowryLab/data/RNA_sample_metadata_lowland.csv")
 rownames(coldata) <- coldata$X
 coldata <- dplyr::select(coldata, -X)
 
+```
 
+
+```{r}
+dds
 ```
 
 
@@ -999,8 +57,8 @@ coldata <- dplyr::select(coldata, -X)
 ```{r dds}
 
 
-# making a DESeq object
-dds <- DESeqDataSetFromMatrix(countData = counts_filt_Midwest,
+# making a DESeq object - lowland
+dds <- DESeqDataSetFromMatrix(countData = counts,
                               colData = coldata,
                               design = ~ Site,
                               tidy=FALSE)
@@ -1013,9 +71,6 @@ dds <- DESeqDataSetFromMatrix(countData = counts_filt_Midwest,
 ```{r normalize}
 # variance stabilizing function to normalize
 vsd <- vst(dds, blind = FALSE)
-
-
-
 # make it a dataframe -- now going to split by habitat 
 t_counts <- as.data.frame(t(as.data.frame(assay(vsd))))
 
@@ -1040,6 +95,8 @@ TX_normalized <- filter(merge, Site == "P")
 ```
 
 
+
+
 ## read in the .fam data from the bed files and number the rows 
 
 ```{r processing}
@@ -1047,7 +104,7 @@ TX_normalized <- filter(merge, Site == "P")
 # process the fam file 
 # this part ensures that gene counts are in the same order as in the vcf 
 
-famDat <- read.csv("~/Dropbox/LowryLab/data/sample_fam_Midwest.csv", header = FALSE)
+famDat <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/sample_fam_lowland.csv", header=FALSE)
 
 colnames(famDat) <- c("SRR1", 
                      "SRR2", 
@@ -1056,7 +113,8 @@ colnames(famDat) <- c("SRR1",
                      "V5", 
                      "V6", 
                      "V7",
-                     "pop")
+                     "pop",
+                     "V8")
 
 # adding num 
 famDat$num <- row_number(famDat)
@@ -1083,6 +141,9 @@ phen_fam_merged_MI <- merge(famDat,
 ```
 
 
+
+
+
 ## re-order the merged files, take out unnecessary columns, and write to .csv
 
 ```{r ordering}
@@ -1096,47 +157,56 @@ order_MI <- phen_fam_merged_MI[order(phen_fam_merged_MI$num),]
 
 fam_MI <- dplyr::select(order_MI, 
                         -SRR1,
+                        -SRR,
                         -V4,
                         -V5,
                         -V6,
                         -subpop,
                  -plantID,
                  -V7,
+                 -V8,
                  -Site,
                  -num,
                  -pop)
 
 fam_TX <- dplyr::select(order_TX, 
                         -SRR1,
+                        -SRR,
                         -V4,
                         -V5,
                         -V6,
                         -subpop,
                  -plantID,
                  -V7,
+                 -V8,
                  -Site,
                  -num,
                  -pop)
 
 # writing the expression data as a matrix (for matrix eQTL)
-#write.csv(setNames(data.frame(t(fam_TX[,-1])), fam_TX[,1]),
-#          "data/genes_TX_lowland.csv")
+write.csv(setNames(data.frame(t(fam_TX[,-1])), fam_TX[,1]),
+          "~/Dropbox/LowryLab/data/expression/genes_TX_lowland.csv")
 
-#write.csv(setNames(data.frame(t(fam_MI[,-1])), fam_MI[,1]),
-#        "data/genes_MI_lowland.csv")
+write.csv(setNames(data.frame(t(fam_MI[,-1])), fam_MI[,1]),
+        "~/Dropbox/LowryLab/data/expression/genes_MI_lowland.csv")
 
 ```
+
+```{r}
+fam_TX
+```
+
 
 ```{r GxE_calcs}
 
 # subtracting to get at GxE 
 
 # prepping the MI dataframe
-MI_p <- dplyr::select(fam_MI, -SRR, -SRR2)
+MI_p <- dplyr::select(fam_MI, -SRR2)
 MI_mat <- as.matrix(MI_p)
 
 # prepping the TX dataframe 
-TX_p <- dplyr::select(fam_TX, -SRR, -SRR2)
+TX_p <- dplyr::select(fam_TX, -SRR2)
 TX_mat <- as.matrix(TX_p)
 
 # subtracting
@@ -1153,175 +223,6 @@ fam_GxE1 <- dplyr::select(fam_GxE, -`fam_TX$SRR2`)
 
 # writing the GxE matrix for uploading to matrix eQTL
 write.csv(setNames(data.frame(t(fam_GxE1[,-1])), fam_GxE1[,1]),
-        "data/genes_GxE_Midwest.csv")
+        "~/Dropbox/LowryLab/data/expression/genes_GxE_lowland.csv")
 
 ```
-
-```{r}
-
-# now summarizing the difference in gene expression in MI and TX 
-GxE <- setNames(data.frame(t(fam_GxE1[,-1])), fam_GxE1[,1])
-
-
-GxE$median <- apply(GxE, 1, median, na.rm=T)
-GxE$mean <- apply(GxE, 1, mean, na.rm=T)
-
-#write.csv(dplyr::select(GxE, median, mean),
-#          "GxE_summ.csv")
-
-GxE_summ <- read.csv("GxE_summ.csv")
-filter(GxE_summ, median > 0.25)
-
-ggplot(filter(GxE_summ,
-              median > 0.25),
-       aes(x=s1/1000000,
-           y = median)) +
-  facet_wrap(~chr) + 
-  geom_point()
-
-```
-
-```{r}
-
-# the next step is to calculate the median coverage of each gene and plot it, spatially, across the chromosome 
-
-# the goal is to compare gene expression in the N and K sub-genomes 
-
-# with this finding I can follow up on the lovell et al. finding that there's more heritable climate-associated SNPs in the N subgenome than the K 
-
-
-transposed_expression <- setNames(data.frame(t(fam_MI[,-1])), fam_MI[,1])
-transposed_expression$median <- apply(transposed_expression, 1, median, na.rm=T)
-transposed_expression$mean <- apply(transposed_expression, 1, mean, na.rm=T)
-
-summarize <- dplyr::select(transposed_expression, median, mean)
-
-# now to connect gene to bp position 
-
-genePos <- read.csv("data/AP13_gene_position.txt",
-                   sep="\t")
-
-#expression_and_position_TX <- merge(summarize,
-#      genePos,
-#      all.x=TRUE,
-#      ID.vars=c(geneid))
-
-summarize$geneid <- rownames(summarize)
-
-
-## adding a subgenome column 
-KTX <- filter(expression_and_position_TX, 
-       chr == "Chr01K" |
-                        chr == "Chr02K" |
-                        chr == "Chr03K" |
-                        chr == "Chr04K" |
-                        chr == "Chr05K" |
-                        chr == "Chr06K" |
-                        chr == "Chr07K" |
-                        chr == "Chr08K" |
-                        chr == "Chr09K")
-KTX$subgenome <- "K"
-
-NTX <- filter(expression_and_position_TX, 
-       chr == "Chr01N" |
-                        chr == "Chr02N" |
-                        chr == "Chr03N" |
-                        chr == "Chr04N" |
-                        chr == "Chr05N" |
-                        chr == "Chr06N" |
-                        chr == "Chr07N" |
-                        chr == "Chr08N" |
-                        chr == "Chr09N")
-NTX$subgenome <- "N"
-
-# putting together the N and K subgenomes 
-summTX <- rbind(KTX, NTX)
-
-# plotting!
-ggplot(summTX,
-       aes(x=chr,
-           y=median,
-           fill = subgenome)) +
-  theme_bw() +
-  geom_boxplot() +
-  scale_fill_viridis_d()
-
-
-write.csv(summarize, "MI_median.csv")
-
-```
-
-
-## plot PCAs of gene expression 
-
-```{r PCA}
-
-# plot PCA of gene expression variance
-plotPCA(vsd, intgroup=c("subpop", "Site"),
-             returnData=FALSE) +
-  scale_color_manual(values = c("grey",
-                                "grey",
-                                "brown",
-                                "brown1",
-                                "darkorange",
-                                "darkorange3",
-                                "dodgerblue2", 
-                                "dodgerblue4",
-                                "white",
-                                "white")) +
-  theme_bw()
-
-
-```
-
-## code graveyard 
-
-```{r old code from vetting the data }
-PCdat <- plotPCA(vsd, intgroup=c("subpop", "Site"),
-             returnData=TRUE)
-
-
-ggplot(PCdat,
-       aes(x = PC1, y = PC2, col = Site)) + 
-  geom_point() +
-  scale_color_manual(values = c("purple",
-                                "darkgreen")) +
-  theme_bw() +
-  ggtitle("Gene Expression PCA by Site")
-
-
-ggplot(filter(PCdat, subpop=="Midwest"),
-       aes(x = PC1, y = PC2,
-           label = plantID,
-           col = subpop)) + 
-  geom_point() +
-  theme_bw() +
-  ggtitle("Gene Expression PCA by Site") + 
-  geom_label()
-
-ggplot(filter(PCdat, plantID=="J036.A" |
-                                  plantID=="J396.A" |
-                                  plantID=="J525.C" |
-                                  plantID=="J526.C"),
-       aes(x=PC1,
-           y=PC2, col = subpop,
-           label=plantID)) + 
-  geom_point() +
-  geom_label() +
-  xlim(-25,50) +
-  scale_color_manual(values=c("brown",
-                              "dodgerblue")) +
-  theme_bw()
-
-
-## calc-ing euclidean distance 
-
-checkDat <- read.csv("data/DESeq_PCA.csv")
-
-ggplot(checkDat,
-       aes(x=dist)) +
-  geom_histogram() +
-  theme_bw() +
-  xlab("Euclidean distance between clones in MI/TX")
-```
-

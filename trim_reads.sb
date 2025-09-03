@@ -1,0 +1,40 @@
+#!/bin/bash --login
+#SBATCH --job-name=trim_herbarium_reads
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --time=4:00:00
+#SBATCH --mail-type=ALL
+#SBATCH --mem=48GB
+#SBATCH --mail-user=bergcole@msu.edu
+#SBATCH --output=%x-%j.SLURMout
+
+echo "JobID: $SLURM_JOB_ID"
+echo "Running on node: `hostname`"
+
+# first purging modules, then loading what you need 
+# load in Trimmomatic
+module purge 
+module load Trimmomatic/0.39-Java-11
+
+# call to the fastq array
+sampleID="fastq_prefix"
+
+# naming variables for the directories
+fastqDir="~/path/to/fastqs"
+
+# set the reference genome
+genome="~/path/to/referenceGenome.fa"
+
+
+# trim the adapter reads with Trimmomatic 
+# this takes paired end samples in the vcfDir and outputs paired fastqs
+
+java -jar $EBROOTTRIMMOMATIC/trimmomatic-0.39.jar \
+    PE \
+    -threads 12 \
+    -phred33 \
+    -trimlog ${outDir}/trimlog.txt \
+    ${fastqDir}/${sampleID}_1.fastq  ${fastqDir}/${sampleID}_2.fastq \
+    ${fastqDir}/${sampleID}.1.paired.fastq ${fastqDir}/${sampleID}.1.unpaired.fastq  \
+    ${fastqDir}/${sampleID}.2.paired.fastq ${fastqDir}/${sampleID}.2.unpaired.fastq  \
+    ILLUMINACLIP:$EBROOTTRIMMOMATIC/adapters/TruSeq3-PE.fa LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36  # you may need to adjust this depending on how they were sequenced

@@ -57,10 +57,10 @@ allsnps$LoadFile(chrom1K)
 ```{r snps_genes}
 
 # gene name, chromosome, start, stop
-gene_location_file_name = "data/AP13_gene_position.txt"
+gene_location_file_name = "~/Dropbox/LowryLab/data/AP13/AP13_gene_position.txt"
 
 # snp name, chromosome, position (bp)
-snps_location_file_name = "data/positions.txt"
+snps_location_file_name = "~/Dropbox/LowryLab/data/positions.txt"
 
 # process smps
 snpspos = read.table(snps_location_file_name, 
