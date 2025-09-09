@@ -1,0 +1,309 @@
+---
+title: "eQTL_setup"
+author: "Colette Berg"
+date: "2025-07-23"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+library(MatrixEQTL)
+library(dplyr)
+library(ggplot2)
+library(VariantAnnotation)
+library(vcfR)
+library(adegenet)
+library(eQTLpipeline)
+base.dir = find.package("MatrixEQTL")
+
+# set the working directory
+setwd("~/Dropbox/LowryLab")
+
+
+```
+
+
+## setting up matrix eQTL settings
+
+```{r matrix eQTL settings, echo=FALSE}
+
+# setting up matrix eQTL settings
+useModel = modelLINEAR; # modelANOVA or modelLINEAR or modelLINEAR_CROSS
+output_file_name = tempfile();
+pvOutputThreshold = 1e-12;
+errorCovariance = numeric();
+
+```
+
+## read in gene expression data
+
+```{r expression, message = FALSE}
+
+# reading in gene expression data
+
+# MI_midwest
+geneMI_Midwest = SlicedData$new()
+geneMI_Midwest$fileDelimiter = ",";    
+geneMI_Midwest$LoadFile("~/Dropbox/LowryLab/data/expression/genes_MI_Midwest.csv")
+
+# TX_midwest 
+geneTX_Midwest = SlicedData$new()
+geneTX_Midwest$fileDelimiter = ",";    
+geneTX_Midwest$LoadFile("~/Dropbox/LowryLab/data/expression/genes_TX_Midwest.csv")
+
+# GxE_midwest
+geneGxE_Midwest = SlicedData$new()
+geneGxE_Midwest$fileDelimiter = ",";    
+geneGxE_Midwest$LoadFile("~/Dropbox/LowryLab/data/expression/genes_GxE_Midwest_filt.csv")
+
+# MI_lowland
+geneMI_lowland = SlicedData$new()
+geneMI_lowland$fileDelimiter = ",";    
+geneMI_lowland$LoadFile("~/Dropbox/LowryLab/data/expression/genes_MI_lowland.csv")
+
+# TX_lowland 
+geneTX_lowland = SlicedData$new()
+geneTX_lowland$fileDelimiter = ",";    
+geneTX_lowland$LoadFile("~/Dropbox/LowryLab/data/expression/genes_TX_lowland.csv")
+
+# GxE_lowland
+geneGxE_lowland = SlicedData$new()
+geneGxE_lowland$fileDelimiter = ",";    
+geneGxE_lowland$LoadFile("~/Dropbox/LowryLab/data/expression/genes_GxE_lowland_filt.csv")
+
+```
+
+
+```{r covariates}
+
+## Load covariates file. in this case it's the first 5 PC's (plink)
+
+cvrt_Midwest = SlicedData$new();
+cvrt_Midwest$fileDelimiter = ",";      # the TAB character
+cvrt_Midwest$fileOmitCharacters = "NA"; # denote missing values;
+cvrt_Midwest$fileSkipRows = 1;          # one row of column labels
+cvrt_Midwest$fileSkipColumns = 1;       # one column of row labels
+cvrt_Midwest$LoadFile("~/Dropbox/LowryLab/data/cov_allChroms_Midwest1.csv");
+
+## Load covariates file. in this case it's the first 5 PC's (plink)
+
+cvrt_lowland = SlicedData$new();
+cvrt_lowland$fileDelimiter = ",";      # the TAB character
+cvrt_lowland$fileOmitCharacters = "NA"; # denote missing values;
+cvrt_lowland$fileSkipRows = 1;          # one row of column labels
+cvrt_lowland$fileSkipColumns = 1;       # one column of row labels
+cvrt_lowland$LoadFile("~/Dropbox/LowryLab/data/cov_allChroms_lowland.csv");
+
+
+```
+
+```{r snps_genes}
+
+# gene name, chromosome, start, stop
+gene_location_file_name = "data/AP13/AP13_gene_position.txt"
+
+# snp name, chromosome, position (bp)
+snps_location_file_name = "data/positions.txt"
+
+# process smps
+snpspos = read.table(snps_location_file_name, 
+                     header = FALSE, 
+                     stringsAsFactors = FALSE,
+                     sep="\t")
+
+# process gene names 
+genepos = read.table(gene_location_file_name, 
+                     header = TRUE, 
+                     stringsAsFactors = FALSE,
+                     sep="\t")
+
+```
+
+
+```{r load genotypes}
+
+
+# reading in the data first 
+
+# 1K
+chrom1K = "~/Dropbox/LowryLab/data/genotypes/Chr01K_lowland_genotype_matrix.txt"
+
+# loading genotype data 
+allsnps_1K = SlicedData$new();
+allsnps_1K$fileDelimiter = "\t";       # denote missing values;
+allsnps_1K$fileSkipColumns = 1;          # one column of row labels
+allsnps_1K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+allsnps_1K$LoadFile(chrom1K)
+
+# 1N
+chrom1N = "~/Dropbox/LowryLab/data/genotypes/Chr01N_lowland_genotype_matrix.txt"
+
+# loading genotype data 
+allsnps_1N = SlicedData$new();
+allsnps_1N$fileDelimiter = "\t";       # denote missing values;
+allsnps_1N$fileSkipColumns = 1;          # one column of row labels
+allsnps_1N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+allsnps_1N$LoadFile(chrom1N)
+
+# 2K
+chrom2K = "~/Dropbox/LowryLab/data/genotypes/Chr02K_lowland_genotype_matrix.txt"
+
+# loading genotype data 
+allsnps_2K = SlicedData$new();
+allsnps_2K$fileDelimiter = "\t";       # denote missing values;
+allsnps_2K$fileSkipColumns = 1;          # one column of row labels
+allsnps_2K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+allsnps_2K$LoadFile(chrom2K)
+
+# 2N
+chrom2N = "~/Dropbox/LowryLab/data/genotypes/Chr02N_lowland_genotype_matrix.txt"
+
+# loading genotype data 
+allsnps_2N = SlicedData$new();
+allsnps_2N$fileDelimiter = "\t";       # denote missing values;
+allsnps_2N$fileSkipColumns = 1;          # one column of row labels
+allsnps_2N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+allsnps_2N$LoadFile(chrom2N)
+
+# 3K
+chrom3K = "~/Dropbox/LowryLab/data/genotypes/Chr03K_lowland_genotype_matrix.txt"
+
+# loading genotype data 
+allsnps_3K = SlicedData$new();
+allsnps_3K$fileDelimiter = "\t";       # denote missing values;
+allsnps_3K$fileSkipColumns = 1;          # one column of row labels
+allsnps_3K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+allsnps_3K$LoadFile(chrom3K)
+
+# 3N
+chrom3N = "~/Dropbox/LowryLab/data/genotypes/Chr03N_lowland_genotype_matrix.txt"
+
+# loading genotype data 
+allsnps_3N = SlicedData$new();
+allsnps_3N$fileDelimiter = "\t";       # denote missing values;
+allsnps_3N$fileSkipColumns = 1;          # one column of row labels
+allsnps_3N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+allsnps_3N$LoadFile(chrom3N)
+
+# 4K
+chrom4K = "~/Dropbox/LowryLab/data/genotypes/Chr04K_lowland_genotype_matrix.txt"
+
+# loading genotype data 
+allsnps_4K = SlicedData$new();
+allsnps_4K$fileDelimiter = "\t";       # denote missing values;
+allsnps_4K$fileSkipColumns = 1;          # one column of row labels
+allsnps_4K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+allsnps_4K$LoadFile(chrom4K)
+
+# 4N
+chrom4N = "~/Dropbox/LowryLab/data/genotypes/Chr04N_lowland_genotype_matrix.txt"
+
+# loading genotype data 
+allsnps_4N = SlicedData$new();
+allsnps_4N$fileDelimiter = "\t";       # denote missing values;
+allsnps_4N$fileSkipColumns = 1;          # one column of row labels
+allsnps_4N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+allsnps_4N$LoadFile(chrom4N)
+
+# 5K
+chrom5K = "~/Dropbox/LowryLab/data/genotypes/Chr05K_lowland_genotype_matrix.txt"
+
+# loading genotype data 
+allsnps_5K = SlicedData$new();
+allsnps_5K$fileDelimiter = "\t";       # denote missing values;
+allsnps_5K$fileSkipColumns = 1;          # one column of row labels
+allsnps_5K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+allsnps_5K$LoadFile(chrom5K)
+
+# 5N
+chrom5N = "~/Dropbox/LowryLab/data/genotypes/Chr05N_lowland_genotype_matrix.txt"
+
+# loading genotype data 
+allsnps_5N = SlicedData$new();
+allsnps_5N$fileDelimiter = "\t";       # denote missing values;
+allsnps_5N$fileSkipColumns = 1;          # one column of row labels
+allsnps_5N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+allsnps_5N$LoadFile(chrom5N)
+
+# 6K
+chrom6K = "~/Dropbox/LowryLab/data/genotypes/Chr06K_lowland_genotype_matrix.txt"
+
+# loading genotype data 
+allsnps_6K = SlicedData$new();
+allsnps_6K$fileDelimiter = "\t";       # denote missing values;
+allsnps_6K$fileSkipColumns = 1;          # one column of row labels
+allsnps_6K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+allsnps_6K$LoadFile(chrom6K)
+
+# 6N
+chrom6N = "~/Dropbox/LowryLab/data/genotypes/Chr06N_lowland_genotype_matrix.txt"
+
+# loading genotype data 
+allsnps_6N = SlicedData$new();
+allsnps_6N$fileDelimiter = "\t";       # denote missing values;
+allsnps_6N$fileSkipColumns = 1;          # one column of row labels
+allsnps_6N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+allsnps_6N$LoadFile(chrom6N)
+
+# 7K
+chrom7K = "~/Dropbox/LowryLab/data/genotypes/Chr07K_lowland_genotype_matrix.txt"
+
+# loading genotype data 
+allsnps_7K = SlicedData$new();
+allsnps_7K$fileDelimiter = "\t";       # denote missing values;
+allsnps_7K$fileSkipColumns = 1;          # one column of row labels
+allsnps_7K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+allsnps_7K$LoadFile(chrom7K)
+
+# 7
+chrom7N = "~/Dropbox/LowryLab/data/genotypes/Chr07N_lowland_genotype_matrix.txt"
+
+# loading genotype data 
+allsnps_7N = SlicedData$new();
+allsnps_7N$fileDelimiter = "\t";       # denote missing values;
+allsnps_7N$fileSkipColumns = 1;          # one column of row labels
+allsnps_7N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+allsnps_7N$LoadFile(chrom7N)
+
+# 8K
+chrom8K = "~/Dropbox/LowryLab/data/genotypes/Chr08K_lowland_genotype_matrix.txt"
+
+# loading genotype data 
+allsnps_8K = SlicedData$new();
+allsnps_8K$fileDelimiter = "\t";       # denote missing values;
+allsnps_8K$fileSkipColumns = 1;          # one column of row labels
+allsnps_8K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+allsnps_8K$LoadFile(chrom8K)
+
+# 8N
+chrom8N = "~/Dropbox/LowryLab/data/genotypes/Chr08N_lowland_genotype_matrix.txt"
+
+# loading genotype data 
+allsnps_8N = SlicedData$new();
+allsnps_8N$fileDelimiter = "\t";       # denote missing values;
+allsnps_8N$fileSkipColumns = 1;          # one column of row labels
+allsnps_8N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+allsnps_8N$LoadFile(chrom8N)
+
+# 9K
+chrom9K = "~/Dropbox/LowryLab/data/genotypes/Chr09K_lowland_genotype_matrix.txt"
+
+# loading genotype data 
+allsnps_9K = SlicedData$new();
+allsnps_9K$fileDelimiter = "\t";       # denote missing values;
+allsnps_9K$fileSkipColumns = 1;          # one column of row labels
+allsnps_9K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+allsnps_9K$LoadFile(chrom9K)
+
+# 9N
+chrom9N = "~/Dropbox/LowryLab/data/genotypes/Chr09N_lowland_genotype_matrix.txt"
+
+# loading genotype data 
+allsnps_9N = SlicedData$new();
+allsnps_9N$fileDelimiter = "\t";       # denote missing values;
+allsnps_9N$fileSkipColumns = 1;          # one column of row labels
+allsnps_9N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+allsnps_9N$LoadFile(chrom9N)
+```

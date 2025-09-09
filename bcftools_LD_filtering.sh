@@ -1,0 +1,39 @@
+bcftools view -S lowland.txt  -o Chr01K_lowland.vcf  Chr01K_LD.vcf
+bcftools view -S lowland.txt  -o Chr01N_lowland.vcf  Chr01N_LD.vcf
+bcftools view -S lowland.txt  -o Chr02K_lowland.vcf  Chr02K_LD.vcf
+bcftools view -S lowland.txt  -o Chr02N_lowland.vcf  Chr02N_LD.vcf
+bcftools view -S lowland.txt  -o Chr03K_lowland.vcf  Chr03K_LD.vcf
+bcftools view -S lowland.txt  -o Chr03N_lowland.vcf  Chr03N_LD.vcf
+bcftools view -S lowland.txt  -o Chr04K_lowland.vcf  Chr04K_LD.vcf
+bcftools view -S lowland.txt  -o Chr04N_lowland.vcf  Chr04N_LD.vcf
+bcftools view -S lowland.txt  -o Chr05K_lowland.vcf  Chr05K_LD.vcf
+bcftools view -S lowland.txt  -o Chr05N_lowland.vcf  Chr05N_LD.vcf
+bcftools view -S lowland.txt  -o Chr06K_lowland.vcf  Chr06K_LD.vcf
+bcftools view -S lowland.txt  -o Chr06N_lowland.vcf  Chr06N_LD.vcf
+bcftools view -S lowland.txt  -o Chr07K_lowland.vcf  Chr07K_LD.vcf
+bcftools view -S lowland.txt  -o Chr07N_lowland.vcf  Chr07N_LD.vcf
+bcftools view -S lowland.txt  -o Chr08K_lowland.vcf  Chr08K_LD.vcf
+bcftools view -S lowland.txt  -o Chr08N_lowland.vcf  Chr08N_LD.vcf
+bcftools view -S lowland.txt  -o Chr09K_lowland.vcf  Chr09K_LD.vcf
+bcftools view -S lowland.txt  -o Chr09N_lowland.vcf  Chr09N_LD.vcf
+
+
+bcftools view -S Midwest.txt  -o Chr01K_Midwest.vcf  Chr01K_LD.vcf
+bcftools view -S Midwest.txt  -o Chr01N_Midwest.vcf  Chr01N_LD.vcf
+bcftools view -S Midwest.txt  -o Chr02K_Midwest.vcf  Chr02K_LD.vcf
+bcftools view -S Midwest.txt  -o Chr02N_Midwest.vcf  Chr02N_LD.vcf
+bcftools view -S Midwest.txt  -o Chr03K_Midwest.vcf  Chr03K_LD.vcf
+bcftools view -S Midwest.txt  -o Chr03N_Midwest.vcf  Chr03N_LD.vcf
+bcftools view -S Midwest.txt  -o Chr04K_Midwest.vcf  Chr04K_LD.vcf
+bcftools view -S Midwest.txt  -o Chr04N_Midwest.vcf  Chr04N_LD.vcf
+bcftools view -S Midwest.txt  -o Chr05K_Midwest.vcf  Chr05K_LD.vcf
+bcftools view -S Midwest.txt  -o Chr05N_Midwest.vcf  Chr05N_LD.vcf
+bcftools view -S Midwest.txt  -o Chr06K_Midwest.vcf  Chr06K_LD.vcf
+bcftools view -S Midwest.txt  -o Chr06N_Midwest.vcf  Chr06N_LD.vcf
+bcftools view -S Midwest.txt  -o Chr07K_Midwest.vcf  Chr07K_LD.vcf
+bcftools view -S Midwest.txt  -o Chr07N_Midwest.vcf  Chr07N_LD.vcf
+bcftools view -S Midwest.txt  -o Chr08K_Midwest.vcf  Chr08K_LD.vcf
+bcftools view -S Midwest.txt  -o Chr08N_Midwest.vcf  Chr08N_LD.vcf
+bcftools view -S Midwest.txt  -o Chr09K_Midwest.vcf  Chr09K_LD.vcf
+bcftools view -S Midwest.txt  -o Chr09N_Midwest.vcf  Chr09N_LD.vcf
+
