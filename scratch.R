@@ -1,37 +1,47 @@
 library(viridis)
+library(gridExtra)
+library(dplyr)
 
-ggplot(dplyr::filter(GxE_eQTLs,
-              chr == "Chr01K" |
-                chr == "Chr01N" |
-                chr == "Chr02K" |
-                chr == "Chr02N" |
-                chr == "Chr03K" |
-                chr == "Chr03N" |
-                chr == "Chr04K" |
-                chr == "Chr04N" |
-                chr == "Chr05K" |
-                chr == "Chr05N" |
-                chr == "Chr06K" |
-                chr == "Chr06N" |
-                chr == "Chr07K" |
-                chr == "Chr07N" |
-                chr == "Chr08K" |
-                chr == "Chr08N" |
-                chr == "Chr09K" |
-                chr == "Chr09N"),
+
+datLab$Chrom <- factor(datLab$Chrom,
+                          levels = c("Chr09N",
+                                     "Chr09K",
+                                     "Chr08N",
+                                     "Chr08K",
+                                     "Chr07N",
+                                     "Chr07K",
+                                     "Chr06N",
+                                     "Chr06K",
+                                     "Chr05N",
+                                     "Chr05K",
+                                     "Chr04N",
+                                     "Chr04K",
+                                     "Chr03N",
+                                     "Chr03K",
+                                     "Chr02N",
+                                     "Chr02K",
+                                     "Chr01N",
+                                     "Chr01K"))
+
+ggplot(dplyr::filter(datLab,
+                     Chrom != "scaffold_174",
+                     Chrom !="scaffold_19",
+                     Chrom != "scaffold_24"),
        aes(x = as.numeric(Pos)/1000000,
            y = as.numeric(s1)/1000000,
            color=-log10(p.value),
            alpha = -log10(p.value))) +
-  facet_grid(Chrom ~ chr) +
-  geom_point() +
   theme_bw() +
-  scale_color_viridis() +
-  ylab("Gene Position (Mb)") +
-  xlab("Genome Position (Mb)") +
+  facet_grid(chr~Chrom,
+             space = "free",
+             scales = "free") +
   theme(strip.background = element_rect(fill="white"),
         panel.spacing = unit(0, "lines"),
         legend.position = "none") +
+  geom_point(size = 0.25) +
+  scale_color_viridis() +
+  ylab("Genome Position (Mb)") +
+  xlab("Gene Position (Mb)")  +
   ggtitle("GxE eQTLs, Midwest Only")
 
 

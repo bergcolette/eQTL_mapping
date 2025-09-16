@@ -15,6 +15,7 @@ library(ggplot2)
 library(reshape2)
 library(gridExtra)
 library(tidyr)
+library(data.table)
 
 ```
 
@@ -29,11 +30,11 @@ genePos <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/AP13/AP13_gene_pos
 genePos$gene <- genePos$geneid
 
 # read in the SNP position for later
-snpsPos <- read.csv("data/positions.txt",
-                    sep="\t",
-                    header=FALSE)
+#snpsPos <- read.csv("data/positions.txt",
+##                    sep="\t",
+     #               header=FALSE)
 
-snpsPos$SNP <- snpsPos$V1
+#snpsPos$SNP <- snpsPos$V1
 ```
 
 
@@ -42,80 +43,46 @@ snpsPos$SNP <- snpsPos$V1
 ```{r data }
 
 # read in the trans eQTL output 
-Chr01K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_lowland_1K.txt", sep = "\t")
-Chr01N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_lowland_1N.txt", sep = "\t")
-Chr02K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_lowland_2K.txt", sep = "\t")
-Chr02N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_lowland_2N.txt", sep = "\t")
-Chr03K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_lowland_3K.txt", sep = "\t")
-Chr03N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_lowland_3N.txt", sep = "\t")
-Chr04K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_lowland_4K.txt", sep = "\t")
-Chr04N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_lowland_4N.txt", sep = "\t")
-Chr05K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_lowland_5K.txt", sep = "\t")
-Chr05N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_lowland_5N.txt", sep = "\t")
-Chr06K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_lowland_6K.txt", sep = "\t")
-Chr06N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_lowland_6N.txt", sep = "\t")
-Chr07K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_lowland_7K.txt", sep = "\t")
-Chr07N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_lowland_7N.txt", sep = "\t")
-Chr08K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_lowland_8K.txt", sep = "\t")
-Chr08N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_lowland_8N.txt", sep = "\t")
-Chr09K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_lowland_9K.txt", sep = "\t")
-Chr09N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_lowland_9N.txt", sep = "\t")
+Chr01K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_1K.txt", sep = "\t")
+Chr01N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_1N.txt", sep = "\t")
+Chr02K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_2K.txt", sep = "\t")
+Chr02N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_2N.txt", sep = "\t")
+Chr03K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_3K.txt", sep = "\t")
+Chr03N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_3N.txt", sep = "\t")
+Chr04K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_4K.txt", sep = "\t")
+Chr04N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_4N.txt", sep = "\t")
+Chr05K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_5K.txt", sep = "\t")
+Chr05N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_5N.txt", sep = "\t")
+Chr06K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_6K.txt", sep = "\t")
+Chr06N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_6N.txt", sep = "\t")
+Chr07K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_7K.txt", sep = "\t")
+Chr07N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_7N.txt", sep = "\t")
+Chr08K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_8K.txt", sep = "\t")
+Chr08N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_8N.txt", sep = "\t")
+Chr09K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_9K.txt", sep = "\t")
+Chr09N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_9N.txt", sep = "\t")
 
 
 # read in the cis eQTL output
-Chr01K_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_lowland_1K_cis.txt", sep = "\t")
-Chr01N_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_lowland_1N_cis.txt", sep = "\t")
-Chr02K_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_lowland_2K_cis.txt", sep = "\t")
-Chr02N_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_lowland_2N_cis.txt", sep = "\t")
-Chr03K_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_lowland_3K_cis.txt", sep = "\t")
-Chr03N_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_lowland_3N_cis.txt", sep = "\t")
-Chr04K_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_lowland_4K_cis.txt", sep = "\t")
-Chr04N_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_lowland_4N_cis.txt", sep = "\t")
-Chr05K_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_lowland_5K_cis.txt", sep = "\t")
-Chr05N_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_lowland_5N_cis.txt", sep = "\t")
-Chr06K_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_lowland_6K_cis.txt", sep = "\t")
-Chr06N_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_lowland_6N_cis.txt", sep = "\t")
-Chr07K_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_lowland_7K_cis.txt", sep = "\t")
-Chr07N_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_lowland_7N_cis.txt", sep = "\t")
-Chr08K_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_lowland_8K_cis.txt", sep = "\t")
-Chr08N_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_lowland_8N_cis.txt", sep = "\t")
-Chr09K_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_lowland_9K_cis.txt", sep = "\t")
-Chr09N_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_lowland_9N_cis.txt", sep = "\t")
+Chr01K_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_1K_cis.txt", sep = "\t")
+Chr01N_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_1N_cis.txt", sep = "\t")
+Chr02K_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_2K_cis.txt", sep = "\t")
+Chr02N_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_2N_cis.txt", sep = "\t")
+Chr03K_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_3K_cis.txt", sep = "\t")
+Chr03N_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_3N_cis.txt", sep = "\t")
+Chr04K_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_4K_cis.txt", sep = "\t")
+Chr04N_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_4N_cis.txt", sep = "\t")
+Chr05K_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_5K_cis.txt", sep = "\t")
+Chr05N_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_5N_cis.txt", sep = "\t")
+Chr06K_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_6K_cis.txt", sep = "\t")
+Chr06N_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_6N_cis.txt", sep = "\t")
+Chr07K_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_7K_cis.txt", sep = "\t")
+Chr07N_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_7N_cis.txt", sep = "\t")
+Chr08K_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_8K_cis.txt", sep = "\t")
+Chr08N_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_8N_cis.txt", sep = "\t")
+Chr09K_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_9K_cis.txt", sep = "\t")
+Chr09N_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_9N_cis.txt", sep = "\t")
 
-
-```
-
-
-```{r}
-allCis
-
-```
-
-
-```{r cis processing, echo=FALSE}
-
-
-
-
-# adding a chrom column 
-Chr01K_cis$chrom <- "1K"
-Chr01N_cis$chrom <- "1N"
-Chr02K_cis$chrom <- "2K"
-Chr02N_cis$chrom <- "2N"
-Chr03K_cis$chrom <- "3K"
-Chr03N_cis$chrom <- "3N"
-Chr04K_cis$chrom <- "4K"
-Chr04N_cis$chrom <- "4N" 
-Chr05K_cis$chrom <- "5K"
-Chr05N_cis$chrom <- "5N" 
-Chr06K_cis$chrom <- "6K" 
-Chr06N_cis$chrom <- "6N"
-Chr07K_cis$chrom <- "7K" 
-Chr07N_cis$chrom <- "7N" 
-Chr08K_cis$chrom <- "8K" 
-Chr08N_cis$chrom <- "8N" 
-Chr09K_cis$chrom <- "9K"
-Chr09N_cis$chrom <- "9N"
 
 # adding all the cis-eQTLs into a list 
 allCis <- rbind(Chr01K_cis,
@@ -139,32 +106,8 @@ allCis <- rbind(Chr01K_cis,
 
 allCis$type <- "cis"
 
+cis_labeled <- merge(allCis, genePos, by="gene")
 
-```
-
-
-
-```{r trans processing}
-
-# adding a chrom column 
-Chr01K_trans$chrom <- "1K"
-Chr01N_trans$chrom <- "1N"
-Chr02K_trans$chrom <- "2K"
-Chr02N_trans$chrom <- "2N"
-Chr03K_trans$chrom <- "3K"
-Chr03N_trans$chrom <- "3N"
-Chr04K_trans$chrom <- "4K"
-Chr04N_trans$chrom <- "4N" 
-Chr05K_trans$chrom <- "5K"
-Chr05N_trans$chrom <- "5N" 
-Chr06K_trans$chrom <- "6K" 
-Chr06N_trans$chrom <- "6N"
-Chr07K_trans$chrom <- "7K" 
-Chr07N_trans$chrom <- "7N" 
-Chr08K_trans$chrom <- "8K" 
-Chr08N_trans$chrom <- "8N" 
-Chr09K_trans$chrom <- "9K"
-Chr09N_trans$chrom <- "9N"
 
 # adding gene position to the trans files 
 Chr01K_trans_labeled <- merge(Chr01K_trans, genePos, id.vars = c("gene"))
@@ -190,44 +133,212 @@ Chr09N_trans_labeled <- merge(Chr09N_trans, genePos, id.vars = c("gene"))
 
 
 
-allTrans <- rbind(Chr01K_trans,
-                  Chr01N_trans,
-                  Chr02K_trans,
-                  Chr02N_trans,
-                  Chr03K_trans,
-                  Chr03N_trans,
-                  Chr04K_trans,
-                  Chr04N_trans,
-                  Chr05K_trans,
-                  Chr05N_trans,
-                  Chr06K_trans,
-                  Chr06N_trans,
-                  Chr07K_trans,
-                  Chr07N_trans,
-                  Chr08K_trans,
-                  Chr08N_trans,
-                  Chr09K_trans,
-                  Chr09N_trans)
-
-allTrans$type <- "trans"
-
-all_eQTLs <- rbind(allCis, allTrans)
-
-```
+alltrans_labeled <- rbind(Chr01K_trans_labeled,
+                  Chr01N_trans_labeled,
+                  Chr02K_trans_labeled,
+                  Chr02N_trans_labeled,
+                  Chr03K_trans_labeled,
+                  Chr03N_trans_labeled,
+                  Chr04K_trans_labeled,
+                  Chr04N_trans_labeled,
+                  Chr05K_trans_labeled,
+                  Chr05N_trans_labeled,
+                  Chr06K_trans_labeled,
+                  Chr06N_trans_labeled,
+                  Chr07K_trans_labeled,
+                  Chr07N_trans_labeled,
+                  Chr08K_trans_labeled,
+                  Chr08N_trans_labeled,
+                  Chr09K_trans_labeled,
+                  Chr09N_trans_labeled)
 
 
+alltrans_labeled$type <- "trans"
 
-```{r}
+all_eQTLs <- rbind(cis_labeled, alltrans_labeled)
+
 
 datLab <- all_eQTLs %>% 
   separate(SNP, into = c("Chrom", "Pos"), sep = "_", remove = FALSE)
 
 
-MI_eQTLs <- merge(datLab, genePos, 
-      id.vars = c("gene"))
+MI_Mid <- datLab %>%
+          dplyr::count(Chrom, type)
+
+subK <- filter(MI_Mid, Chrom == "Chr01K" |
+         Chrom == "Chr02K" |
+         Chrom == "Chr03K" |
+         Chrom == "Chr04K" |
+         Chrom == "Chr05K" |
+         Chrom == "Chr06K" |
+         Chrom == "Chr07K" |
+         Chrom == "Chr08K" |
+         Chrom == "Chr09K")
+
+subK$sub <- "K"
+
+subN <- filter(MI_Mid, Chrom == "Chr01N" |
+         Chrom == "Chr02N" |
+         Chrom == "Chr03N" |
+         Chrom == "Chr04N" |
+         Chrom == "Chr05N" |
+         Chrom == "Chr06N" |
+         Chrom == "Chr07N" |
+         Chrom == "Chr08N" |
+         Chrom == "Chr09N")
+
+subN$sub <- "N"
+
+all<-rbind(subK,subN)
+
+
+ggplot(filter(all,
+              type=="trans"),
+       aes(x=Chrom,
+           y=n,
+           fill=sub)) +
+  geom_bar(stat="identity") +
+  theme_bw() +
+  scale_fill_brewer(palette = "Paired") +
+  theme(axis.text.x=element_text(angle=90)) 
+
+```
+
+```{r}
+all %>% count(Chrom, type)
+
+count(all$Chrom)
+
+```
+
+
+
+
+```{r}
+
 
 
 ```
+
+
+```{r}
+transChrom <- dplyr::filter(datLab, chr != Chrom)
+
+chrom_1K_1N <- filter(transChrom,
+       Chrom == "Chr01K",
+       chr == "Chr01N")
+
+chrom_1N_1K <- filter(transChrom,
+       Chrom == "Chr01N",
+       chr == "Chr01K")
+
+chrom_2K_2N <- filter(transChrom,
+       Chrom == "Chr02K",
+       chr == "Chr02N")
+
+chrom_2N_2K <- filter(transChrom,
+       Chrom == "Chr02N",
+       chr == "Chr02K")
+
+chrom_3K_3N <- filter(transChrom,
+       Chrom == "Chr03K",
+       chr == "Chr03N")
+
+chrom_3N_3K <- filter(transChrom,
+       Chrom == "Chr03N",
+       chr == "Chr03K")
+
+chrom_4K_4N <- filter(transChrom,
+       Chrom == "Chr04K",
+       chr == "Chr04N")
+
+chrom_4N_4K <- filter(transChrom,
+       Chrom == "Chr04N",
+       chr == "Chr04K")
+
+chrom_5K_5N <- filter(transChrom,
+       Chrom == "Chr05K",
+       chr == "Chr05N")
+
+chrom_5N_5K <- filter(transChrom,
+       Chrom == "Chr05N",
+       chr == "Chr05K")
+
+chrom_6K_6N <- filter(transChrom,
+       Chrom == "Chr06K",
+       chr == "Chr06N")
+
+chrom_6N_6K <- filter(transChrom,
+       Chrom == "Chr06N",
+       chr == "Chr06K")
+
+chrom_7K_7N <- filter(transChrom,
+       Chrom == "Chr07K",
+       chr == "Chr07N")
+
+chrom_7N_7K <- filter(transChrom,
+       Chrom == "Chr07N",
+       chr == "Chr07K")
+
+chrom_8K_8N <- filter(transChrom,
+       Chrom == "Chr08K",
+       chr == "Chr08N")
+
+chrom_8N_8K <- filter(transChrom,
+       Chrom == "Chr08N",
+       chr == "Chr08K")
+
+chrom_9K_9N <- filter(transChrom,
+       Chrom == "Chr09K",
+       chr == "Chr09N")
+
+chrom_9N_9K <- filter(transChrom,
+       Chrom == "Chr09N",
+       chr == "Chr09K")
+
+chrom_1K_1N <- mutate(chrom_1K_1N, diff = abs(as.numeric(Pos) - s1))
+chrom_1N_1K <- mutate(chrom_1N_1K, diff = abs(as.numeric(Pos) - s1))
+chrom_2K_2N <- mutate(chrom_2K_2N, diff = abs(as.numeric(Pos) - s1))
+chrom_2N_2K <- mutate(chrom_2N_2K, diff = abs(as.numeric(Pos) - s1))
+chrom_3K_3N <- mutate(chrom_3K_3N, diff = abs(as.numeric(Pos) - s1))
+chrom_3N_3K <- mutate(chrom_3N_3K, diff = abs(as.numeric(Pos) - s1))
+chrom_4K_4N <- mutate(chrom_4K_4N, diff = abs(as.numeric(Pos) - s1))
+chrom_4N_4K <- mutate(chrom_4N_4K, diff = abs(as.numeric(Pos) - s1))
+chrom_5K_5N <- mutate(chrom_5K_5N, diff = abs(as.numeric(Pos) - s1))
+chrom_5N_5K <- mutate(chrom_5N_5K, diff = abs(as.numeric(Pos) - s1))
+chrom_6K_6N <- mutate(chrom_6K_6N, diff = abs(as.numeric(Pos) - s1))
+chrom_6N_6K <- mutate(chrom_6N_6K, diff = abs(as.numeric(Pos) - s1))
+chrom_7K_7N <- mutate(chrom_7K_7N, diff = abs(as.numeric(Pos) - s1))
+chrom_7N_7K <- mutate(chrom_7N_7K, diff = abs(as.numeric(Pos) - s1))
+chrom_8K_8N <- mutate(chrom_8K_8N, diff = abs(as.numeric(Pos) - s1))
+chrom_8N_8K <- mutate(chrom_8N_8K, diff = abs(as.numeric(Pos) - s1))
+chrom_9K_9N <- mutate(chrom_9K_9N, diff = abs(as.numeric(Pos) - s1))
+chrom_9N_9K <- mutate(chrom_9N_9K, diff = abs(as.numeric(Pos) - s1))
+
+all <- rbind(chrom_1K_1N,
+      chrom_1N_1K,
+      chrom_2K_2N,
+      chrom_2N_2K,
+      chrom_3K_3N,
+      chrom_3N_3K,
+      chrom_4K_4N,
+      chrom_4N_4K,
+      chrom_5K_5N,
+      chrom_5N_5K,
+      chrom_6K_6N,
+      chrom_6N_6K,
+      chrom_7K_7N,
+      chrom_7N_7K,
+      chrom_8K_8N,
+      chrom_8N_8K,
+      chrom_9K_9N,
+      chrom_9N_9K)
+
+length(unique(all$gene))
+
+write.csv(all, "~/Dropbox/LowryLab/data/shadowEQTLs_TX_lowland.csv")
+```
+
 
 
 

@@ -1,0 +1,270 @@
+---
+title: "gene_regulation"
+author: "Colette Berg"
+date: "2025-09-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r dataLoad}
+# read in the trans eQTL output 
+Chr01K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_1K.txt", sep = "\t")
+Chr01N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_1N.txt", sep = "\t")
+Chr02K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_2K.txt", sep = "\t")
+Chr02N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_2N.txt", sep = "\t")
+Chr03K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_3K.txt", sep = "\t")
+Chr03N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_3N.txt", sep = "\t")
+Chr04K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_4K.txt", sep = "\t")
+Chr04N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_4N.txt", sep = "\t")
+Chr05K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_5K.txt", sep = "\t")
+Chr05N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_5N.txt", sep = "\t")
+Chr06K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_6K.txt", sep = "\t")
+Chr06N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_6N.txt", sep = "\t")
+Chr07K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_7K.txt", sep = "\t")
+Chr07N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_7N.txt", sep = "\t")
+Chr08K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_8K.txt", sep = "\t")
+Chr08N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_8N.txt", sep = "\t")
+Chr09K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_9K.txt", sep = "\t")
+Chr09N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_9N.txt", sep = "\t")
+
+
+# read in the cis eQTL output
+Chr01K_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_1K_cis.txt", sep = "\t")
+Chr01N_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_1N_cis.txt", sep = "\t")
+Chr02K_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_2K_cis.txt", sep = "\t")
+Chr02N_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_2N_cis.txt", sep = "\t")
+Chr03K_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_3K_cis.txt", sep = "\t")
+Chr03N_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_3N_cis.txt", sep = "\t")
+Chr04K_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_4K_cis.txt", sep = "\t")
+Chr04N_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_4N_cis.txt", sep = "\t")
+Chr05K_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_5K_cis.txt", sep = "\t")
+Chr05N_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_5N_cis.txt", sep = "\t")
+Chr06K_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_6K_cis.txt", sep = "\t")
+Chr06N_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_6N_cis.txt", sep = "\t")
+Chr07K_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_7K_cis.txt", sep = "\t")
+Chr07N_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_7N_cis.txt", sep = "\t")
+Chr08K_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_8K_cis.txt", sep = "\t")
+Chr08N_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_8N_cis.txt", sep = "\t")
+Chr09K_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_9K_cis.txt", sep = "\t")
+Chr09N_cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_9N_cis.txt", sep = "\t")
+
+
+# adding all the cis-eQTLs into a list 
+allCis <- rbind(Chr01K_cis,
+                Chr01N_cis,
+                Chr02K_cis,
+                Chr02N_cis,
+                Chr03K_cis,
+                Chr03N_cis,
+                Chr04K_cis,
+                Chr04N_cis,
+                Chr05K_cis,
+                Chr05N_cis,
+                Chr06K_cis,
+                Chr06N_cis,
+                Chr07K_cis,
+                Chr07N_cis,
+                Chr08K_cis,
+                Chr08N_cis,
+                Chr09K_cis,
+                Chr09N_cis)
+
+allCis$type <- "cis"
+
+cis_labeled <- merge(allCis, genePos, by="gene")
+
+
+# adding gene position to the trans files 
+Chr01K_trans_labeled <- merge(Chr01K_trans, genePos, id.vars = c("gene"))
+Chr01N_trans_labeled <- merge(Chr01N_trans, genePos, id.vars = c("gene"))
+Chr02K_trans_labeled <- merge(Chr02K_trans, genePos, id.vars = c("gene"))
+Chr02N_trans_labeled <- merge(Chr02N_trans, genePos, id.vars = c("gene"))
+Chr03K_trans_labeled <- merge(Chr03K_trans, genePos, id.vars = c("gene"))
+Chr03N_trans_labeled <- merge(Chr03N_trans, genePos, id.vars = c("gene"))
+Chr04K_trans_labeled <- merge(Chr04K_trans, genePos, id.vars = c("gene"))
+Chr04N_trans_labeled <- merge(Chr04N_trans, genePos, id.vars = c("gene"))
+Chr05K_trans_labeled <- merge(Chr05K_trans, genePos, id.vars = c("gene"))
+Chr05N_trans_labeled <- merge(Chr05N_trans, genePos, id.vars = c("gene"))
+Chr06K_trans_labeled <- merge(Chr06K_trans, genePos, id.vars = c("gene"))
+Chr06N_trans_labeled <- merge(Chr06N_trans, genePos, id.vars = c("gene"))
+Chr07K_trans_labeled <- merge(Chr07K_trans, genePos, id.vars = c("gene"))
+Chr07N_trans_labeled <- merge(Chr07N_trans, genePos, id.vars = c("gene"))
+Chr08K_trans_labeled <- merge(Chr08K_trans, genePos, id.vars = c("gene"))
+Chr08N_trans_labeled <- merge(Chr08N_trans, genePos, id.vars = c("gene"))
+Chr09K_trans_labeled <- merge(Chr09K_trans, genePos, id.vars = c("gene"))
+Chr09N_trans_labeled <- merge(Chr09N_trans, genePos, id.vars = c("gene"))
+
+
+
+
+
+alltrans_labeled <- rbind(Chr01K_trans_labeled,
+                          Chr01N_trans_labeled,
+                          Chr02K_trans_labeled,
+                          Chr02N_trans_labeled,
+                          Chr03K_trans_labeled,
+                          Chr03N_trans_labeled,
+                          Chr04K_trans_labeled,
+                          Chr04N_trans_labeled,
+                          Chr05K_trans_labeled,
+                          Chr05N_trans_labeled,
+                          Chr06K_trans_labeled,
+                          Chr06N_trans_labeled,
+                          Chr07K_trans_labeled,
+                          Chr07N_trans_labeled,
+                          Chr08K_trans_labeled,
+                          Chr08N_trans_labeled,
+                          Chr09K_trans_labeled,
+                          Chr09N_trans_labeled)
+
+
+alltrans_labeled$type <- "trans"
+
+all_eQTLs <- rbind(cis_labeled, alltrans_labeled)
+
+
+
+GxE_Midwest_eQTLs <- all_eQTLs %>% 
+  separate(SNP, into = c("Chrom", "Pos"), sep = "_", remove = FALSE)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r, echo=FALSE}
+position_genes <- ggplot(filter(MI_Atlantic_summ,
+              type=="trans",
+           chr!="scaffold_19",
+           chr!="scaffold_174"),
+       aes(x=s1/1000000,
+           y=chr)) +
+  geom_point() +
+  theme_bw() +
+  ggtitle("MI_Atlantic")
+
+number_genes <- ggplot(filter(MI_Atlantic_summ,
+           chr!="scaffold_19",
+           chr!="scaffold_174"),
+       aes(x=chr)) +
+  geom_bar() +
+  facet_wrap(~type,
+             scales="free",
+             nrow=2,
+             strip.position = "left") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle=90)) +
+  ggtitle("MI_Atlantic")
+
+grid.arrange(position_genes, number_genes,
+             nrow=1)
+
+number_genes
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+
+
+```{r}
+length(unique(filter(GxE_Atlantic_eQTLs, type == "cis")$gene))
+
+GxE_Atlantic_summ <- dplyr::count(GxE_Atlantic_eQTLs, type, Chrom)
+MI_Atlantic_summ <- dplyr::count(MI_Atlantic_eQTLs, type, Chrom)
+TX_Atlantic_summ <- dplyr::count(TX_Atlantic_eQTLs, type, Chrom)
+
+
+GxE_Gulf_summ <- dplyr::count(GxE_Gulf_eQTLs, type, Chrom)
+MI_Gulf_summ <- dplyr::count(MI_Gulf_eQTLs, type, Chrom)
+TX_Gulf_summ <- dplyr::count(TX_Gulf_eQTLs, type, Chrom)
+
+
+GxE_Midwest_summ <- dplyr::count(GxE_Midwest_eQTLs, type, Chrom)
+MI_Midwest_summ <- dplyr::count(MI_Midwest_eQTLs, type, Chrom)
+TX_Midwest_summ <- dplyr::count(TX_Midwest_eQTLs, type, Chrom)
+
+
+
+
+GxE_Atlantic_summ$pop <- "GxE_Atlantic"
+MI_Atlantic_summ$pop  <- "MI_Atlantic"
+TX_Atlantic_summ$pop  <- "TX_Atlantic"
+
+
+GxE_Gulf_summ$pop  <- "GxE_Gulf"
+MI_Gulf_summ$pop  <- "MI_Gulf"
+TX_Gulf_summ$pop  <- "TX_Gulf"
+
+
+GxE_Midwest_summ$pop  <- "GxE_Midwest"
+MI_Midwest_summ$pop  <- "MI_Midwest"
+TX_Midwest_summ$pop  <- "TX_Midwest"
+
+allSumm <- rbind(GxE_Atlantic_summ,
+      MI_Atlantic_summ,
+      TX_Atlantic_summ,
+      GxE_Gulf_summ,
+      MI_Gulf_summ,
+      TX_Gulf_summ,
+      GxE_Midwest_summ,
+      MI_Midwest_summ,
+      TX_Midwest_summ)
+
+Ksumm <- filter(allSumm, 
+        Chrom == "Chr01K" |
+         Chrom == "Chr02K" |
+         Chrom == "Chr03K" |
+         Chrom == "Chr04K" |
+         Chrom == "Chr05K" |
+        Chrom == "Chr06K" |
+        Chrom == "Chr07K" |
+        Chrom == "Chr08K" |
+        Chrom == "Chr09K")
+
+Ksumm$subgenome <- "K"
+
+Nsumm <- filter(allSumm, 
+       Chrom  == "Chr01N" |
+         Chrom == "Chr02N" |
+         Chrom == "Chr03N" |
+         Chrom == "Chr04N" |
+         Chrom == "Chr05N" |
+        Chrom == "Chr06N" |
+         Chrom == "Chr07N" |
+        Chrom == "Chr08N" |
+        Chrom  == "Chr09N")
+
+Nsumm$subgenome <- "N"
+  
+
+allSumm <- rbind(Ksumm,
+      Nsumm)
+
+ggplot(filter(allSumm, 
+              type=="trans"),
+       aes(x=Chrom,
+                    fill=subgenome,
+                    y=n)) +
+  facet_grid(~pop,
+             scales = "free") +
+  geom_bar(stat="identity",
+           position="dodge") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle=90),
+        legend.position = "bottom") +
+  scale_fill_manual(values=c( "mediumpurple",
+                              "forestgreen"))
+
+
+```
+
