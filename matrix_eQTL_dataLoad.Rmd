@@ -5,6 +5,8 @@ date: "2025-07-23"
 output: html_document
 ---
 
+## set up script and load required packages 
+
 ```{r setup, include=FALSE}
 
 knitr::opts_chunk$set(echo = TRUE)
@@ -18,12 +20,7 @@ library(adegenet)
 library(eQTLpipeline)
 base.dir = find.package("MatrixEQTL")
 
-# set the working directory
-setwd("~/Dropbox/LowryLab")
-
-
 ```
-
 
 ## setting up matrix eQTL settings
 
@@ -32,7 +29,6 @@ setwd("~/Dropbox/LowryLab")
 # setting up matrix eQTL settings
 useModel = modelLINEAR; # modelANOVA or modelLINEAR or modelLINEAR_CROSS
 output_file_name = tempfile();
-pvOutputThreshold = 1e-12;
 errorCovariance = numeric();
 
 ```
@@ -41,72 +37,65 @@ errorCovariance = numeric();
 
 ```{r expression, message = FALSE}
 
-# reading in gene expression data
+# reading in gene expression data for Midwest, Gulf, and Atlantic 
 
-# MI_midwest
+# MI_Midwest
 geneMI_Midwest = SlicedData$new()
 geneMI_Midwest$fileDelimiter = ",";    
 geneMI_Midwest$LoadFile("~/Dropbox/LowryLab/data/expression/genes_MI_Midwest.csv")
 
-# TX_midwest 
+# TX_Midwest 
 geneTX_Midwest = SlicedData$new()
 geneTX_Midwest$fileDelimiter = ",";    
 geneTX_Midwest$LoadFile("~/Dropbox/LowryLab/data/expression/genes_TX_Midwest.csv")
 
-# GxE_midwest
+# GxE_Midwest
 geneGxE_Midwest = SlicedData$new()
 geneGxE_Midwest$fileDelimiter = ",";    
 geneGxE_Midwest$LoadFile("~/Dropbox/LowryLab/data/expression/genes_GxE_Midwest_filt.csv")
 
-# MI_lowland
-geneMI_lowland = SlicedData$new()
-geneMI_lowland$fileDelimiter = ",";    
-geneMI_lowland$LoadFile("~/Dropbox/LowryLab/data/expression/genes_MI_lowland.csv")
+# MI_Gulf
+geneMI_Gulf = SlicedData$new()
+geneMI_Gulf$fileDelimiter = ",";    
+geneMI_Gulf$LoadFile("~/Dropbox/LowryLab/data/expression/genes_MI_Gulf.csv")
 
-# TX_lowland 
-geneTX_lowland = SlicedData$new()
-geneTX_lowland$fileDelimiter = ",";    
-geneTX_lowland$LoadFile("~/Dropbox/LowryLab/data/expression/genes_TX_lowland.csv")
+# TX_Gulf 
+geneTX_Gulf = SlicedData$new()
+geneTX_Gulf$fileDelimiter = ",";    
+geneTX_Gulf$LoadFile("~/Dropbox/LowryLab/data/expression/genes_TX_Gulf.csv")
 
-# GxE_lowland
-geneGxE_lowland = SlicedData$new()
-geneGxE_lowland$fileDelimiter = ",";    
-geneGxE_lowland$LoadFile("~/Dropbox/LowryLab/data/expression/genes_GxE_lowland_filt.csv")
+# GxE_Gulf
+geneGxE_Gulf = SlicedData$new()
+geneGxE_Gulf$fileDelimiter = ",";    
+geneGxE_Gulf$LoadFile("~/Dropbox/LowryLab/data/expression/genes_GxE_Gulf_filt.csv")
 
-```
+# MI_Atlantic
+geneMI_Atlantic = SlicedData$new()
+geneMI_Atlantic$fileDelimiter = ",";    
+geneMI_Atlantic$LoadFile("~/Dropbox/LowryLab/data/expression/genes_MI_Atlantic.csv")
 
+# TX_Atlantic 
+geneTX_Atlantic = SlicedData$new()
+geneTX_Atlantic$fileDelimiter = ",";    
+geneTX_Atlantic$LoadFile("~/Dropbox/LowryLab/data/expression/genes_TX_Atlantic.csv")
 
-```{r covariates}
-
-## Load covariates file. in this case it's the first 5 PC's (plink)
-
-cvrt_Midwest = SlicedData$new();
-cvrt_Midwest$fileDelimiter = ",";      # the TAB character
-cvrt_Midwest$fileOmitCharacters = "NA"; # denote missing values;
-cvrt_Midwest$fileSkipRows = 1;          # one row of column labels
-cvrt_Midwest$fileSkipColumns = 1;       # one column of row labels
-cvrt_Midwest$LoadFile("~/Dropbox/LowryLab/data/cov_allChroms_Midwest.csv");
-
-
-## Load covariates file. in this case it's the first 5 PC's (plink)
-
-cvrt_lowland = SlicedData$new();
-cvrt_lowland$fileDelimiter = ",";      # the TAB character
-cvrt_lowland$fileOmitCharacters = "NA"; # denote missing values;
-cvrt_lowland$fileSkipRows = 1;          # one row of column labels
-cvrt_lowland$fileSkipColumns = 1;       # one column of row labels
-cvrt_lowland$LoadFile("~/Dropbox/LowryLab/data/cov_allChroms_lowland.csv");
-
+# GxE_Atlantic
+geneGxE_Atlantic = SlicedData$new()
+geneGxE_Atlantic$fileDelimiter = ",";    
+geneGxE_Atlantic$LoadFile("~/Dropbox/LowryLab/data/expression/genes_GxE_Atlantic_filt.csv")
 
 ```
+
+
+## read in gene location and snp location file 
 
 ```{r snps_genes}
 
 # gene name, chromosome, start, stop
-gene_location_file_name = "data/AP13/AP13_gene_position.txt"
+gene_location_file_name = "~/Dropbox/LowryLab/data/AP13/AP13_gene_position.txt"
 
 # snp name, chromosome, position (bp)
-snps_location_file_name = "data/positions.txt"
+snps_location_file_name = "~/Dropbox/LowryLab/data/positions.txt"
 
 # process smps
 snpspos = read.table(snps_location_file_name, 
@@ -122,189 +111,3757 @@ genepos = read.table(gene_location_file_name,
 
 ```
 
+## read in the covariates file
 
-```{r load genotypes}
+```{r covariates}
 
+## Load covariates file, Midwest. in this case it's the first 5 PC's (plink)
+
+cvrt_Midwest = SlicedData$new();
+cvrt_Midwest$fileDelimiter = ",";      # the TAB character
+cvrt_Midwest$fileOmitCharacters = "NA"; # denote missing values;
+cvrt_Midwest$fileSkipRows = 1;          # one row of column labels
+cvrt_Midwest$fileSkipColumns = 1;       # one column of row labels
+cvrt_Midwest$LoadFile("~/Dropbox/lowryLab/data/expression/cov_allChroms_Midwest.csv");
+
+## Load covariates file, Gulf. in this case it's the first 5 PC's (plink)
+
+cvrt_Gulf = SlicedData$new();
+cvrt_Gulf$fileDelimiter = ",";      # the TAB character
+cvrt_Gulf$fileOmitCharacters = "NA"; # denote missing values;
+cvrt_Gulf$fileSkipRows = 1;          # one row of column labels
+cvrt_Gulf$fileSkipColumns = 1;       # one column of row labels
+cvrt_Gulf$LoadFile("~/Dropbox/lowryLab/data/expression/cov_allChroms_Gulf.csv");
+
+
+## Load covariates file, Atlantic. in this case it's the first 5 PC's (plink)
+
+cvrt_Atlantic = SlicedData$new();
+cvrt_Atlantic$fileDelimiter = ",";      # the TAB character
+cvrt_Atlantic$fileOmitCharacters = "NA"; # denote missing values;
+cvrt_Atlantic$fileSkipRows = 1;          # one row of column labels
+cvrt_Atlantic$fileSkipColumns = 1;       # one column of row labels
+cvrt_Atlantic$LoadFile("~/Dropbox/lowryLab/data/expression/cov_allChroms_Atlantic.csv");
+
+
+```
+
+## read in Midwest genotypes 
+```{r read in genotypes, Midwest}
 
 # reading in the data first 
 
 # 1K
-chrom1K = "~/Dropbox/LowryLab/data/genotypes/Chr01K_Midwest_genotype_matrix.txt"
+Midwest_chrom1K = "~/Dropbox/lowryLab/data/genotypes/Chr01K_Midwest_genotype_matrix.txt"
 
 # loading genotype data 
-allsnps_1K = SlicedData$new();
-allsnps_1K$fileDelimiter = "\t";       # denote missing values;
-allsnps_1K$fileSkipColumns = 1;          # one column of row labels
-allsnps_1K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
-allsnps_1K$LoadFile(chrom1K)
+Midwest_allsnps_1K = SlicedData$new();
+Midwest_allsnps_1K$fileDelimiter = "\t";       # denote missing values;
+Midwest_allsnps_1K$fileSkipColumns = 1;          # one column of row labels
+Midwest_allsnps_1K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Midwest_allsnps_1K$LoadFile(Midwest_chrom1K)
 
 # 1N
-chrom1N = "~/Dropbox/LowryLab/data/genotypes/Chr01N_Midwest_genotype_matrix.txt"
+Midwest_chrom1N = "~/Dropbox/lowryLab/data/genotypes/Chr01N_Midwest_genotype_matrix.txt"
 
 # loading genotype data 
-allsnps_1N = SlicedData$new();
-allsnps_1N$fileDelimiter = "\t";       # denote missing values;
-allsnps_1N$fileSkipColumns = 1;          # one column of row labels
-allsnps_1N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
-allsnps_1N$LoadFile(chrom1N)
+Midwest_allsnps_1N = SlicedData$new();
+Midwest_allsnps_1N$fileDelimiter = "\t";       # denote missing values;
+Midwest_allsnps_1N$fileSkipColumns = 1;          # one column of row labels
+Midwest_allsnps_1N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Midwest_allsnps_1N$LoadFile(Midwest_chrom1N)
 
 # 2K
-chrom2K = "~/Dropbox/LowryLab/data/genotypes/Chr02K_Midwest_genotype_matrix.txt"
+Midwest_chrom2K = "~/Dropbox/lowryLab/data/genotypes/Chr02K_Midwest_genotype_matrix.txt"
 
 # loading genotype data 
-allsnps_2K = SlicedData$new();
-allsnps_2K$fileDelimiter = "\t";       # denote missing values;
-allsnps_2K$fileSkipColumns = 1;          # one column of row labels
-allsnps_2K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
-allsnps_2K$LoadFile(chrom2K)
+Midwest_allsnps_2K = SlicedData$new();
+Midwest_allsnps_2K$fileDelimiter = "\t";       # denote missing values;
+Midwest_allsnps_2K$fileSkipColumns = 1;          # one column of row labels
+Midwest_allsnps_2K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Midwest_allsnps_2K$LoadFile(Midwest_chrom2K)
 
 # 2N
-chrom2N = "~/Dropbox/LowryLab/data/genotypes/Chr02N_Midwest_genotype_matrix.txt"
+Midwest_chrom2N = "~/Dropbox/lowryLab/data/genotypes/Chr02N_Midwest_genotype_matrix.txt"
 
 # loading genotype data 
-allsnps_2N = SlicedData$new();
-allsnps_2N$fileDelimiter = "\t";       # denote missing values;
-allsnps_2N$fileSkipColumns = 1;          # one column of row labels
-allsnps_2N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
-allsnps_2N$LoadFile(chrom2N)
+Midwest_allsnps_2N = SlicedData$new();
+Midwest_allsnps_2N$fileDelimiter = "\t";       # denote missing values;
+Midwest_allsnps_2N$fileSkipColumns = 1;          # one column of row labels
+Midwest_allsnps_2N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Midwest_allsnps_2N$LoadFile(Midwest_chrom2N)
 
 # 3K
-chrom3K = "~/Dropbox/LowryLab/data/genotypes/Chr03K_Midwest_genotype_matrix.txt"
+Midwest_chrom3K = "~/Dropbox/lowryLab/data/genotypes/Chr03K_Midwest_genotype_matrix.txt"
 
 # loading genotype data 
-allsnps_3K = SlicedData$new();
-allsnps_3K$fileDelimiter = "\t";       # denote missing values;
-allsnps_3K$fileSkipColumns = 1;          # one column of row labels
-allsnps_3K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
-allsnps_3K$LoadFile(chrom3K)
+Midwest_allsnps_3K = SlicedData$new();
+Midwest_allsnps_3K$fileDelimiter = "\t";       # denote missing values;
+Midwest_allsnps_3K$fileSkipColumns = 1;          # one column of row labels
+Midwest_allsnps_3K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Midwest_allsnps_3K$LoadFile(Midwest_chrom3K)
 
 # 3N
-chrom3N = "~/Dropbox/LowryLab/data/genotypes/Chr03N_Midwest_genotype_matrix.txt"
+Midwest_chrom3N = "~/Dropbox/lowryLab/data/genotypes/Chr03N_Midwest_genotype_matrix.txt"
 
 # loading genotype data 
-allsnps_3N = SlicedData$new();
-allsnps_3N$fileDelimiter = "\t";       # denote missing values;
-allsnps_3N$fileSkipColumns = 1;          # one column of row labels
-allsnps_3N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
-allsnps_3N$LoadFile(chrom3N)
+Midwest_allsnps_3N = SlicedData$new();
+Midwest_allsnps_3N$fileDelimiter = "\t";       # denote missing values;
+Midwest_allsnps_3N$fileSkipColumns = 1;          # one column of row labels
+Midwest_allsnps_3N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Midwest_allsnps_3N$LoadFile(Midwest_chrom3N)
 
 # 4K
-chrom4K = "~/Dropbox/LowryLab/data/genotypes/Chr04K_Midwest_genotype_matrix.txt"
+Midwest_chrom4K = "~/Dropbox/lowryLab/data/genotypes/Chr04K_Midwest_genotype_matrix.txt"
 
 # loading genotype data 
-allsnps_4K = SlicedData$new();
-allsnps_4K$fileDelimiter = "\t";       # denote missing values;
-allsnps_4K$fileSkipColumns = 1;          # one column of row labels
-allsnps_4K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
-allsnps_4K$LoadFile(chrom4K)
+Midwest_allsnps_4K = SlicedData$new();
+Midwest_allsnps_4K$fileDelimiter = "\t";       # denote missing values;
+Midwest_allsnps_4K$fileSkipColumns = 1;          # one column of row labels
+Midwest_allsnps_4K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Midwest_allsnps_4K$LoadFile(Midwest_chrom4K)
 
 # 4N
-chrom4N = "~/Dropbox/LowryLab/data/genotypes/Chr04N_Midwest_genotype_matrix.txt"
+Midwest_chrom4N = "~/Dropbox/lowryLab/data/genotypes/Chr04N_Midwest_genotype_matrix.txt"
 
 # loading genotype data 
-allsnps_4N = SlicedData$new();
-allsnps_4N$fileDelimiter = "\t";       # denote missing values;
-allsnps_4N$fileSkipColumns = 1;          # one column of row labels
-allsnps_4N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
-allsnps_4N$LoadFile(chrom4N)
+Midwest_allsnps_4N = SlicedData$new();
+Midwest_allsnps_4N$fileDelimiter = "\t";       # denote missing values;
+Midwest_allsnps_4N$fileSkipColumns = 1;          # one column of row labels
+Midwest_allsnps_4N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Midwest_allsnps_4N$LoadFile(Midwest_chrom4N)
 
 # 5K
-chrom5K = "~/Dropbox/LowryLab/data/genotypes/Chr05K_Midwest_genotype_matrix.txt"
+Midwest_chrom5K = "~/Dropbox/lowryLab/data/genotypes/Chr05K_Midwest_genotype_matrix.txt"
 
 # loading genotype data 
-allsnps_5K = SlicedData$new();
-allsnps_5K$fileDelimiter = "\t";       # denote missing values;
-allsnps_5K$fileSkipColumns = 1;          # one column of row labels
-allsnps_5K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
-allsnps_5K$LoadFile(chrom5K)
+Midwest_allsnps_5K = SlicedData$new();
+Midwest_allsnps_5K$fileDelimiter = "\t";       # denote missing values;
+Midwest_allsnps_5K$fileSkipColumns = 1;          # one column of row labels
+Midwest_allsnps_5K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Midwest_allsnps_5K$LoadFile(Midwest_chrom5K)
 
 # 5N
-chrom5N = "~/Dropbox/LowryLab/data/genotypes/Chr05N_Midwest_genotype_matrix.txt"
+Midwest_chrom5N = "~/Dropbox/lowryLab/data/genotypes/Chr05N_Midwest_genotype_matrix.txt"
 
 # loading genotype data 
-allsnps_5N = SlicedData$new();
-allsnps_5N$fileDelimiter = "\t";       # denote missing values;
-allsnps_5N$fileSkipColumns = 1;          # one column of row labels
-allsnps_5N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
-allsnps_5N$LoadFile(chrom5N)
+Midwest_allsnps_5N = SlicedData$new();
+Midwest_allsnps_5N$fileDelimiter = "\t";       # denote missing values;
+Midwest_allsnps_5N$fileSkipColumns = 1;          # one column of row labels
+Midwest_allsnps_5N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Midwest_allsnps_5N$LoadFile(Midwest_chrom5N)
 
 # 6K
-chrom6K = "~/Dropbox/LowryLab/data/genotypes/Chr06K_Midwest_genotype_matrix.txt"
+Midwest_chrom6K = "~/Dropbox/lowryLab/data/genotypes/Chr06K_Midwest_genotype_matrix.txt"
 
 # loading genotype data 
-allsnps_6K = SlicedData$new();
-allsnps_6K$fileDelimiter = "\t";       # denote missing values;
-allsnps_6K$fileSkipColumns = 1;          # one column of row labels
-allsnps_6K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
-allsnps_6K$LoadFile(chrom6K)
+Midwest_allsnps_6K = SlicedData$new();
+Midwest_allsnps_6K$fileDelimiter = "\t";       # denote missing values;
+Midwest_allsnps_6K$fileSkipColumns = 1;          # one column of row labels
+Midwest_allsnps_6K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Midwest_allsnps_6K$LoadFile(Midwest_chrom6K)
 
 # 6N
-chrom6N = "~/Dropbox/LowryLab/data/genotypes/Chr06N_Midwest_genotype_matrix.txt"
+Midwest_chrom6N = "~/Dropbox/lowryLab/data/genotypes/Chr06N_Midwest_genotype_matrix.txt"
 
 # loading genotype data 
-allsnps_6N = SlicedData$new();
-allsnps_6N$fileDelimiter = "\t";       # denote missing values;
-allsnps_6N$fileSkipColumns = 1;          # one column of row labels
-allsnps_6N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
-allsnps_6N$LoadFile(chrom6N)
+Midwest_allsnps_6N = SlicedData$new();
+Midwest_allsnps_6N$fileDelimiter = "\t";       # denote missing values;
+Midwest_allsnps_6N$fileSkipColumns = 1;          # one column of row labels
+Midwest_allsnps_6N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Midwest_allsnps_6N$LoadFile(Midwest_chrom6N)
 
 # 7K
-chrom7K = "~/Dropbox/LowryLab/data/genotypes/Chr07K_Midwest_genotype_matrix.txt"
+Midwest_chrom7K = "~/Dropbox/lowryLab/data/genotypes/Chr07K_Midwest_genotype_matrix.txt"
 
 # loading genotype data 
-allsnps_7K = SlicedData$new();
-allsnps_7K$fileDelimiter = "\t";       # denote missing values;
-allsnps_7K$fileSkipColumns = 1;          # one column of row labels
-allsnps_7K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
-allsnps_7K$LoadFile(chrom7K)
+Midwest_allsnps_7K = SlicedData$new();
+Midwest_allsnps_7K$fileDelimiter = "\t";       # denote missing values;
+Midwest_allsnps_7K$fileSkipColumns = 1;          # one column of row labels
+Midwest_allsnps_7K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Midwest_allsnps_7K$LoadFile(Midwest_chrom7K)
 
 # 7
-chrom7N = "~/Dropbox/LowryLab/data/genotypes/Chr07N_Midwest_genotype_matrix.txt"
+Midwest_chrom7N = "~/Dropbox/lowryLab/data/genotypes/Chr07N_Midwest_genotype_matrix.txt"
 
 # loading genotype data 
-allsnps_7N = SlicedData$new();
-allsnps_7N$fileDelimiter = "\t";       # denote missing values;
-allsnps_7N$fileSkipColumns = 1;          # one column of row labels
-allsnps_7N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
-allsnps_7N$LoadFile(chrom7N)
+Midwest_allsnps_7N = SlicedData$new();
+Midwest_allsnps_7N$fileDelimiter = "\t";       # denote missing values;
+Midwest_allsnps_7N$fileSkipColumns = 1;          # one column of row labels
+Midwest_allsnps_7N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Midwest_allsnps_7N$LoadFile(Midwest_chrom7N)
 
 # 8K
-chrom8K = "~/Dropbox/LowryLab/data/genotypes/Chr08K_Midwest_genotype_matrix.txt"
+Midwest_chrom8K = "~/Dropbox/lowryLab/data/genotypes/Chr08K_Midwest_genotype_matrix.txt"
 
 # loading genotype data 
-allsnps_8K = SlicedData$new();
-allsnps_8K$fileDelimiter = "\t";       # denote missing values;
-allsnps_8K$fileSkipColumns = 1;          # one column of row labels
-allsnps_8K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
-allsnps_8K$LoadFile(chrom8K)
+Midwest_allsnps_8K = SlicedData$new();
+Midwest_allsnps_8K$fileDelimiter = "\t";       # denote missing values;
+Midwest_allsnps_8K$fileSkipColumns = 1;          # one column of row labels
+Midwest_allsnps_8K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Midwest_allsnps_8K$LoadFile(Midwest_chrom8K)
 
 # 8N
-chrom8N = "~/Dropbox/LowryLab/data/genotypes/Chr08N_Midwest_genotype_matrix.txt"
+Midwest_chrom8N = "~/Dropbox/lowryLab/data/genotypes/Chr08N_Midwest_genotype_matrix.txt"
 
 # loading genotype data 
-allsnps_8N = SlicedData$new();
-allsnps_8N$fileDelimiter = "\t";       # denote missing values;
-allsnps_8N$fileSkipColumns = 1;          # one column of row labels
-allsnps_8N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
-allsnps_8N$LoadFile(chrom8N)
+Midwest_allsnps_8N = SlicedData$new();
+Midwest_allsnps_8N$fileDelimiter = "\t";       # denote missing values;
+Midwest_allsnps_8N$fileSkipColumns = 1;          # one column of row labels
+Midwest_allsnps_8N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Midwest_allsnps_8N$LoadFile(Midwest_chrom8N)
 
 # 9K
-chrom9K = "~/Dropbox/LowryLab/data/genotypes/Chr09K_Midwest_genotype_matrix.txt"
+Midwest_chrom9K = "~/Dropbox/lowryLab/data/genotypes/Chr09K_Midwest_genotype_matrix.txt"
 
 # loading genotype data 
-allsnps_9K = SlicedData$new();
-allsnps_9K$fileDelimiter = "\t";       # denote missing values;
-allsnps_9K$fileSkipColumns = 1;          # one column of row labels
-allsnps_9K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
-allsnps_9K$LoadFile(chrom9K)
+Midwest_allsnps_9K = SlicedData$new();
+Midwest_allsnps_9K$fileDelimiter = "\t";       # denote missing values;
+Midwest_allsnps_9K$fileSkipColumns = 1;          # one column of row labels
+Midwest_allsnps_9K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Midwest_allsnps_9K$LoadFile(Midwest_chrom9K)
 
 # 9N
-chrom9N = "~/Dropbox/LowryLab/data/genotypes/Chr09N_Midwest_genotype_matrix.txt"
+Midwest_chrom9N = "~/Dropbox/lowryLab/data/genotypes/Chr09N_Midwest_genotype_matrix.txt"
 
 # loading genotype data 
-allsnps_9N = SlicedData$new();
-allsnps_9N$fileDelimiter = "\t";       # denote missing values;
-allsnps_9N$fileSkipColumns = 1;          # one column of row labels
-allsnps_9N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
-allsnps_9N$LoadFile(chrom9N)
+Midwest_allsnps_9N = SlicedData$new();
+Midwest_allsnps_9N$fileDelimiter = "\t";       # denote missing values;
+Midwest_allsnps_9N$fileSkipColumns = 1;          # one column of row labels
+Midwest_allsnps_9N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Midwest_allsnps_9N$LoadFile(Midwest_chrom9N)
 ```
+
+## read in Gulf genotypes
+```{r read in genotypes, Gulf}
+
+# reading in the data first 
+
+# 1K
+Gulf_chrom1K = "~/Dropbox/lowryLab/data/genotypes/Chr01K_Gulf_genotype_matrix.txt"
+
+# loading genotype data 
+Gulf_allsnps_1K = SlicedData$new();
+Gulf_allsnps_1K$fileDelimiter = "\t";       # denote missing values;
+Gulf_allsnps_1K$fileSkipColumns = 1;          # one column of row labels
+Gulf_allsnps_1K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Gulf_allsnps_1K$LoadFile(Gulf_chrom1K)
+
+# 1N
+Gulf_chrom1N = "~/Dropbox/lowryLab/data/genotypes/Chr01N_Gulf_genotype_matrix.txt"
+
+# loading genotype data 
+Gulf_allsnps_1N = SlicedData$new();
+Gulf_allsnps_1N$fileDelimiter = "\t";       # denote missing values;
+Gulf_allsnps_1N$fileSkipColumns = 1;          # one column of row labels
+Gulf_allsnps_1N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Gulf_allsnps_1N$LoadFile(Gulf_chrom1N)
+
+# 2K
+Gulf_chrom2K = "~/Dropbox/lowryLab/data/genotypes/Chr02K_Gulf_genotype_matrix.txt"
+
+# loading genotype data 
+Gulf_allsnps_2K = SlicedData$new();
+Gulf_allsnps_2K$fileDelimiter = "\t";       # denote missing values;
+Gulf_allsnps_2K$fileSkipColumns = 1;          # one column of row labels
+Gulf_allsnps_2K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Gulf_allsnps_2K$LoadFile(Gulf_chrom2K)
+
+# 2N
+Gulf_chrom2N = "~/Dropbox/lowryLab/data/genotypes/Chr02N_Gulf_genotype_matrix.txt"
+
+# loading genotype data 
+Gulf_allsnps_2N = SlicedData$new();
+Gulf_allsnps_2N$fileDelimiter = "\t";       # denote missing values;
+Gulf_allsnps_2N$fileSkipColumns = 1;          # one column of row labels
+Gulf_allsnps_2N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Gulf_allsnps_2N$LoadFile(Gulf_chrom2N)
+
+# 3K
+Gulf_chrom3K = "~/Dropbox/lowryLab/data/genotypes/Chr03K_Gulf_genotype_matrix.txt"
+
+# loading genotype data 
+Gulf_allsnps_3K = SlicedData$new();
+Gulf_allsnps_3K$fileDelimiter = "\t";       # denote missing values;
+Gulf_allsnps_3K$fileSkipColumns = 1;          # one column of row labels
+Gulf_allsnps_3K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Gulf_allsnps_3K$LoadFile(Gulf_chrom3K)
+
+# 3N
+Gulf_chrom3N = "~/Dropbox/lowryLab/data/genotypes/Chr03N_Gulf_genotype_matrix.txt"
+
+# loading genotype data 
+Gulf_allsnps_3N = SlicedData$new();
+Gulf_allsnps_3N$fileDelimiter = "\t";       # denote missing values;
+Gulf_allsnps_3N$fileSkipColumns = 1;          # one column of row labels
+Gulf_allsnps_3N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Gulf_allsnps_3N$LoadFile(Gulf_chrom3N)
+
+# 4K
+Gulf_chrom4K = "~/Dropbox/lowryLab/data/genotypes/Chr04K_Gulf_genotype_matrix.txt"
+
+# loading genotype data 
+Gulf_allsnps_4K = SlicedData$new();
+Gulf_allsnps_4K$fileDelimiter = "\t";       # denote missing values;
+Gulf_allsnps_4K$fileSkipColumns = 1;          # one column of row labels
+Gulf_allsnps_4K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Gulf_allsnps_4K$LoadFile(Gulf_chrom4K)
+
+# 4N
+Gulf_chrom4N = "~/Dropbox/lowryLab/data/genotypes/Chr04N_Gulf_genotype_matrix.txt"
+
+# loading genotype data 
+Gulf_allsnps_4N = SlicedData$new();
+Gulf_allsnps_4N$fileDelimiter = "\t";       # denote missing values;
+Gulf_allsnps_4N$fileSkipColumns = 1;          # one column of row labels
+Gulf_allsnps_4N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Gulf_allsnps_4N$LoadFile(Gulf_chrom4N)
+
+# 5K
+Gulf_chrom5K = "~/Dropbox/lowryLab/data/genotypes/Chr05K_Gulf_genotype_matrix.txt"
+
+# loading genotype data 
+Gulf_allsnps_5K = SlicedData$new();
+Gulf_allsnps_5K$fileDelimiter = "\t";       # denote missing values;
+Gulf_allsnps_5K$fileSkipColumns = 1;          # one column of row labels
+Gulf_allsnps_5K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Gulf_allsnps_5K$LoadFile(Gulf_chrom5K)
+
+# 5N
+Gulf_chrom5N = "~/Dropbox/lowryLab/data/genotypes/Chr05N_Gulf_genotype_matrix.txt"
+
+# loading genotype data 
+Gulf_allsnps_5N = SlicedData$new();
+Gulf_allsnps_5N$fileDelimiter = "\t";       # denote missing values;
+Gulf_allsnps_5N$fileSkipColumns = 1;          # one column of row labels
+Gulf_allsnps_5N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Gulf_allsnps_5N$LoadFile(Gulf_chrom5N)
+
+# 6K
+Gulf_chrom6K = "~/Dropbox/lowryLab/data/genotypes/Chr06K_Gulf_genotype_matrix.txt"
+
+# loading genotype data 
+Gulf_allsnps_6K = SlicedData$new();
+Gulf_allsnps_6K$fileDelimiter = "\t";       # denote missing values;
+Gulf_allsnps_6K$fileSkipColumns = 1;          # one column of row labels
+Gulf_allsnps_6K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Gulf_allsnps_6K$LoadFile(Gulf_chrom6K)
+
+# 6N
+Gulf_chrom6N = "~/Dropbox/lowryLab/data/genotypes/Chr06N_Gulf_genotype_matrix.txt"
+
+# loading genotype data 
+Gulf_allsnps_6N = SlicedData$new();
+Gulf_allsnps_6N$fileDelimiter = "\t";       # denote missing values;
+Gulf_allsnps_6N$fileSkipColumns = 1;          # one column of row labels
+Gulf_allsnps_6N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Gulf_allsnps_6N$LoadFile(Gulf_chrom6N)
+
+# 7K
+Gulf_chrom7K = "~/Dropbox/lowryLab/data/genotypes/Chr07K_Gulf_genotype_matrix.txt"
+
+# loading genotype data 
+Gulf_allsnps_7K = SlicedData$new();
+Gulf_allsnps_7K$fileDelimiter = "\t";       # denote missing values;
+Gulf_allsnps_7K$fileSkipColumns = 1;          # one column of row labels
+Gulf_allsnps_7K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Gulf_allsnps_7K$LoadFile(Gulf_chrom7K)
+
+# 7
+Gulf_chrom7N = "~/Dropbox/lowryLab/data/genotypes/Chr07N_Gulf_genotype_matrix.txt"
+
+# loading genotype data 
+Gulf_allsnps_7N = SlicedData$new();
+Gulf_allsnps_7N$fileDelimiter = "\t";       # denote missing values;
+Gulf_allsnps_7N$fileSkipColumns = 1;          # one column of row labels
+Gulf_allsnps_7N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Gulf_allsnps_7N$LoadFile(Gulf_chrom7N)
+
+# 8K
+Gulf_chrom8K = "~/Dropbox/lowryLab/data/genotypes/Chr08K_Gulf_genotype_matrix.txt"
+
+# loading genotype data 
+Gulf_allsnps_8K = SlicedData$new();
+Gulf_allsnps_8K$fileDelimiter = "\t";       # denote missing values;
+Gulf_allsnps_8K$fileSkipColumns = 1;          # one column of row labels
+Gulf_allsnps_8K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Gulf_allsnps_8K$LoadFile(Gulf_chrom8K)
+
+# 8N
+Gulf_chrom8N = "~/Dropbox/lowryLab/data/genotypes/Chr08N_Gulf_genotype_matrix.txt"
+
+# loading genotype data 
+Gulf_allsnps_8N = SlicedData$new();
+Gulf_allsnps_8N$fileDelimiter = "\t";       # denote missing values;
+Gulf_allsnps_8N$fileSkipColumns = 1;          # one column of row labels
+Gulf_allsnps_8N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Gulf_allsnps_8N$LoadFile(Gulf_chrom8N)
+
+# 9K
+Gulf_chrom9K = "~/Dropbox/lowryLab/data/genotypes/Chr09K_Gulf_genotype_matrix.txt"
+
+# loading genotype data 
+Gulf_allsnps_9K = SlicedData$new();
+Gulf_allsnps_9K$fileDelimiter = "\t";       # denote missing values;
+Gulf_allsnps_9K$fileSkipColumns = 1;          # one column of row labels
+Gulf_allsnps_9K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Gulf_allsnps_9K$LoadFile(Gulf_chrom9K)
+
+# 9N
+Gulf_chrom9N = "~/Dropbox/lowryLab/data/genotypes/Chr09N_Gulf_genotype_matrix.txt"
+
+# loading genotype data 
+Gulf_allsnps_9N = SlicedData$new();
+Gulf_allsnps_9N$fileDelimiter = "\t";       # denote missing values;
+Gulf_allsnps_9N$fileSkipColumns = 1;          # one column of row labels
+Gulf_allsnps_9N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Gulf_allsnps_9N$LoadFile(Gulf_chrom9N)
+```
+
+# read in Atlantic genotypes 
+
+```{r read in genotypes, Atlantic}
+
+# reading in the data first 
+
+# 1K
+Atlantic_chrom1K = "~/Dropbox/lowryLab/data/genotypes/Chr01K_Atlantic_genotype_matrix.txt"
+
+# loading genotype data 
+Atlantic_allsnps_1K = SlicedData$new();
+Atlantic_allsnps_1K$fileDelimiter = "\t";       # denote missing values;
+Atlantic_allsnps_1K$fileSkipColumns = 1;          # one column of row labels
+Atlantic_allsnps_1K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Atlantic_allsnps_1K$LoadFile(Atlantic_chrom1K)
+
+# 1N
+Atlantic_chrom1N = "~/Dropbox/lowryLab/data/genotypes/Chr01N_Atlantic_genotype_matrix.txt"
+
+# loading genotype data 
+Atlantic_allsnps_1N = SlicedData$new();
+Atlantic_allsnps_1N$fileDelimiter = "\t";       # denote missing values;
+Atlantic_allsnps_1N$fileSkipColumns = 1;          # one column of row labels
+Atlantic_allsnps_1N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Atlantic_allsnps_1N$LoadFile(Atlantic_chrom1N)
+
+# 2K
+Atlantic_chrom2K = "~/Dropbox/lowryLab/data/genotypes/Chr02K_Atlantic_genotype_matrix.txt"
+
+# loading genotype data 
+Atlantic_allsnps_2K = SlicedData$new();
+Atlantic_allsnps_2K$fileDelimiter = "\t";       # denote missing values;
+Atlantic_allsnps_2K$fileSkipColumns = 1;          # one column of row labels
+Atlantic_allsnps_2K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Atlantic_allsnps_2K$LoadFile(Atlantic_chrom2K)
+
+# 2N
+Atlantic_chrom2N = "~/Dropbox/lowryLab/data/genotypes/Chr02N_Atlantic_genotype_matrix.txt"
+
+# loading genotype data 
+Atlantic_allsnps_2N = SlicedData$new();
+Atlantic_allsnps_2N$fileDelimiter = "\t";       # denote missing values;
+Atlantic_allsnps_2N$fileSkipColumns = 1;          # one column of row labels
+Atlantic_allsnps_2N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Atlantic_allsnps_2N$LoadFile(Atlantic_chrom2N)
+
+# 3K
+Atlantic_chrom3K = "~/Dropbox/lowryLab/data/genotypes/Chr03K_Atlantic_genotype_matrix.txt"
+
+# loading genotype data 
+Atlantic_allsnps_3K = SlicedData$new();
+Atlantic_allsnps_3K$fileDelimiter = "\t";       # denote missing values;
+Atlantic_allsnps_3K$fileSkipColumns = 1;          # one column of row labels
+Atlantic_allsnps_3K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Atlantic_allsnps_3K$LoadFile(Atlantic_chrom3K)
+
+# 3N
+Atlantic_chrom3N = "~/Dropbox/lowryLab/data/genotypes/Chr03N_Atlantic_genotype_matrix.txt"
+
+# loading genotype data 
+Atlantic_allsnps_3N = SlicedData$new();
+Atlantic_allsnps_3N$fileDelimiter = "\t";       # denote missing values;
+Atlantic_allsnps_3N$fileSkipColumns = 1;          # one column of row labels
+Atlantic_allsnps_3N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Atlantic_allsnps_3N$LoadFile(Atlantic_chrom3N)
+
+# 4K
+Atlantic_chrom4K = "~/Dropbox/lowryLab/data/genotypes/Chr04K_Atlantic_genotype_matrix.txt"
+
+# loading genotype data 
+Atlantic_allsnps_4K = SlicedData$new();
+Atlantic_allsnps_4K$fileDelimiter = "\t";       # denote missing values;
+Atlantic_allsnps_4K$fileSkipColumns = 1;          # one column of row labels
+Atlantic_allsnps_4K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Atlantic_allsnps_4K$LoadFile(Atlantic_chrom4K)
+
+# 4N
+Atlantic_chrom4N = "~/Dropbox/lowryLab/data/genotypes/Chr04N_Atlantic_genotype_matrix.txt"
+
+# loading genotype data 
+Atlantic_allsnps_4N = SlicedData$new();
+Atlantic_allsnps_4N$fileDelimiter = "\t";       # denote missing values;
+Atlantic_allsnps_4N$fileSkipColumns = 1;          # one column of row labels
+Atlantic_allsnps_4N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Atlantic_allsnps_4N$LoadFile(Atlantic_chrom4N)
+
+# 5K
+Atlantic_chrom5K = "~/Dropbox/lowryLab/data/genotypes/Chr05K_Atlantic_genotype_matrix.txt"
+
+# loading genotype data 
+Atlantic_allsnps_5K = SlicedData$new();
+Atlantic_allsnps_5K$fileDelimiter = "\t";       # denote missing values;
+Atlantic_allsnps_5K$fileSkipColumns = 1;          # one column of row labels
+Atlantic_allsnps_5K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Atlantic_allsnps_5K$LoadFile(Atlantic_chrom5K)
+
+# 5N
+Atlantic_chrom5N = "~/Dropbox/lowryLab/data/genotypes/Chr05N_Atlantic_genotype_matrix.txt"
+
+# loading genotype data 
+Atlantic_allsnps_5N = SlicedData$new();
+Atlantic_allsnps_5N$fileDelimiter = "\t";       # denote missing values;
+Atlantic_allsnps_5N$fileSkipColumns = 1;          # one column of row labels
+Atlantic_allsnps_5N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Atlantic_allsnps_5N$LoadFile(Atlantic_chrom5N)
+
+# 6K
+Atlantic_chrom6K = "~/Dropbox/lowryLab/data/genotypes/Chr06K_Atlantic_genotype_matrix.txt"
+
+# loading genotype data 
+Atlantic_allsnps_6K = SlicedData$new();
+Atlantic_allsnps_6K$fileDelimiter = "\t";       # denote missing values;
+Atlantic_allsnps_6K$fileSkipColumns = 1;          # one column of row labels
+Atlantic_allsnps_6K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Atlantic_allsnps_6K$LoadFile(Atlantic_chrom6K)
+
+# 6N
+Atlantic_chrom6N = "~/Dropbox/lowryLab/data/genotypes/Chr06N_Atlantic_genotype_matrix.txt"
+
+# loading genotype data 
+Atlantic_allsnps_6N = SlicedData$new();
+Atlantic_allsnps_6N$fileDelimiter = "\t";       # denote missing values;
+Atlantic_allsnps_6N$fileSkipColumns = 1;          # one column of row labels
+Atlantic_allsnps_6N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Atlantic_allsnps_6N$LoadFile(Atlantic_chrom6N)
+
+# 7K
+Atlantic_chrom7K = "~/Dropbox/lowryLab/data/genotypes/Chr07K_Atlantic_genotype_matrix.txt"
+
+# loading genotype data 
+Atlantic_allsnps_7K = SlicedData$new();
+Atlantic_allsnps_7K$fileDelimiter = "\t";       # denote missing values;
+Atlantic_allsnps_7K$fileSkipColumns = 1;          # one column of row labels
+Atlantic_allsnps_7K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Atlantic_allsnps_7K$LoadFile(Atlantic_chrom7K)
+
+# 7
+Atlantic_chrom7N = "~/Dropbox/lowryLab/data/genotypes/Chr07N_Atlantic_genotype_matrix.txt"
+
+# loading genotype data 
+Atlantic_allsnps_7N = SlicedData$new();
+Atlantic_allsnps_7N$fileDelimiter = "\t";       # denote missing values;
+Atlantic_allsnps_7N$fileSkipColumns = 1;          # one column of row labels
+Atlantic_allsnps_7N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Atlantic_allsnps_7N$LoadFile(Atlantic_chrom7N)
+
+# 8K
+Atlantic_chrom8K = "~/Dropbox/lowryLab/data/genotypes/Chr08K_Atlantic_genotype_matrix.txt"
+
+# loading genotype data 
+Atlantic_allsnps_8K = SlicedData$new();
+Atlantic_allsnps_8K$fileDelimiter = "\t";       # denote missing values;
+Atlantic_allsnps_8K$fileSkipColumns = 1;          # one column of row labels
+Atlantic_allsnps_8K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Atlantic_allsnps_8K$LoadFile(Atlantic_chrom8K)
+
+# 8N
+Atlantic_chrom8N = "~/Dropbox/lowryLab/data/genotypes/Chr08N_Atlantic_genotype_matrix.txt"
+
+# loading genotype data 
+Atlantic_allsnps_8N = SlicedData$new();
+Atlantic_allsnps_8N$fileDelimiter = "\t";       # denote missing values;
+Atlantic_allsnps_8N$fileSkipColumns = 1;          # one column of row labels
+Atlantic_allsnps_8N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Atlantic_allsnps_8N$LoadFile(Atlantic_chrom8N)
+
+# 9K
+Atlantic_chrom9K = "~/Dropbox/lowryLab/data/genotypes/Chr09K_Atlantic_genotype_matrix.txt"
+
+# loading genotype data 
+Atlantic_allsnps_9K = SlicedData$new();
+Atlantic_allsnps_9K$fileDelimiter = "\t";       # denote missing values;
+Atlantic_allsnps_9K$fileSkipColumns = 1;          # one column of row labels
+Atlantic_allsnps_9K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Atlantic_allsnps_9K$LoadFile(Atlantic_chrom9K)
+
+# 9N
+Atlantic_chrom9N = "~/Dropbox/lowryLab/data/genotypes/Chr09N_Atlantic_genotype_matrix.txt"
+
+# loading genotype data 
+Atlantic_allsnps_9N = SlicedData$new();
+Atlantic_allsnps_9N$fileDelimiter = "\t";       # denote missing values;
+Atlantic_allsnps_9N$fileSkipColumns = 1;          # one column of row labels
+Atlantic_allsnps_9N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Atlantic_allsnps_9N$LoadFile(Atlantic_chrom9N)
+```
+
+# map eQTLs, MI Midwest 
+
+```{r run matrix eQTL, MI Midwest}
+
+
+# eQTL_1K
+me_MI_Midwest_1K = Matrix_eQTL_main(
+  snps = Midwest_allsnps_1K,
+  gene = geneMI_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  cvrt = cvrt_Midwest,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_1K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_1K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+
+# eQTL_1N
+me_MI_Midwest_1N = Matrix_eQTL_main(
+  snps = Midwest_allsnps_1N,
+  gene = geneMI_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_1N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_1N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_2K
+me_MI_Midwest_2K = Matrix_eQTL_main(
+  snps = Midwest_allsnps_2K,
+  gene = geneMI_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_2K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_2K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_2N
+me_MI_Midwest_2N = Matrix_eQTL_main(
+  snps = Midwest_allsnps_2N,
+  gene = geneMI_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_2N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_2N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_3K
+me_MI_Midwest_3K = Matrix_eQTL_main(
+  snps = Midwest_allsnps_3K,
+  gene = geneMI_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_3K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_3K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_3N
+me_MI_Midwest_3N = Matrix_eQTL_main(
+  snps = Midwest_allsnps_3N,
+  gene = geneMI_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_3N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_3N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_4K
+me_MI_Midwest_4K = Matrix_eQTL_main(
+  snps = Midwest_allsnps_4K,
+  gene = geneMI_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_4K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_4K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_4N
+me_MI_Midwest_4N = Matrix_eQTL_main(
+  snps = Midwest_allsnps_4N,
+  gene = geneMI_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_4N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_4N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_5K
+me_MI_Midwest_5K = Matrix_eQTL_main(
+  snps = Midwest_allsnps_5K,
+  gene = geneMI_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_5K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_5K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_5N
+me_MI_Midwest_5N = Matrix_eQTL_main(
+  snps = Midwest_allsnps_5N,
+  gene = geneMI_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_5N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_5N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_6K
+me_MI_Midwest_6K = Matrix_eQTL_main(
+  snps = Midwest_allsnps_6K,
+  gene = geneMI_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_6K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_6K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_6N
+me_MI_Midwest_6N = Matrix_eQTL_main(
+  snps = Midwest_allsnps_6N,
+  gene = geneMI_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_6N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_6N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_7K
+me_MI_Midwest_7K = Matrix_eQTL_main(
+  snps = Midwest_allsnps_7K,
+  gene = geneMI_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_7K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_7K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_7N
+me_MI_Midwest_7N = Matrix_eQTL_main(
+  snps = Midwest_allsnps_7N,
+  gene = geneMI_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_7N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_7N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_8K
+me_MI_Midwest_8K = Matrix_eQTL_main(
+  snps = Midwest_allsnps_8K,
+  gene = geneMI_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_8K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_8K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_8N
+me_MI_Midwest_8N = Matrix_eQTL_main(
+  snps = Midwest_allsnps_8N,
+  gene = geneMI_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_8N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_8N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_9K
+me_MI_Midwest_9K = Matrix_eQTL_main(
+  snps = Midwest_allsnps_9K,
+  gene = geneMI_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_9K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_9K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_9N
+me_MI_Midwest_9N = Matrix_eQTL_main(
+  snps = Midwest_allsnps_9N,
+  gene = geneMI_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_9N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_9N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+
+
+```
+
+# map eQTLs, TX Midwest
+
+```{r run matrix eQTL, TX Midwest}
+
+
+# eQTL_1K
+me_TX_Midwest_1K = Matrix_eQTL_main(
+  snps = Midwest_allsnps_1K,
+  gene = geneTX_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  cvrt = cvrt_Midwest,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_1K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_1K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+
+# eQTL_1N
+me_TX_Midwest_1N = Matrix_eQTL_main(
+  snps = Midwest_allsnps_1N,
+  gene = geneTX_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_1N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_1N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_2K
+me_TX_Midwest_2K = Matrix_eQTL_main(
+  snps = Midwest_allsnps_2K,
+  gene = geneTX_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_2K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_2K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_2N
+me_TX_Midwest_2N = Matrix_eQTL_main(
+  snps = Midwest_allsnps_2N,
+  gene = geneTX_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_2N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_2N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_3K
+me_TX_Midwest_3K = Matrix_eQTL_main(
+  snps = Midwest_allsnps_3K,
+  gene = geneTX_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_3K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_3K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_3N
+me_TX_Midwest_3N = Matrix_eQTL_main(
+  snps = Midwest_allsnps_3N,
+  gene = geneTX_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_3N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_3N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_4K
+me_TX_Midwest_4K = Matrix_eQTL_main(
+  snps = Midwest_allsnps_4K,
+  gene = geneTX_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_4K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_4K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_4N
+me_TX_Midwest_4N = Matrix_eQTL_main(
+  snps = Midwest_allsnps_4N,
+  gene = geneTX_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_4N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_4N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_5K
+me_TX_Midwest_5K = Matrix_eQTL_main(
+  snps = Midwest_allsnps_5K,
+  gene = geneTX_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_5K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_5K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_5N
+me_TX_Midwest_5N = Matrix_eQTL_main(
+  snps = Midwest_allsnps_5N,
+  gene = geneTX_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_5N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_5N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_6K
+me_TX_Midwest_6K = Matrix_eQTL_main(
+  snps = Midwest_allsnps_6K,
+  gene = geneTX_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_6K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_6K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_6N
+me_TX_Midwest_6N = Matrix_eQTL_main(
+  snps = Midwest_allsnps_6N,
+  gene = geneTX_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_6N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_6N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_7K
+me_TX_Midwest_7K = Matrix_eQTL_main(
+  snps = Midwest_allsnps_7K,
+  gene = geneTX_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_7K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_7K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_7N
+me_TX_Midwest_7N = Matrix_eQTL_main(
+  snps = Midwest_allsnps_7N,
+  gene = geneTX_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_7N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_7N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_8K
+me_TX_Midwest_8K = Matrix_eQTL_main(
+  snps = Midwest_allsnps_8K,
+  gene = geneTX_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_8K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_8K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_8N
+me_TX_Midwest_8N = Matrix_eQTL_main(
+  snps = Midwest_allsnps_8N,
+  gene = geneTX_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_8N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_8N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_9K
+me_TX_Midwest_9K = Matrix_eQTL_main(
+  snps = Midwest_allsnps_9K,
+  gene = geneTX_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_9K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_9K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_9N
+me_TX_Midwest_9N = Matrix_eQTL_main(
+  snps = Midwest_allsnps_9N,
+  gene = geneTX_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_9N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_9N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+```
+
+# map eQTLs, GxE Midwest
+
+```{r run matrix eQTL, GxE Midwest}
+
+
+# eQTL_1K
+me_GxE_Midwest_1K = Matrix_eQTL_main(
+  snps = Midwest_allsnps_1K,
+  gene = geneGxE_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  cvrt = cvrt_Midwest,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_1K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_1K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+
+# eQTL_1N
+me_GxE_Midwest_1N = Matrix_eQTL_main(
+  snps = Midwest_allsnps_1N,
+  gene = geneGxE_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_1N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_1N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_2K
+me_GxE_Midwest_2K = Matrix_eQTL_main(
+  snps = Midwest_allsnps_2K,
+  gene = geneGxE_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_2K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_2K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_2N
+me_GxE_Midwest_2N = Matrix_eQTL_main(
+  snps = Midwest_allsnps_2N,
+  gene = geneGxE_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_2N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_2N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_3K
+me_GxE_Midwest_3K = Matrix_eQTL_main(
+  snps = Midwest_allsnps_3K,
+  gene = geneGxE_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_3K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_3K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_3N
+me_GxE_Midwest_3N = Matrix_eQTL_main(
+  snps = Midwest_allsnps_3N,
+  gene = geneGxE_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_3N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_3N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_4K
+me_GxE_Midwest_4K = Matrix_eQTL_main(
+  snps = Midwest_allsnps_4K,
+  gene = geneGxE_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_4K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_4K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_4N
+me_GxE_Midwest_4N = Matrix_eQTL_main(
+  snps = Midwest_allsnps_4N,
+  gene = geneGxE_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_4N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_4N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_5K
+me_GxE_Midwest_5K = Matrix_eQTL_main(
+  snps = Midwest_allsnps_5K,
+  gene = geneGxE_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_5K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_5K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_5N
+me_GxE_Midwest_5N = Matrix_eQTL_main(
+  snps = Midwest_allsnps_5N,
+  gene = geneGxE_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_5N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_5N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_6K
+me_GxE_Midwest_6K = Matrix_eQTL_main(
+  snps = Midwest_allsnps_6K,
+  gene = geneGxE_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_6K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_6K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_6N
+me_GxE_Midwest_6N = Matrix_eQTL_main(
+  snps = Midwest_allsnps_6N,
+  gene = geneGxE_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_6N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_6N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_7K
+me_GxE_Midwest_7K = Matrix_eQTL_main(
+  snps = Midwest_allsnps_7K,
+  gene = geneGxE_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_7K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_7K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_7N
+me_GxE_Midwest_7N = Matrix_eQTL_main(
+  snps = Midwest_allsnps_7N,
+  gene = geneGxE_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_7N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_7N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_8K
+me_GxE_Midwest_8K = Matrix_eQTL_main(
+  snps = Midwest_allsnps_8K,
+  gene = geneGxE_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_8K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_8K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_8N
+me_GxE_Midwest_8N = Matrix_eQTL_main(
+  snps = Midwest_allsnps_8N,
+  gene = geneGxE_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_8N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_8N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_9K
+me_GxE_Midwest_9K = Matrix_eQTL_main(
+  snps = Midwest_allsnps_9K,
+  gene = geneGxE_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_9K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_9K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_9N
+me_GxE_Midwest_9N = Matrix_eQTL_main(
+  snps = Midwest_allsnps_9N,
+  gene = geneGxE_Midwest,
+  cvrt = cvrt_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_9N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_9N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+```
+
+# map eQTLs, MI Gulf
+
+```{r run matrix eQTL, MI Gulf}
+
+
+# eQTL_1K
+me_MI_Gulf_1K = Matrix_eQTL_main(
+  snps = Gulf_allsnps_1K,
+  gene = geneMI_Gulf,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  cvrt = cvrt_Gulf,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_1K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_1K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+
+# eQTL_1N
+me_MI_Gulf_1N = Matrix_eQTL_main(
+  snps = Gulf_allsnps_1N,
+  gene = geneMI_Gulf,
+  cvrt = cvrt_Gulf,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_1N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_1N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_2K
+me_MI_Gulf_2K = Matrix_eQTL_main(
+  snps = Gulf_allsnps_2K,
+  gene = geneMI_Gulf,
+  cvrt = cvrt_Gulf,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_2K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_2K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_2N
+me_MI_Gulf_2N = Matrix_eQTL_main(
+  snps = Gulf_allsnps_2N,
+  gene = geneMI_Gulf,
+  cvrt = cvrt_Gulf,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_2N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_2N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_3K
+me_MI_Gulf_3K = Matrix_eQTL_main(
+  snps = Gulf_allsnps_3K,
+  gene = geneMI_Gulf,
+  cvrt = cvrt_Gulf,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_3K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_3K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_3N
+me_MI_Gulf_3N = Matrix_eQTL_main(
+  snps = Gulf_allsnps_3N,
+  gene = geneMI_Gulf,
+  cvrt = cvrt_Gulf,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_3N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_3N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_4K
+me_MI_Gulf_4K = Matrix_eQTL_main(
+  snps = Gulf_allsnps_4K,
+  gene = geneMI_Gulf,
+  cvrt = cvrt_Gulf,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_4K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_4K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_4N
+me_MI_Gulf_4N = Matrix_eQTL_main(
+  snps = Gulf_allsnps_4N,
+  gene = geneMI_Gulf,
+  cvrt = cvrt_Gulf,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_4N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_4N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_5K
+me_MI_Gulf_5K = Matrix_eQTL_main(
+  snps = Gulf_allsnps_5K,
+  gene = geneMI_Gulf,
+  cvrt = cvrt_Gulf,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_5K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_5K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_5N
+me_MI_Gulf_5N = Matrix_eQTL_main(
+  snps = Gulf_allsnps_5N,
+  gene = geneMI_Gulf,
+  cvrt = cvrt_Gulf,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_5N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_5N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_6K
+me_MI_Gulf_6K = Matrix_eQTL_main(
+  snps = Gulf_allsnps_6K,
+  gene = geneMI_Gulf,
+  cvrt = cvrt_Gulf,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_6K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_6K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_6N
+me_MI_Gulf_6N = Matrix_eQTL_main(
+  snps = Gulf_allsnps_6N,
+  gene = geneMI_Gulf,
+  cvrt = cvrt_Gulf,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_6N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_6N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_7K
+me_MI_Gulf_7K = Matrix_eQTL_main(
+  snps = Gulf_allsnps_7K,
+  gene = geneMI_Gulf,
+  cvrt = cvrt_Gulf,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_7K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_7K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_7N
+me_MI_Gulf_7N = Matrix_eQTL_main(
+  snps = Gulf_allsnps_7N,
+  gene = geneMI_Gulf,
+  cvrt = cvrt_Gulf,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_7N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_7N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_8K
+me_MI_Gulf_8K = Matrix_eQTL_main(
+  snps = Gulf_allsnps_8K,
+  gene = geneMI_Gulf,
+  cvrt = cvrt_Gulf,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_8K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_8K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_8N
+me_MI_Gulf_8N = Matrix_eQTL_main(
+  snps = Gulf_allsnps_8N,
+  gene = geneMI_Gulf,
+  cvrt = cvrt_Gulf,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_8N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_8N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_9K
+me_MI_Gulf_9K = Matrix_eQTL_main(
+  snps = Gulf_allsnps_9K,
+  gene = geneMI_Gulf,
+  cvrt = cvrt_Gulf,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_9K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_9K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_9N
+me_MI_Gulf_9N = Matrix_eQTL_main(
+  snps = Gulf_allsnps_9N,
+  gene = geneMI_Gulf,
+  cvrt = cvrt_Gulf,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_9N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_9N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+```
+
+# map eQTLs, TX Gulf
+
+```{r run matrix eQTL, TX Gulf}
+
+
+# eQTL_1K
+me_MI_TX_1K = Matrix_eQTL_main(
+  snps = TX_allsnps_1K,
+  gene = geneMI_TX,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  cvrt = cvrt_TX,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_TX_1K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_TX_1K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+
+# eQTL_1N
+me_MI_TX_1N = Matrix_eQTL_main(
+  snps = TX_allsnps_1N,
+  gene = geneMI_TX,
+  cvrt = cvrt_TX,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_TX_1N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_TX_1N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_2K
+me_MI_TX_2K = Matrix_eQTL_main(
+  snps = TX_allsnps_2K,
+  gene = geneMI_TX,
+  cvrt = cvrt_TX,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_TX_2K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_TX_2K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_2N
+me_MI_TX_2N = Matrix_eQTL_main(
+  snps = TX_allsnps_2N,
+  gene = geneMI_TX,
+  cvrt = cvrt_TX,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_TX_2N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_TX_2N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_3K
+me_MI_TX_3K = Matrix_eQTL_main(
+  snps = TX_allsnps_3K,
+  gene = geneMI_TX,
+  cvrt = cvrt_TX,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_TX_3K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_TX_3K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_3N
+me_MI_TX_3N = Matrix_eQTL_main(
+  snps = TX_allsnps_3N,
+  gene = geneMI_TX,
+  cvrt = cvrt_TX,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_TX_3N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_TX_3N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_4K
+me_MI_TX_4K = Matrix_eQTL_main(
+  snps = TX_allsnps_4K,
+  gene = geneMI_TX,
+  cvrt = cvrt_TX,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_TX_4K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_TX_4K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_4N
+me_MI_TX_4N = Matrix_eQTL_main(
+  snps = TX_allsnps_4N,
+  gene = geneMI_TX,
+  cvrt = cvrt_TX,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_TX_4N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_TX_4N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_5K
+me_MI_TX_5K = Matrix_eQTL_main(
+  snps = TX_allsnps_5K,
+  gene = geneMI_TX,
+  cvrt = cvrt_TX,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_TX_5K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_TX_5K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_5N
+me_MI_TX_5N = Matrix_eQTL_main(
+  snps = TX_allsnps_5N,
+  gene = geneMI_TX,
+  cvrt = cvrt_TX,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_TX_5N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_TX_5N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_6K
+me_MI_TX_6K = Matrix_eQTL_main(
+  snps = TX_allsnps_6K,
+  gene = geneMI_TX,
+  cvrt = cvrt_TX,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_TX_6K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_TX_6K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_6N
+me_MI_TX_6N = Matrix_eQTL_main(
+  snps = TX_allsnps_6N,
+  gene = geneMI_TX,
+  cvrt = cvrt_TX,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_TX_6N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_TX_6N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_7K
+me_MI_TX_7K = Matrix_eQTL_main(
+  snps = TX_allsnps_7K,
+  gene = geneMI_TX,
+  cvrt = cvrt_TX,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_TX_7K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_TX_7K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_7N
+me_MI_TX_7N = Matrix_eQTL_main(
+  snps = TX_allsnps_7N,
+  gene = geneMI_TX,
+  cvrt = cvrt_TX,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_TX_7N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_TX_7N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_8K
+me_MI_TX_8K = Matrix_eQTL_main(
+  snps = TX_allsnps_8K,
+  gene = geneMI_TX,
+  cvrt = cvrt_TX,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_TX_8K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_TX_8K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_8N
+me_MI_TX_8N = Matrix_eQTL_main(
+  snps = TX_allsnps_8N,
+  gene = geneMI_TX,
+  cvrt = cvrt_TX,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_TX_8N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_TX_8N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_9K
+me_MI_TX_9K = Matrix_eQTL_main(
+  snps = TX_allsnps_9K,
+  gene = geneMI_TX,
+  cvrt = cvrt_TX,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_TX_9K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_TX_9K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_9N
+me_MI_TX_9N = Matrix_eQTL_main(
+  snps = TX_allsnps_9N,
+  gene = geneMI_TX,
+  cvrt = cvrt_TX,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_TX_9N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_TX_9N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+```
+
+# map eQTLs, GxE Gulf
+
+```{r run matrix eQTL, GxE Gulf}
+
+
+# eQTL_1K
+me_GxE_Gulf_1K = Matrix_eQTL_main(
+  snps = Gulf_allsnps_1K,
+  gene = geneGxE_Gulf,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  cvrt = cvrt_Gulf,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_1K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_1K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+
+# eQTL_1N
+me_GxE_Gulf_1N = Matrix_eQTL_main(
+  snps = Gulf_allsnps_1N,
+  gene = geneGxE_Gulf,
+  cvrt = cvrt_Gulf,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_1N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_1N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_2K
+me_GxE_Gulf_2K = Matrix_eQTL_main(
+  snps = Gulf_allsnps_2K,
+  gene = geneGxE_Gulf,
+  cvrt = cvrt_Gulf,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_2K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_2K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_2N
+me_GxE_Gulf_2N = Matrix_eQTL_main(
+  snps = Gulf_allsnps_2N,
+  gene = geneGxE_Gulf,
+  cvrt = cvrt_Gulf,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_2N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_2N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_3K
+me_GxE_Gulf_3K = Matrix_eQTL_main(
+  snps = Gulf_allsnps_3K,
+  gene = geneGxE_Gulf,
+  cvrt = cvrt_Gulf,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_3K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_3K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_3N
+me_GxE_Gulf_3N = Matrix_eQTL_main(
+  snps = Gulf_allsnps_3N,
+  gene = geneGxE_Gulf,
+  cvrt = cvrt_Gulf,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_3N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_3N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_4K
+me_GxE_Gulf_4K = Matrix_eQTL_main(
+  snps = Gulf_allsnps_4K,
+  gene = geneGxE_Gulf,
+  cvrt = cvrt_Gulf,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_4K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_4K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_4N
+me_GxE_Gulf_4N = Matrix_eQTL_main(
+  snps = Gulf_allsnps_4N,
+  gene = geneGxE_Gulf,
+  cvrt = cvrt_Gulf,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_4N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_4N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_5K
+me_GxE_Gulf_5K = Matrix_eQTL_main(
+  snps = Gulf_allsnps_5K,
+  gene = geneGxE_Gulf,
+  cvrt = cvrt_Gulf,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_5K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_5K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_5N
+me_GxE_Gulf_5N = Matrix_eQTL_main(
+  snps = Gulf_allsnps_5N,
+  gene = geneGxE_Gulf,
+  cvrt = cvrt_Gulf,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_5N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_5N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_6K
+me_GxE_Gulf_6K = Matrix_eQTL_main(
+  snps = Gulf_allsnps_6K,
+  gene = geneGxE_Gulf,
+  cvrt = cvrt_Gulf,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_6K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_6K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_6N
+me_GxE_Gulf_6N = Matrix_eQTL_main(
+  snps = Gulf_allsnps_6N,
+  gene = geneGxE_Gulf,
+  cvrt = cvrt_Gulf,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_6N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_6N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_7K
+me_GxE_Gulf_7K = Matrix_eQTL_main(
+  snps = Gulf_allsnps_7K,
+  gene = geneGxE_Gulf,
+  cvrt = cvrt_Gulf,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_7K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_7K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_7N
+me_GxE_Gulf_7N = Matrix_eQTL_main(
+  snps = Gulf_allsnps_7N,
+  gene = geneGxE_Gulf,
+  cvrt = cvrt_Gulf,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_7N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_7N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_8K
+me_GxE_Gulf_8K = Matrix_eQTL_main(
+  snps = Gulf_allsnps_8K,
+  gene = geneGxE_Gulf,
+  cvrt = cvrt_Gulf,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_8K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_8K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_8N
+me_GxE_Gulf_8N = Matrix_eQTL_main(
+  snps = Gulf_allsnps_8N,
+  gene = geneGxE_Gulf,
+  cvrt = cvrt_Gulf,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_8N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_8N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_9K
+me_GxE_Gulf_9K = Matrix_eQTL_main(
+  snps = Gulf_allsnps_9K,
+  gene = geneGxE_Gulf,
+  cvrt = cvrt_Gulf,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_9K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_9K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_9N
+me_GxE_Gulf_9N = Matrix_eQTL_main(
+  snps = Gulf_allsnps_9N,
+  gene = geneGxE_Gulf,
+  cvrt = cvrt_Gulf,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_9N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_9N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+```
+
+# map eQTLs, MI Atlantic
+
+```{r run matrix eQTL, MI Atlantic}
+
+
+# eQTL_1K
+me_MI_Atlantic_1K = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_1K,
+  gene = geneMI_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  cvrt = cvrt_Atlantic,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_1K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_1K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+
+# eQTL_1N
+me_MI_Atlantic_1N = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_1N,
+  gene = geneMI_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_1N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_1N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_2K
+me_MI_Atlantic_2K = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_2K,
+  gene = geneMI_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_2K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_2K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_2N
+me_MI_Atlantic_2N = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_2N,
+  gene = geneMI_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_2N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_2N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_3K
+me_MI_Atlantic_3K = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_3K,
+  gene = geneMI_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_3K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_3K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_3N
+me_MI_Atlantic_3N = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_3N,
+  gene = geneMI_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_3N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_3N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_4K
+me_MI_Atlantic_4K = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_4K,
+  gene = geneMI_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_4K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_4K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_4N
+me_MI_Atlantic_4N = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_4N,
+  gene = geneMI_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_4N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_4N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_5K
+me_MI_Atlantic_5K = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_5K,
+  gene = geneMI_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_5K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_5K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_5N
+me_MI_Atlantic_5N = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_5N,
+  gene = geneMI_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_5N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_5N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_6K
+me_MI_Atlantic_6K = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_6K,
+  gene = geneMI_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_6K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_6K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_6N
+me_MI_Atlantic_6N = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_6N,
+  gene = geneMI_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_6N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_6N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_7K
+me_MI_Atlantic_7K = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_7K,
+  gene = geneMI_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_7K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_7K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_7N
+me_MI_Atlantic_7N = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_7N,
+  gene = geneMI_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_7N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_7N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_8K
+me_MI_Atlantic_8K = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_8K,
+  gene = geneMI_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_8K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_8K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_8N
+me_MI_Atlantic_8N = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_8N,
+  gene = geneMI_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_8N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_8N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_9K
+me_MI_Atlantic_9K = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_9K,
+  gene = geneMI_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_9K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_9K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_9N
+me_MI_Atlantic_9N = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_9N,
+  gene = geneMI_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_9N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_9N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+```
+
+# map eQTLs, TX Atlantic
+
+```{r run matrix eQTL, TX Atlantic}
+
+
+# eQTL_1K
+me_TX_Atlantic_1K = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_1K,
+  gene = geneTX_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  cvrt = cvrt_Atlantic,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_1K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_1K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+
+# eQTL_1N
+me_TX_Atlantic_1N = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_1N,
+  gene = geneTX_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_1N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_1N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_2K
+me_TX_Atlantic_2K = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_2K,
+  gene = geneTX_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_2K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_2K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_2N
+me_TX_Atlantic_2N = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_2N,
+  gene = geneTX_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_2N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_2N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_3K
+me_TX_Atlantic_3K = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_3K,
+  gene = geneTX_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_3K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_3K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_3N
+me_TX_Atlantic_3N = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_3N,
+  gene = geneTX_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_3N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_3N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_4K
+me_TX_Atlantic_4K = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_4K,
+  gene = geneTX_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_4K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_4K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_4N
+me_TX_Atlantic_4N = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_4N,
+  gene = geneTX_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_4N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_4N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_5K
+me_TX_Atlantic_5K = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_5K,
+  gene = geneTX_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_5K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_5K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_5N
+me_TX_Atlantic_5N = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_5N,
+  gene = geneTX_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_5N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_5N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_6K
+me_TX_Atlantic_6K = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_6K,
+  gene = geneTX_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_6K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_6K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_6N
+me_TX_Atlantic_6N = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_6N,
+  gene = geneTX_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_6N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_6N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_7K
+me_TX_Atlantic_7K = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_7K,
+  gene = geneTX_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_7K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_7K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_7N
+me_TX_Atlantic_7N = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_7N,
+  gene = geneTX_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_7N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_7N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_8K
+me_TX_Atlantic_8K = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_8K,
+  gene = geneTX_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_8K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_8K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_8N
+me_TX_Atlantic_8N = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_8N,
+  gene = geneTX_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_8N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_8N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_9K
+me_TX_Atlantic_9K = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_9K,
+  gene = geneTX_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_9K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_9K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_9N
+me_TX_Atlantic_9N = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_9N,
+  gene = geneTX_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_9N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_9N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+```
+
+# map eQTLs, GxE Atlantic
+
+```{r run matrix eQTL, GxE Atlantic}
+
+
+# eQTL_1K
+me_GxE_Atlantic_1K = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_1K,
+  gene = geneGxE_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  cvrt = cvrt_Atlantic,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_1K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_1K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+
+# eQTL_1N
+me_GxE_Atlantic_1N = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_1N,
+  gene = geneGxE_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_1N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_1N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_2K
+me_GxE_Atlantic_2K = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_2K,
+  gene = geneGxE_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_2K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_2K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_2N
+me_GxE_Atlantic_2N = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_2N,
+  gene = geneGxE_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_2N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_2N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_3K
+me_GxE_Atlantic_3K = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_3K,
+  gene = geneGxE_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_3K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_3K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_3N
+me_GxE_Atlantic_3N = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_3N,
+  gene = geneGxE_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_3N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_3N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_4K
+me_GxE_Atlantic_4K = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_4K,
+  gene = geneGxE_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_4K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_4K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_4N
+me_GxE_Atlantic_4N = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_4N,
+  gene = geneGxE_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_4N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_4N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_5K
+me_GxE_Atlantic_5K = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_5K,
+  gene = geneGxE_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_5K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_5K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_5N
+me_GxE_Atlantic_5N = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_5N,
+  gene = geneGxE_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_5N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_5N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_6K
+me_GxE_Atlantic_6K = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_6K,
+  gene = geneGxE_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_6K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_6K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_6N
+me_GxE_Atlantic_6N = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_6N,
+  gene = geneGxE_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_6N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_6N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_7K
+me_GxE_Atlantic_7K = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_7K,
+  gene = geneGxE_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_7K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_7K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_7N
+me_GxE_Atlantic_7N = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_7N,
+  gene = geneGxE_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_7N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_7N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_8K
+me_GxE_Atlantic_8K = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_8K,
+  gene = geneGxE_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_8K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_8K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_8N
+me_GxE_Atlantic_8N = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_8N,
+  gene = geneGxE_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_8N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_8N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_9K
+me_GxE_Atlantic_9K = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_9K,
+  gene = geneGxE_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_9K.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_9K_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL_9N
+me_GxE_Atlantic_9N = Matrix_eQTL_main(
+  snps = Atlantic_allsnps_9N,
+  gene = geneGxE_Atlantic,
+  cvrt = cvrt_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_9N.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_9N_cis.txt",
+  pvOutputThreshold = 1e-11,
+  pvOutputThreshold.cis = 1e-2, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+```
+
+
+
+
+
+
+
+
+

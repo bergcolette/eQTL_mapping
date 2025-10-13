@@ -1,0 +1,11 @@
+awk '{print "BIOMASS", $0}' BIOMASS_Midwest_TX.assoc.txt > BIOMASS_Midwest_TX.labeled.txt
+awk '{print "EM1", $0}' EM1_Midwest_TX.assoc.txt > EM1_Midwest_TX.labeled.txt 
+awk '{print "EM50", $0}' EM50_Midwest_TX.assoc.txt > EM50_Midwest_TX.labeled.txt
+awk '{print "FL1", $0}' FL1_Midwest_TX.assoc.txt > FL1_Midwest_TX.labeled.txt
+awk '{print "FL50" $0}' FL50_Midwest_TX.assoc.txt > FL50_Midwest_TX.labeled.txt 
+awk '{print "GR100", $0}' GR100_Midwest_TX.assoc.txt > GR100_Midwest_TX.labeled.txt 
+awk '{print "GR1", $0}' GR1_Midwest_TX.assoc.txt > GR1_Midwest_TX.labeled.txt 
+awk '{print "GR50", $0}' GR50_Midwest_TX.assoc.txt > GR50_Midwest_TX.labeled.txt 
+awk '{print "HT_PAN_EOS", $0}' HT_PAN_EOS_Midwest_TX.assoc.txt > HT_PAN_EOS_Midwest_TX.labeled.txt
+awk '{print "MOISTURE", $0}' MOISTURE_Midwest_TX.assoc.txt > MOISTURE_Midwest_TX.labeled.txt 
+awk '{print "TC_EOS", $0}' TC_EOS_Midwest_TX.assoc.txt > TC_EOS_Midwest_TX.labeled.txt 
