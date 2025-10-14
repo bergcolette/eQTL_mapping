@@ -1,3 +1,10 @@
+# creating a pseudo-F1 vcf 
+
+# using awk. if line > 91, replace column 10 (the genotype column) with 0/1
+awk 'NR > 91 {$10 = "0/1"} {print}' F1_template.recode.vcf > F1.vcf
+
+
+
 bcftools concat Chr01K.recode.vcf.gz \
  Chr01N.recode.vcf.gz \
  Chr02K.recode.vcf.gz \

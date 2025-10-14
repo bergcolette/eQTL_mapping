@@ -14,6 +14,7 @@ library(DESeq2)
 library(genefilter)
 library(tidyverse)
 library(WGCNA)
+library(gridExtra)
 
 setwd("~/Dropbox/LowryLab/data")
 ```
@@ -95,43 +96,39 @@ colData <- read.csv("sampleDat_noF1.csv",
 # run DESeq (make dds object)
 ```{r make a DESeq object}
 # format for DESeq 
-
+# the first model includes genotype, habitat, and their interaction 
 dds <- DESeqDataSetFromMatrix(countData = all,
                               colData = colData,
                               design =  ~ habitat + genotype + habitat:genotype)
-
 
 ```
 
 # filter the DDS object
 ```{r filter}
-smallestGroupSize <- 5
+
+# filter for each (all model, hab only, gen only)
+
 keep <- rowSums(counts(dds) >= 10) >= smallestGroupSize
-dds <- dds[keep,]
+dds <- dds_all[keep,]
+
 ```
 
-# normalize & prep for WGCNA 
-```{r normalize }
-# running deseq 
-dds <- DESeq(dds)
 
-# running VSD
+# normalize
+```{r normalize }
+
+# running deseq for habitat only
+dds <- DESeq(dds)
 vsd <- varianceStabilizingTransformation(dds)
 
-# extract the normalized data 
-wpn_vsd <- getVarianceStabilizedData(dds)
-rv_wpn <- rowVars(wpn_vsd)
+```
+```{r}
+res_genotype <- results(dds_all, contrast=c("genotype","AP13","DAC6"))
 
-# Extracting the 5% most differentiated genes
-q95_wpn <- quantile( rowVars(wpn_vsd), .95) 
-
-# set the row variables
-expr_normalized <- wpn_vsd[ rv_wpn > q95_wpn, ]
-
-# format for WGCNA
-input_mat = t(expr_normalized)
+res_habitat <- results(dds_all, contrast=c("habitat","KBSM","PKLE"))
 
 ```
+
 
 # PCA plot of gene expression to vet samples
 
@@ -146,11 +143,52 @@ ggplot(pcaData, aes(PC1, PC2, color=habitat, shape=genotype)) +
   coord_fixed() +
   theme_bw()
 ```
+# plotting differential gene expression 
 
-# volcano plot of gene expression 
+```{r volcano plots}
 
-```{r}
 
+# DE based on genotype
+gen_DE <- ggplot(res_genotype,
+       aes(x=log2FoldChange,
+           y=-log10(padj))) +
+  geom_point(size = 0.35) +
+  theme_bw() +
+  ggtitle("AP13 vs DAC6 DE")
+
+# DE based on habitat
+hab_DE <- ggplot(res_habitat,
+       aes(x=log2FoldChange,
+           y=-log10(padj))) +
+  geom_point(size = 0.35) +
+  theme_bw() +
+  theme(legend.position = "none") +
+  ggtitle("MI vs TX DE")
+
+
+# putting the two plots together
+grid.arrange(gen_DE,
+             hab_DE,
+             nrow=1)
+
+```
+
+
+```{r prep for WGCNA}
+# just doing WGCNA on the whole model (genotype, habitat, their interaction)
+
+# extract the normalized data 
+wpn_vsd <- getVarianceStabilizedData(dds_all)
+rv_wpn <- rowVars(wpn_vsd)
+
+# Extracting the 5% most differentiated genes
+q95_wpn <- quantile( rowVars(wpn_vsd), .95) 
+
+# set the row variables
+expr_normalized <- wpn_vsd[ rv_wpn > q95_wpn, ]
+
+# format for WGCNA
+input_mat = t(expr_normalized)
 ```
 
 
