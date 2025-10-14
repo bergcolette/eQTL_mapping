@@ -1,0 +1,284 @@
+---
+title: "DE_analyses and WGCNA"
+author: "Colette Berg"
+date: "2025-10-07"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(dplyr)
+library(edgeR)
+library(DESeq2)
+library(genefilter)
+library(tidyverse)
+library(WGCNA)
+
+setwd("~/Dropbox/LowryLab/data")
+```
+
+# read in the data 
+```{r read in data}
+# read in read counts from HTSeq; 
+# not including the F1's 
+
+# BUWCG <-  read.csv("/Users/coletteberg/Dropbox/LowryLab/data/BUWCG.counts.tsv")
+BUWCU <-  read.csv("BUWCU.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
+BUWGW <-  read.csv("BUWGW.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
+#BUWGX <-  read.csv("BUWGX.counts.tsv")
+BUWHN <-  read.csv("BUWHN.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
+BUWBN <-  read.csv("BUWBN.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
+BUWBY <-  read.csv("BUWBY.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
+BUWNS <-  read.csv("BUWNS.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
+BUWOC <-  read.csv("BUWOC.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
+BUWOP <-  read.csv("BUWOP.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
+BUWGG <-  read.csv("BUWGG.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
+BUWNH <-  read.csv("BUWNH.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
+BUWOO <-  read.csv("BUWOO.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
+BUWBH <-  read.csv("BUWBH.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
+BUWGY <-  read.csv("BUWGY.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
+BUWHP <-  read.csv("BUWHP.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
+#BUWBG <-  read.csv("BUWBG.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
+#BUWBU <-  read.csv("BUWBU.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
+#BUWBW <-  read.csv("BUWBW.counts.tsv")
+#BUWCY <-  read.csv("BUWCY.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
+#BUWGO <-  read.csv("BUWGO.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
+#BUWHS <-  read.csv("BUWHS.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
+#BUWHW <-  read.csv("BUWHW.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
+#BUWHY <-  read.csv("BUWHY.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
+#BUWHZ <-  read.csv("BUWHZ.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
+#BUWNA <-  read.csv("BUWNA.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
+#BUWNP <-  read.csv("BUWNP.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
+# BUWNX <-  read.csv("BUWNX.counts.tsv")
+
+# put all of the files together
+all <- cbind(BUWCU,
+BUWGW,
+BUWHN,
+BUWBN,
+BUWBY,
+BUWNS,
+BUWOC,
+BUWOP,
+BUWGG,
+BUWNH,
+BUWOO,
+BUWBH,
+BUWGY,
+BUWHP)
+
+
+# set the colnames
+colnames(all) <- c("AP13_KBSM_1",
+"AP13_KBSM_2",
+"AP13_KBSM_3",
+"AP13_PKLE_1",
+"AP13_PKLE_2",
+"AP13_PKLE_3",
+"AP13_PKLE_4",
+"AP13_PKLE_5",
+"DAC6_KBSM_1",
+"DAC6_KBSM_2",
+"DAC6_KBSM_3",
+"DAC6_PKLE_1",
+"DAC6_PKLE_2",
+"DAC6_PKLE_3")
+
+
+# read sample data 
+colData <- read.csv("sampleDat_noF1.csv",
+                    row.names = 1)
+
+```
+
+# run DESeq (make dds object)
+```{r make a DESeq object}
+# format for DESeq 
+
+dds <- DESeqDataSetFromMatrix(countData = all,
+                              colData = colData,
+                              design =  ~ habitat + genotype + habitat:genotype)
+
+
+```
+
+# filter the DDS object
+```{r filter}
+smallestGroupSize <- 5
+keep <- rowSums(counts(dds) >= 10) >= smallestGroupSize
+dds <- dds[keep,]
+```
+
+# normalize & prep for WGCNA 
+```{r normalize }
+# running deseq 
+dds <- DESeq(dds)
+
+# running VSD
+vsd <- varianceStabilizingTransformation(dds)
+
+# extract the normalized data 
+wpn_vsd <- getVarianceStabilizedData(dds)
+rv_wpn <- rowVars(wpn_vsd)
+
+# Extracting the 5% most differentiated genes
+q95_wpn <- quantile( rowVars(wpn_vsd), .95) 
+
+# set the row variables
+expr_normalized <- wpn_vsd[ rv_wpn > q95_wpn, ]
+
+# format for WGCNA
+input_mat = t(expr_normalized)
+
+```
+
+# PCA plot of gene expression to vet samples
+
+```{r PCA of genotypes}
+
+pcaData <- plotPCA(vsd, intgroup=c("habitat", "genotype"), returnData=TRUE)
+percentVar <- round(100 * attr(pcaData, "percentVar"))
+ggplot(pcaData, aes(PC1, PC2, color=habitat, shape=genotype)) +
+  geom_point(size=3) +
+  xlab(paste0("PC1: ",percentVar[1],"% variance")) +
+  ylab(paste0("PC2: ",percentVar[2],"% variance")) + 
+  coord_fixed() +
+  theme_bw()
+```
+
+# volcano plot of gene expression 
+
+```{r}
+
+```
+
+
+# pick the power level for WGCNA
+
+```{r WGCNA picking power}
+
+allowWGCNAThreads()
+
+#> Allowing multi-threading with up to 4 threads
+# Choose a set of soft-thresholding powers
+powers = c(c(1:10), seq(from = 12, to = 20, by = 2))
+
+# Call the network topology analysis function
+sft = pickSoftThreshold(
+  input_mat,             # <= Input data
+  #blockSize = 30,
+  powerVector = powers,
+  verbose = 5
+  )
+
+
+# plot to select threshold
+par(mfrow = c(1,2));
+cex1 = 0.9;
+
+plot(sft$fitIndices[, 1],
+     -sign(sft$fitIndices[, 3]) * sft$fitIndices[, 2],
+     xlab = "Soft Threshold (power)",
+     ylab = "Scale Free Topology Model Fit, signed R^2",
+     main = paste("Scale independence")
+)
+     
+```
+
+# run the heavy WGCNA analysis
+```{r WGCNA analysis }
+picked_power = 12
+temp_cor <- cor
+cor <- WGCNA::cor
+
+
+netwk <- blockwiseModules(input_mat,                # <= input here
+
+                          # == Adjacency Function ==
+                          power = picked_power,                # <= power here
+                          networkType = "signed",
+
+                          # == Tree and Block Options ==
+                          deepSplit = 2,
+                          pamRespectsDendro = F,
+                          # detectCutHeight = 0.75,
+                          minModuleSize = 30,
+                          maxBlockSize = 4000,
+
+                          # == Module Adjustments ==
+                          reassignThreshold = 0,
+                          mergeCutHeight = 0.25,
+
+                          # == TOM == Archive the run results in TOM file (saves time)
+                          saveTOMs = T,
+                          saveTOMFileBase = "ER",
+
+                          # == Output Options
+                          numericLabels = T,
+                          verbose = 3)
+
+```
+
+# plot the WGCNA dendrogram
+
+```{r WGCNA plotting dendrogram}
+ # Convert labels to colors for plotting
+mergedColors = labels2colors(netwk$colors)
+# Plot the dendrogram and the module colors underneath
+plotDendroAndColors(
+  netwk$dendrograms[[1]],
+  mergedColors[netwk$blockGenes[[1]]],
+  "Module colors",
+  dendroLabels = FALSE,
+  hang = 0.03,
+  addGuide = TRUE,
+  guideHang = 0.05 )
+
+```
+
+# plot the WGCNA module heat map 
+
+```{r WGCNA plotting heat map of modules}
+module_df <- data.frame(
+  gene_id = names(netwk$colors),
+  colors = labels2colors(netwk$colors)
+)
+
+
+write_delim(module_df,
+            file = "gene_modules.txt",
+            delim = "\t")
+
+# Get Module Eigengenes per cluster
+MEs0 <- moduleEigengenes(input_mat, mergedColors)$eigengenes
+
+# Reorder modules so similar modules are next to each other
+MEs0 <- orderMEs(MEs0)
+module_order = names(MEs0) %>% gsub("ME","", .)
+
+# Add treatment names
+MEs0$treatment = row.names(MEs0)
+
+# tidy & plot data
+mME = MEs0 %>%
+  pivot_longer(-treatment) %>%
+  mutate(
+    name = gsub("ME", "", name),
+    name = factor(name, levels = module_order)
+  )
+
+mME %>% ggplot(., aes(x=treatment, y=name, fill=value)) +
+  geom_tile() +
+  theme_bw() +
+  scale_fill_gradient2(
+    low = "blue",
+    high = "red",
+    mid = "white",
+    midpoint = 0,
+    limit = c(-1,1)) +
+  theme(axis.text.x = element_text(angle=90)) +
+  labs(title = "Module-trait Relationships", y = "Modules", fill="corr")
+```
+
+
