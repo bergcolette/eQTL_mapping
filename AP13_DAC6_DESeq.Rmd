@@ -106,6 +106,8 @@ dds <- DESeqDataSetFromMatrix(countData = all,
 # filter the DDS object
 ```{r filter}
 
+
+
 # filter for each (all model, hab only, gen only)
 
 keep <- rowSums(counts(dds) >= 10) >= smallestGroupSize
@@ -273,6 +275,7 @@ plotDendroAndColors(
   addGuide = TRUE,
   guideHang = 0.05 )
 
+
 ```
 
 # plot the WGCNA module heat map 
@@ -319,4 +322,9 @@ mME %>% ggplot(., aes(x=treatment, y=name, fill=value)) +
   labs(title = "Module-trait Relationships", y = "Modules", fill="corr")
 ```
 
+# identify the genes with the highest hub membership (from David's code)
+
+```{r hub gene identification}
+
+```
 

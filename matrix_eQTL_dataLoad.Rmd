@@ -18,9 +18,109 @@ library(VariantAnnotation)
 library(vcfR)
 library(adegenet)
 library(eQTLpipeline)
+library(DESeq2)
 base.dir = find.package("MatrixEQTL")
 
 ```
+
+# read in gene expression data, median filter, normalize, and split by population
+
+```{r gene expression data prep}
+
+# read in the raw data
+expressionData <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/expression/switchgrass_diversityPanel_rawCounts.txt",
+                           sep="\t")
+
+# only retain genes with median coverage > 3 
+# calculate median expression for each gene 
+expressionData$row_median <- apply(dplyr::select(expressionData, -GeneID),
+                                          1, median, na.rm=TRUE)
+# filter
+exp_medFilt <- dplyr::filter(expressionData,
+       row_median>3)
+
+# write header of expression data to format metadata
+# write.csv(head(expressionData),
+#          "~/Dropbox/LowryLab/data/exp_medFilt.csv")
+
+# read in metadata 
+colData <- read.csv("~/Dropbox/LowryLab/data/test_colData.csv",
+                    row.names=1)
+
+# make DESeq onject
+dds <- DESeqDataSetFromMatrix(countData = dplyr::select(exp_medFilt,
+                                        -GeneID,
+                                        -row_median),
+                              colData = colData,
+                              design = ~ habitat)
+             
+# normalize the data with DESeq 
+vsd <- varianceStabilizingTransformation(dds)
+
+# writing the normalized csv 
+write.csv(assay(vsd), "normalized_expression.csv")
+
+# reading the normalized csv (you can skip to this step first if it's already made )
+normDat <- read.csv("normalized_expression.csv")
+
+# now adding gene ID to normDat 
+normDat_geneID <- cbind(dplyr::select(exp_medFilt, GeneID), dplyr::select(normDat, -X))
+```
+
+## transpose expression data, add SRR ID's & pop info
+
+```{r transposing & adding SRR id's to the normalized data}
+
+# setting the row names as gene names
+rownames(normDat_geneID) <- normDat_geneID$GeneID
+
+# transposing and removing the extra gene name column 
+normExp_transposed <- as.data.frame(t(dplyr::select(normDat_geneID, -GeneID)))
+              
+# read in newer colData (with SRR ID's)
+metadat <- read.csv("~/Dropbox/LowryLab/data/RNA_colData.csv")
+
+# merging the metadata with the normalized expression data
+exp_with_metadata <- cbind(metadat, normExp_transposed)
+```
+
+## filter by population and site 
+
+```{r split by site / pop}
+
+MI_Atlantic <- filter(exp_with_metadata,
+                      habitat == "M",
+                      population == "Atlantic")
+
+MI_Gulf <- filter(exp_with_metadata,
+                      habitat == "M",
+                      population == "Gulf")
+
+MI_Midwest <- filter(exp_with_metadata,
+                      habitat == "M",
+                      population == "Midwest")
+
+TX_Atlantic <- filter(exp_with_metadata,
+                      habitat == "P",
+                      population == "Atlantic")
+
+TX_Gulf <- filter(exp_with_metadata,
+                      habitat == "P",
+                      population == "Gulf")
+
+TX_Midwest <- filter(exp_with_metadata,
+                      habitat == "P",
+                      population == "Midwest")
+
+
+```
+
+```{r}
+read.csv("~/Dropbox/lowryLab/data/genotypes/Chr01K_Midwest_matrix.txt",
+         sep="\t",
+         header=FALSE)
+```
+
 
 ## setting up matrix eQTL settings
 
@@ -32,6 +132,11 @@ output_file_name = tempfile();
 errorCovariance = numeric();
 
 ```
+
+```{r}
+read.csv("~/Dropbox/LowryLab/data/expression/genes_MI_Midwest.csv")
+```
+
 
 ## read in gene expression data
 
@@ -85,7 +190,6 @@ geneGxE_Atlantic$fileDelimiter = ",";
 geneGxE_Atlantic$LoadFile("~/Dropbox/LowryLab/data/expression/genes_GxE_Atlantic_filt.csv")
 
 ```
-
 
 ## read in gene location and snp location file 
 
@@ -147,6 +251,7 @@ cvrt_Atlantic$LoadFile("~/Dropbox/lowryLab/data/expression/cov_allChroms_Atlanti
 ```
 
 ## read in Midwest genotypes 
+
 ```{r read in genotypes, Midwest}
 
 # reading in the data first 
@@ -333,6 +438,7 @@ Midwest_allsnps_9N$LoadFile(Midwest_chrom9N)
 ```
 
 ## read in Gulf genotypes
+
 ```{r read in genotypes, Gulf}
 
 # reading in the data first 
@@ -1422,7 +1528,7 @@ me_GxE_Midwest_1K = Matrix_eQTL_main(
   cvrt = cvrt_Midwest,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_1K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_1K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1442,7 +1548,7 @@ me_GxE_Midwest_1N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_1N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_1N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1461,7 +1567,7 @@ me_GxE_Midwest_2K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_2K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_2K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1480,7 +1586,7 @@ me_GxE_Midwest_2N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_2N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_2N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1499,7 +1605,7 @@ me_GxE_Midwest_3K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_3K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_3K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1518,7 +1624,7 @@ me_GxE_Midwest_3N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_3N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_3N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1537,7 +1643,7 @@ me_GxE_Midwest_4K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_4K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_4K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1556,7 +1662,7 @@ me_GxE_Midwest_4N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_4N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_4N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1575,7 +1681,7 @@ me_GxE_Midwest_5K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_5K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_5K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1594,7 +1700,7 @@ me_GxE_Midwest_5N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_5N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_5N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1613,7 +1719,7 @@ me_GxE_Midwest_6K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_6K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_6K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1632,7 +1738,7 @@ me_GxE_Midwest_6N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_6N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_6N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1651,7 +1757,7 @@ me_GxE_Midwest_7K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_7K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_7K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1670,7 +1776,7 @@ me_GxE_Midwest_7N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_7N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_7N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1689,7 +1795,7 @@ me_GxE_Midwest_8K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_8K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_8K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1708,7 +1814,7 @@ me_GxE_Midwest_8N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_8N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_8N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1727,7 +1833,7 @@ me_GxE_Midwest_9K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_9K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_9K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1746,7 +1852,7 @@ me_GxE_Midwest_9N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_9N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_9N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2472,7 +2578,7 @@ me_GxE_Gulf_1K = Matrix_eQTL_main(
   cvrt = cvrt_Gulf,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_1K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_1K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2492,7 +2598,7 @@ me_GxE_Gulf_1N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_1N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_1N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2511,7 +2617,7 @@ me_GxE_Gulf_2K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_2K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_2K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2530,7 +2636,7 @@ me_GxE_Gulf_2N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_2N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_2N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2549,7 +2655,7 @@ me_GxE_Gulf_3K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_3K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_3K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2568,7 +2674,7 @@ me_GxE_Gulf_3N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_3N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_3N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2587,7 +2693,7 @@ me_GxE_Gulf_4K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_4K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_4K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2606,7 +2712,7 @@ me_GxE_Gulf_4N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_4N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_4N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2625,7 +2731,7 @@ me_GxE_Gulf_5K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_5K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_5K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2644,7 +2750,7 @@ me_GxE_Gulf_5N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_5N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_5N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2663,7 +2769,7 @@ me_GxE_Gulf_6K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_6K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_6K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2682,7 +2788,7 @@ me_GxE_Gulf_6N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_6N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_6N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2701,7 +2807,7 @@ me_GxE_Gulf_7K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_7K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_7K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2720,7 +2826,7 @@ me_GxE_Gulf_7N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_7N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_7N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2739,7 +2845,7 @@ me_GxE_Gulf_8K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_8K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_8K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2758,7 +2864,7 @@ me_GxE_Gulf_8N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_8N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_8N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2777,7 +2883,7 @@ me_GxE_Gulf_9K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_9K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_9K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2796,7 +2902,7 @@ me_GxE_Gulf_9N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_9N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_9N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3522,7 +3628,7 @@ me_GxE_Atlantic_1K = Matrix_eQTL_main(
   cvrt = cvrt_Atlantic,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_1K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_1K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3542,7 +3648,7 @@ me_GxE_Atlantic_1N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_1N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_1N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3561,7 +3667,7 @@ me_GxE_Atlantic_2K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_2K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_2K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3580,7 +3686,7 @@ me_GxE_Atlantic_2N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_2N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_2N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3599,7 +3705,7 @@ me_GxE_Atlantic_3K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_3K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_3K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3618,7 +3724,7 @@ me_GxE_Atlantic_3N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_3N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_3N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3637,7 +3743,7 @@ me_GxE_Atlantic_4K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_4K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_4K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3656,7 +3762,7 @@ me_GxE_Atlantic_4N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_4N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_4N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3675,7 +3781,7 @@ me_GxE_Atlantic_5K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_5K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_5K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3694,7 +3800,7 @@ me_GxE_Atlantic_5N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_5N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_5N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3713,7 +3819,7 @@ me_GxE_Atlantic_6K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_6K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_6K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3732,7 +3838,7 @@ me_GxE_Atlantic_6N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_6N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_6N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3751,7 +3857,7 @@ me_GxE_Atlantic_7K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_7K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_7K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3770,7 +3876,7 @@ me_GxE_Atlantic_7N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_7N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_7N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3789,7 +3895,7 @@ me_GxE_Atlantic_8K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_8K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_8K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3808,7 +3914,7 @@ me_GxE_Atlantic_8N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_8N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_8N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3827,7 +3933,7 @@ me_GxE_Atlantic_9K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_9K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_9K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3846,7 +3952,7 @@ me_GxE_Atlantic_9N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_9N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_9N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-10,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
