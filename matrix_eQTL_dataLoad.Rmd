@@ -112,14 +112,54 @@ TX_Midwest <- filter(exp_with_metadata,
                       habitat == "P",
                       population == "Midwest")
 
-
 ```
 
-```{r}
-read.csv("~/Dropbox/lowryLab/data/genotypes/Chr01K_Midwest_matrix.txt",
-         sep="\t",
-         header=FALSE)
+# read in and format genotypes 
+
+```{r format read counts to same order as genotypes}
+
+# loading in the ordered SRR ID's for Midwest, Gulf, and Atlantic
+Midwest_SRR <- read.csv("~/Dropbox/LowryLab/eQTL_mapping/Midwest.txt", 
+                        header = FALSE,
+                        row.names = NULL)
+Gulf_SRR <- read.csv("~/Dropbox/LowryLab/eQTL_mapping/Gulf.txt", header = FALSE)
+Atlantic_SRR <- read.csv("~/Dropbox/LowryLab/eQTL_mapping/Atlantic.txt", header = FALSE)
+
+# adding an SR column for ease of merging
+Midwest_SRR$SRR <- Midwest_SRR$V1
+Gulf_SRR$SRR <- Gulf_SRR$V1
+Atlantic_SRR$SRR <- Atlantic_SRR$V1
+
 ```
+```{r merging to order}
+
+# now merging genotypes with ordered names. this can take a while...
+MI_Midwest_ordered <- merge(Midwest_SRR, MI_Midwest, 
+      by = "SRR",
+      all.x = TRUE)
+
+TX_Midwest_ordered <- merge(Midwest_SRR, TX_Midwest, 
+      by = "SRR",
+      all.x = TRUE)
+
+MI_Gulf_ordered <- merge(Gulf_SRR, MI_Gulf, 
+      by = "SRR",
+      all.x = TRUE)
+
+TX_Gulf_ordered <- merge(Gulf_SRR, TX_Gulf, 
+      by = "SRR",
+      all.x = TRUE)
+
+MI_Atlantic_ordered <- merge(Atlantic_SRR, MI_Atlantic, 
+      by = "SRR",
+      all.x = TRUE)
+
+TX_Atlantic_ordered <- merge(Atlantic_SRR, TX_Atlantic, 
+      by = "SRR",
+      all.x = TRUE)
+```
+
+
 
 
 ## setting up matrix eQTL settings
@@ -132,6 +172,11 @@ output_file_name = tempfile();
 errorCovariance = numeric();
 
 ```
+
+```{r}
+read.csv("~/Dropbox/LowryLab/data/expression/genes_MI_Midwest.csv")
+```
+
 
 ```{r}
 read.csv("~/Dropbox/LowryLab/data/expression/genes_MI_Midwest.csv")
