@@ -1,0 +1,54 @@
+---
+title: "ASE_analyses"
+author: "Colette Berg"
+date: "2025-11-10"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(edgeR)
+library(ggplot2)
+library(viridis)
+
+```
+
+# load in the data for allele-specific expression 
+
+```{r read in data}
+
+# reading in the KBSM F1's first 
+KBSM_F1_1 <- read.csv("~/Dropbox/LowryLab/data/BUWBG.table", sep="\t")
+KBSM_F1_2 <- read.csv("~/Dropbox/LowryLab/data/BUWBU.table", sep="\t")
+KBSM_F1_3 <- read.csv("~/Dropbox/LowryLab/data/BUWHW.table", sep="\t")
+KBSM_F1_4 <- read.csv("~/Dropbox/LowryLab/data/BUWHY.table", sep="\t")
+KBSM_F1_5 <- read.csv("~/Dropbox/LowryLab/data/BUWNX.table", sep="\t")
+
+```
+
+
+```{r}
+# making a function for a binomial test 
+
+dplyr::mutate(KBSM_F1_1, binom_test_p = binom.test(refCount, totalCount, 0.5)$p.value)
+
+KBSM_F1_1_tested <- filter(KBSM_F1_1, 
+                           totalCount > 5,
+                           totalCount < 300) %>%
+  rowwise() %>%
+  mutate(p_value = binom.test(refCount, totalCount, p = 0.5)$p.value) %>%
+  ungroup() # 
+
+ggplot(filter(KBSM_F1_1_tested, p_value < 0.0000002),
+       aes(x = contig, 
+           y = position,
+           col = -log10(p_value))) +
+  geom_point() +
+  scale_color_viridis()
+
+nrow(KBSM_F1_1_tested)
+
+0.05/204838
+```
+
