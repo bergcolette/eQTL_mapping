@@ -2,6 +2,32 @@ library(viridis)
 library(gridExtra)
 library(dplyr)
 
+grid.arrange(GxE_Midwest_plot,
+             TX_Midwest_plot,
+             MI_Midwest_plot,
+             nrow=1)
+
+ggplot(dplyr::filter(Midwest_GxE_eQTLs,
+                     genome_Chrom != "scaffold_174",
+                     genome_Chrom !="scaffold_19",
+                     genome_Chrom != "scaffold_24"),
+       aes(x = as.numeric(genome_bp)/1000000,
+           y = as.numeric(s1)/1000000,
+           color=-log10(p.value),
+           alpha = -log10(p.value))) +
+  theme_bw() +
+  facet_grid(chr~genome_Chrom,
+             space = "free",
+             scales = "free") +
+  theme(strip.background = element_rect(fill="white"),
+        panel.spacing = unit(0, "lines"),
+        legend.position = "none") +
+  geom_point(size = 0.25) +
+  scale_color_viridis() +
+  ylab("Genome Position (Mb)") +
+  xlab("Gene Position (Mb)")  +
+  ggtitle("GxE eQTLs, Midwest Only")
+
 
 datLab$Chrom <- factor(datLab$Chrom,
                           levels = c("Chr09N",
