@@ -16,7 +16,7 @@ library(tidyverse)
 library(WGCNA)
 library(gridExtra)
 
-setwd("~/Dropbox/LowryLab/data")
+setwd("~/Dropbox/LowryLab/data/DE_analyses")
 ```
 
 # read in the data 
@@ -25,21 +25,21 @@ setwd("~/Dropbox/LowryLab/data")
 # not including the F1's 
 
 # BUWCG <-  read.csv("/Users/coletteberg/Dropbox/LowryLab/data/BUWCG.counts.tsv")
-BUWCU <-  read.csv("BUWCU.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
-BUWGW <-  read.csv("BUWGW.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
+BUWCU <-  read.csv("~/Dropbox/LowryLab/data/DE_analyses/BUWCU.counts.tsv", sep="\t", header=FALSE, row.names = 1)
+BUWGW <-  read.csv("~/Dropbox/LowryLab/data/DE_analyses/BUWGW.counts.tsv", sep="\t", header=FALSE, row.names = 1)
 #BUWGX <-  read.csv("BUWGX.counts.tsv")
-BUWHN <-  read.csv("BUWHN.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
-BUWBN <-  read.csv("BUWBN.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
-BUWBY <-  read.csv("BUWBY.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
-BUWNS <-  read.csv("BUWNS.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
-BUWOC <-  read.csv("BUWOC.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
-BUWOP <-  read.csv("BUWOP.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
-BUWGG <-  read.csv("BUWGG.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
-BUWNH <-  read.csv("BUWNH.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
-BUWOO <-  read.csv("BUWOO.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
-BUWBH <-  read.csv("BUWBH.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
-BUWGY <-  read.csv("BUWGY.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
-BUWHP <-  read.csv("BUWHP.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
+BUWHN <-  read.csv("~/Dropbox/LowryLab/data/DE_analyses/BUWHN.counts.tsv", sep="\t", header=FALSE, row.names = 1)
+BUWBN <-  read.csv("~/Dropbox/LowryLab/data/DE_analyses/BUWBN.counts.tsv", sep="\t", header=FALSE, row.names = 1)
+BUWBY <-  read.csv("~/Dropbox/LowryLab/data/DE_analyses/BUWBY.counts.tsv", sep="\t", header=FALSE, row.names = 1)
+BUWNS <-  read.csv("~/Dropbox/LowryLab/data/DE_analyses/BUWNS.counts.tsv", sep="\t", header=FALSE, row.names = 1)
+BUWOC <-  read.csv("~/Dropbox/LowryLab/data/DE_analyses/BUWOC.counts.tsv", sep="\t", header=FALSE, row.names = 1)
+BUWOP <-  read.csv("~/Dropbox/LowryLab/data/DE_analyses/BUWOP.counts.tsv", sep="\t", header=FALSE, row.names = 1)
+BUWGG <-  read.csv("~/Dropbox/LowryLab/data/DE_analyses/BUWGG.counts.tsv", sep="\t", header=FALSE, row.names = 1)
+BUWNH <-  read.csv("~/Dropbox/LowryLab/data/DE_analyses/BUWNH.counts.tsv", sep="\t", header=FALSE, row.names = 1)
+BUWOO <-  read.csv("~/Dropbox/LowryLab/data/DE_analyses/BUWOO.counts.tsv", sep="\t", header=FALSE, row.names = 1)
+BUWBH <-  read.csv("~/Dropbox/LowryLab/data/DE_analyses/BUWBH.counts.tsv", sep="\t", header=FALSE, row.names = 1)
+BUWGY <-  read.csv("~/Dropbox/LowryLab/data/DE_analyses/BUWGY.counts.tsv", sep="\t", header=FALSE, row.names = 1)
+BUWHP <-  read.csv("~/Dropbox/LowryLab/data/DE_analyses/BUWHP.counts.tsv", sep="\t", header=FALSE, row.names = 1)
 #BUWBG <-  read.csv("BUWBG.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
 #BUWBU <-  read.csv("BUWBU.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
 #BUWBW <-  read.csv("BUWBW.counts.tsv")
@@ -66,7 +66,7 @@ BUWGG,
 BUWNH,
 BUWOO,
 BUWBH,
-BUWGY,
+#BUWGY,
 BUWHP)
 
 
@@ -83,12 +83,12 @@ colnames(all) <- c("AP13_KBSM_1",
 "DAC6_KBSM_2",
 "DAC6_KBSM_3",
 "DAC6_PKLE_1",
-"DAC6_PKLE_2",
+#"DAC6_PKLE_2",
 "DAC6_PKLE_3")
 
 
 # read sample data 
-colData <- read.csv("sampleDat_noF1.csv",
+colData <- read.csv("~/Dropbox/LowryLab/data/DE_analyses/sampleDat_noF1_1.csv",
                     row.names = 1)
 
 ```
@@ -110,8 +110,8 @@ dds <- DESeqDataSetFromMatrix(countData = all,
 
 # filter for each (all model, hab only, gen only)
 
-keep <- rowSums(counts(dds) >= 10) >= smallestGroupSize
-dds <- dds_all[keep,]
+keep <- rowSums(counts(dds) >= 10) >= 2
+dds <- dds[keep,]
 
 ```
 
@@ -124,10 +124,11 @@ dds <- DESeq(dds)
 vsd <- varianceStabilizingTransformation(dds)
 
 ```
-```{r}
-res_genotype <- results(dds_all, contrast=c("genotype","AP13","DAC6"))
 
-res_habitat <- results(dds_all, contrast=c("habitat","KBSM","PKLE"))
+```{r}
+res_genotype <- results(dds, contrast=c("genotype","AP13","DAC6"))
+
+res_habitat <- results(dds, contrast=c("habitat","KBSM","PKLE"))
 
 ```
 
@@ -180,17 +181,18 @@ grid.arrange(gen_DE,
 # just doing WGCNA on the whole model (genotype, habitat, their interaction)
 
 # extract the normalized data 
-wpn_vsd <- getVarianceStabilizedData(dds_all)
+wpn_vsd <- getVarianceStabilizedData(dds)
 rv_wpn <- rowVars(wpn_vsd)
 
 # Extracting the 5% most differentiated genes
-q95_wpn <- quantile( rowVars(wpn_vsd), .95) 
+# q95_wpn <- quantile( rowVars(wpn_vsd), .05) 
 
 # set the row variables
-expr_normalized <- wpn_vsd[ rv_wpn > q95_wpn, ]
+# expr_normalized <- wpn_vsd[ rv_wpn > q95_wpn, ]
 
 # format for WGCNA
-input_mat = t(expr_normalized)
+input_mat = t(wpn_vsd)
+
 ```
 
 
@@ -243,7 +245,7 @@ netwk <- blockwiseModules(input_mat,                # <= input here
                           deepSplit = 2,
                           pamRespectsDendro = F,
                           # detectCutHeight = 0.75,
-                          minModuleSize = 30,
+                          minModuleSize = 50,
                           maxBlockSize = 4000,
 
                           # == Module Adjustments ==
@@ -258,7 +260,20 @@ netwk <- blockwiseModules(input_mat,                # <= input here
                           numericLabels = T,
                           verbose = 3)
 
+
 ```
+
+# dynamic tree cutting
+```{r dynamic tree cutting}
+
+softPower = 12 #Chosen in the graphs before
+adjacency = adjacency(input_mat, power = softPower, type = "unsigned") #Calculating the adjacency matrix
+#help(adjacency )
+
+mem.maxVSize()
+```
+
+
 
 # plot the WGCNA dendrogram
 
@@ -275,7 +290,61 @@ plotDendroAndColors(
   addGuide = TRUE,
   guideHang = 0.05 )
 
+MEList <- moduleEigengenes(input_mat, colors = mergedColors)
+MEs <- MEList$eigengenes
 
+# Calculate dissimilarity of module eigengenes
+MEDiss <- 1 - cor(MEs)
+# Cluster module eigengenes
+METree <- hclust(as.dist(MEDiss), method = "average")
+
+MEDissThres <- 0.25
+
+# merging similar modules 
+merge <- mergeCloseModules(input_mat, mergedColors, cutHeight = MEDissThres, verbose = 3)
+
+
+# The merged module colors
+mergedColors <- merge$colors
+
+# Eigengenes of the new merged modules
+mergedMEs <- merge$newMEs
+
+MEs0 <- orderMEs(MEs0)
+module_order = names(mergedMEs) %>% gsub("ME","", .)
+
+# Add treatment names
+mergedMEs$treatment = row.names(mergedMEs)
+
+# tidy & plot data
+mME = mergedMEs %>%
+  pivot_longer(-treatment) %>%
+  mutate(
+    name = gsub("ME", "", name),
+    name = factor(name, levels = module_order)
+  )
+
+mME %>% ggplot(., aes(x=treatment, y=name, fill=value)) +
+  geom_tile() +
+  theme_bw() +
+  scale_fill_gradient2(
+    low = "blue",
+    high = "red",
+    mid = "white",
+    midpoint = 0,
+    limit = c(-1,1)) +
+  theme(axis.text.x = element_text(angle=90)) +
+  labs(title = "Module-trait Relationships", y = "Modules", fill="corr")
+
+
+mME = mergedMEs %>%
+  pivot_longer(-treatment) %>%
+  mutate(
+    name = gsub("ME", "", name),
+    name = factor(name, levels = module_order)
+  )
+
+# make 
 ```
 
 # plot the WGCNA module heat map 
@@ -322,9 +391,227 @@ mME %>% ggplot(., aes(x=treatment, y=name, fill=value)) +
   labs(title = "Module-trait Relationships", y = "Modules", fill="corr")
 ```
 
+```{r get module expression value}
+# pick out a few modules of interest here
+modules_of_interest = c("turquoise", "yellow")
+
+# Pull out list of genes in that module
+submod = module_df %>%
+  subset(colors %in% modules_of_interest)
+
+row.names(module_df) = module_df$gene_id
+
+# Get normalized expression for those genes
+
+subexpr = wpn_vsd[submod$gene_id,]
+
+submod_df = data.frame(subexpr) %>%
+  mutate(
+    gene_id = row.names(.)
+  ) %>%
+  pivot_longer(-gene_id) %>%
+  mutate(
+    module = module_df[gene_id,]$colors
+  )
+
+submod_df
+
+ggplot(filter(submod_df),
+              aes(x=name, y=value)) +
+  geom_boxplot() +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 90)
+  ) +
+  facet_grid(rows = vars(module)) +
+  labs(x = "treatment",
+       y = "normalized expression") +
+  facet_wrap(~module) + ylim(3,12)
+
+write.csv(submod_df, "submod_geneExp.csv")
+
+dat <- read.csv("submod_geneExp.csv")
+
+ggplot(filter(dat, module == "turquoise" | module == "yellow"),
+       aes(x = name,
+           y = value,
+           col = hab)) + 
+  geom_boxplot() +
+  facet_wrap(~module) +
+  ylim(3.5,12) + 
+  theme_bw() +
+  scale_color_manual(values = c("darkorange",
+                                "darkgreen"))
+
+```
+
+
+
 # identify the genes with the highest hub membership (from David's code)
 
 ```{r hub gene identification}
+
+```
+
+# ASE time 
+```{r ASE time}
+# read in the outputs from GATK
+KBSM_AxD_1 <- read.csv("~/Dropbox/LowryLab/data/ASE/BUWBG.table", sep = "\t")
+KBSM_AxD_2 <- read.csv("~/Dropbox/LowryLab/data/ASE/BUWBU.table", sep = "\t")
+#KBSM_AxD_3 <- read.csv("~/Dropbox/LowryLab/data/ASE/BUWBW.table", sep = "\t")
+KBSM_AxD_4 <- read.csv("~/Dropbox/LowryLab/data/ASE/BUWHW.table", sep = "\t")
+KBSM_AxD_5 <- read.csv("~/Dropbox/LowryLab/data/ASE/BUWHY.table", sep = "\t")
+KBSM_AxD_6 <- read.csv("~/Dropbox/LowryLab/data/ASE/BUWNX.table", sep = "\t")
+PKLE_AxD_1 <- read.csv("~/Dropbox/LowryLab/data/ASE/BUWCY.table", sep = "\t")
+PKLE_AxD_2 <- read.csv("~/Dropbox/LowryLab/data/ASE/BUWGO.table", sep = "\t")
+PKLE_AxD_3 <- read.csv("~/Dropbox/LowryLab/data/ASE/BUWHS.table", sep = "\t")
+PKLE_AxD_4 <- read.csv("~/Dropbox/LowryLab/data/ASE/BUWHZ.table", sep = "\t")
+PKLE_AxD_5 <- read.csv("~/Dropbox/LowryLab/data/ASE/BUWNA.table", sep = "\t")
+PKLE_AxD_6 <- read.csv("~/Dropbox/LowryLab/data/ASE/BUWNP.table", sep = "\t")
+
+# filter to only include sites with sufficient depth to test for ASE 
+# KBSM
+KBSM_AxD_1_filt <- filter(KBSM_AxD_1, totalCount > 30, totalCount < 300)
+KBSM_AxD_2_filt <- filter(KBSM_AxD_2, totalCount > 30, totalCount < 300)
+KBSM_AxD_4_filt <- filter(KBSM_AxD_4, totalCount > 30, totalCount < 300)
+KBSM_AxD_5_filt <- filter(KBSM_AxD_5, totalCount > 30, totalCount < 300)
+KBSM_AxD_6_filt <- filter(KBSM_AxD_6, totalCount > 30, totalCount < 300)
+
+# PKLE
+PKLE_AxD_1_filt <- filter(PKLE_AxD_1, totalCount > 30, totalCount < 300)
+PKLE_AxD_2_filt <- filter(PKLE_AxD_2, totalCount > 30, totalCount < 300)
+PKLE_AxD_3_filt <- filter(PKLE_AxD_3, totalCount > 30, totalCount < 300)
+PKLE_AxD_4_filt <- filter(PKLE_AxD_4, totalCount> 30, totalCount < 300)
+PKLE_AxD_5_filt <- filter(PKLE_AxD_5, totalCount > 30, totalCount < 300)
+PKLE_AxD_6_filt <- filter(PKLE_AxD_6, totalCount > 30, totalCount < 300)
+
+
+```
+
+```{r binomial test }
+
+# MI sample 1
+KBSM_F1_1_tested <- KBSM_AxD_1_filt %>%
+  rowwise() %>%
+  mutate(p_value = binom.test(refCount, totalCount, p = 0.5)$p.value) %>%
+  ungroup() # 
+
+# MI sample 2
+KBSM_F1_2_tested <- KBSM_AxD_2_filt %>%
+  rowwise() %>%
+  mutate(p_value = binom.test(refCount, totalCount, p = 0.5)$p.value) %>%
+  ungroup() # 
+
+# MI sample 3
+KBSM_F1_4_tested <- KBSM_AxD_4_filt %>%
+  rowwise() %>%
+  mutate(p_value = binom.test(refCount, totalCount, p = 0.5)$p.value) %>%
+  ungroup() # 
+
+# MI sample 4 
+KBSM_F1_5_tested <- KBSM_AxD_5_filt %>%
+  rowwise() %>%
+  mutate(p_value = binom.test(refCount, totalCount, p = 0.5)$p.value) %>%
+  ungroup() # 
+
+# MI sample 5 
+KBSM_F1_6_tested <- KBSM_AxD_6_filt %>%
+  rowwise() %>%
+  mutate(p_value = binom.test(refCount, totalCount, p = 0.5)$p.value) %>%
+  ungroup() # 
+
+
+# TX sample 1 
+PKLE_F1_1_tested <- PKLE_AxD_1_filt %>%
+  rowwise() %>%
+  mutate(p_value = binom.test(refCount, totalCount, p = 0.5)$p.value) %>%
+  ungroup() # 
+
+# TX sample 2
+PKLE_F1_2_tested <- PKLE_AxD_2_filt %>%
+  rowwise() %>%
+  mutate(p_value = binom.test(refCount, totalCount, p = 0.5)$p.value) %>%
+  ungroup() # 
+
+# TX sample 3
+PKLE_F1_3_tested <- PKLE_AxD_3_filt %>%
+  rowwise() %>%
+  mutate(p_value = binom.test(refCount, totalCount, p = 0.5)$p.value) %>%
+  ungroup() # 
+
+# TX sample 4
+PKLE_F1_4_tested <- PKLE_AxD_4_filt %>%
+  rowwise() %>%
+  mutate(p_value = binom.test(refCount, totalCount, p = 0.5)$p.value) %>%
+  ungroup() # 
+
+# TX sample 5
+PKLE_F1_5_tested <- PKLE_AxD_5_filt %>%
+  rowwise() %>%
+  mutate(p_value = binom.test(refCount, totalCount, p = 0.5)$p.value) %>%
+  ungroup() # 
+
+# TX sample 6
+PKLE_F1_6_tested <- PKLE_AxD_6_filt %>%
+  rowwise() %>%
+  mutate(p_value = binom.test(refCount, totalCount, p = 0.5)$p.value) %>%
+  ungroup() # 
+
+class(KBSM_AxD_1_filt$totalCount)
+class(KBSM_AxD_1_filt$refCount)
+
+ggplot(KBSM_F1_2_tested,
+       aes(x = position,
+           y = -log10(p_value))) + 
+  facet_wrap(~contig) + 
+  geom_point()
+
+filter(PKLE_F1_6_tested, p_value < 0.0001)
+
+filter(PKLE_F1_5_tested, p_value < 0.0001)
+
+
+# find sites that demonstrate ASE in all 5 replicates 
+#Reduce(intersect(
+  
+intersect(list(dplyr::select(filter(PKLE_F1_6_tested, p_value < 0.0001), contig, position),
+          dplyr::select(filter(PKLE_F1_5_tested, p_value < 0.0001), contig, position),
+          dplyr::select(filter(PKLE_F1_4_tested, p_value < 0.0001), contig, position),
+          dplyr::select(filter(PKLE_F1_3_tested, p_value < 0.0001), contig, position),
+          dplyr::select(filter(PKLE_F1_2_tested, p_value < 0.0001), contig, position),
+          dplyr::select(filter(PKLE_F1_1_tested, p_value < 0.0001), contig, position)))
+         
+```
+
+```{r}
+KBSM_F1_1_refBias <- filter(KBSM_F1_1_tested, 
+       p_value < 0.0000000001,
+       refCount > altCount)
+
+KBSM_F1_1_altBias <- filter(KBSM_F1_1_tested, 
+       p_value < 0.0000000001,
+       refCount < altCount)
+
+PKLE_F1_1_refBias 
+
+PKLE_F1_1_altBias
+KBSM_F1_1_altBias
+KBSM_F1_1_refBias
+
+KBS_alt <- ggplot(KBSM_F1_1_altBias,
+       aes(x = position, 
+           y = contig)) +
+  geom_point()  + 
+  ggtitle("ASE biased to alternate allele, KBSM AxD F1")
+
+KBS_ref <- ggplot(KBSM_F1_1_refBias,
+       aes(x = position, 
+           y = contig)) +
+  geom_point() + 
+  ggtitle("ASE biased to reference allele, KBSM AxD F1")
+
+grid.arrange(KBS_alt, KBS_ref, nrow = 1)
+
 
 ```
 

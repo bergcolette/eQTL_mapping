@@ -6,7 +6,6 @@ output: html_document
 ---
 
 ## set up script and load required packages 
-
 ```{r setup, include=FALSE}
 
 knitr::opts_chunk$set(echo = TRUE)
@@ -20,74 +19,46 @@ library(adegenet)
 library(eQTLpipeline)
 library(DESeq2)
 library(viridis)
+library(reshape2)
+library(tidyr)
+library(preprocessCore)
+
 
 base.dir = find.package("MatrixEQTL")
 
 ```
 
 # read in gene expression data, median filter, normalize, and split by population
-
-```{r gene expression data prep}
+# this is commented out now to save time
+```{r gene expression read-in}
+# trying a new tactic where I split expression data by population first, THEN do the filtering and normalization 
+# commenting out the stuff below this for now 
 
 # read in the raw data
-expressionData <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/expression/switchgrass_diversityPanel_rawCounts.txt",
-                           sep="\t")
+expressionData <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/expression/switchgrass_diversityPanel_rawCounts.txt", sep="\t")
 
-# only retain genes with median coverage > 3 
-# calculate median expression for each gene 
-expressionData$row_median <- apply(dplyr::select(expressionData, -GeneID),
-                                          1, median, na.rm=TRUE)
-# filter
-exp_medFilt <- dplyr::filter(expressionData,
-       row_median>3)
 
-# write header of expression data to format metadata
-# write.csv(head(expressionData),
-#          "~/Dropbox/LowryLab/data/exp_medFilt.csv")
-
-# read in metadata 
-colData <- read.csv("~/Dropbox/LowryLab/data/test_colData.csv",
-                    row.names=1)
-
-# make DESeq onject
-dds <- DESeqDataSetFromMatrix(countData = dplyr::select(exp_medFilt,
-                                        -GeneID,
-                                        -row_median),
-                              colData = colData,
-                              design = ~ habitat)
-             
-# normalize the data with DESeq 
-vsd <- varianceStabilizingTransformation(dds)
-
-# writing the normalized csv 
-write.csv(assay(vsd), "normalized_expression.csv")
-
-# reading the normalized csv (you can skip to this step first if it's already made )
-normDat <- read.csv("normalized_expression.csv")
-
-# now adding gene ID to normDat 
-normDat_geneID <- cbind(dplyr::select(exp_medFilt, GeneID), dplyr::select(normDat, -X))
 ```
 
 ## transpose expression data, add SRR ID's & pop info
-
 ```{r transposing & adding SRR id's to the normalized data}
 
+# editing to make it the raw counts data 
 # setting the row names as gene names
-rownames(normDat_geneID) <- normDat_geneID$GeneID
+rownames(expressionData) <- expressionData$GeneID
 
 # transposing and removing the extra gene name column 
-normExp_transposed <- as.data.frame(t(dplyr::select(normDat_geneID, -GeneID)))
+rawExp_transposed <- as.data.frame(t(dplyr::select(expressionData, -GeneID)))
               
 # read in newer colData (with SRR ID's)
 metadat <- read.csv("~/Dropbox/LowryLab/data/RNA_colData.csv")
 
 # merging the metadata with the normalized expression data
-exp_with_metadata <- cbind(metadat, normExp_transposed)
+exp_with_metadata <- cbind(metadat, rawExp_transposed)
+
 ```
 
 ## filter by population and site 
-
 ```{r split by site / pop}
 
 MI_Atlantic <- filter(exp_with_metadata,
@@ -117,7 +88,6 @@ TX_Midwest <- filter(exp_with_metadata,
 ```
 
 # read in and format genotypes 
-
 ```{r format read counts to same order as genotypes}
 
 # loading in the ordered SRR ID's for Midwest, Gulf, and Atlantic
@@ -135,7 +105,6 @@ Atlantic_SRR$SRR <- Atlantic_SRR$V1
 ```
 
 # merging and ordering (very long block)
-
 ```{r merging SRR ID's and gene expression files to order}
 
 # now merging genotypes with ordered names. this can take a while...
@@ -164,8 +133,7 @@ TX_Atlantic_ordered <- merge(Atlantic_SRR, TX_Atlantic,
       all.x = TRUE)
 ```
 
-# formatting for matrix eQTL
-
+# transposing ordered gene expression 
 ```{r format the gene expression files}
 genes_MI_Midwest <- setNames(data.frame(t(dplyr::select(MI_Midwest_ordered, -V1, -X, -habitat, -population)[,-1])), MI_Midwest_ordered[,1])
 genes_TX_Midwest <- setNames(data.frame(t(dplyr::select(TX_Midwest_ordered, -V1, -X, -habitat, -population)[,-1])), TX_Midwest_ordered[,1])
@@ -178,13 +146,92 @@ genes_TX_Gulf <- setNames(data.frame(t(dplyr::select(TX_Gulf_ordered, -V1, -X, -
 
 ```
 
-# now subtracting MI / TX to get the GxE values 
+# normalizing and filtering on a per-pop + habitat basis
+```{r per-pop filt and normalizing. }
 
+# median filter, normalize, and format gene expression
+
+# TX_Midwest
+genes_TX_Midwest$row_median <- apply(genes_TX_Midwest, 1, median, na.rm=TRUE) # median filtering step 1
+genes_TX_Midwest_medFilt <- dplyr::filter(genes_TX_Midwest, row_median>3) # median filtering step 2
+genes_TX_Midwest_log2 <- log2(dplyr::select(genes_TX_Midwest_medFilt, -row_median) + 1) # log2 transform genes 
+genes_TX_Midwest_quantNorm <- as.data.frame(normalize.quantiles(as.matrix(t(genes_TX_Midwest_log2)))) # quant normalize log-transformed genes 
+rownames(genes_TX_Midwest_quantNorm) <- colnames(dplyr::select(genes_TX_Midwest_medFilt, -row_median)) # set rownames
+colnames(genes_TX_Midwest_quantNorm) <- rownames(genes_TX_Midwest_medFilt) # set colnames 
+genes_TX_MidwestNorm <- as.data.frame(t(genes_TX_Midwest_quantNorm)) # transpose
+
+# TX_Gulf
+genes_TX_Gulf$row_median <- apply(genes_TX_Gulf, 1, median, na.rm=TRUE) # median filtering step 1
+genes_TX_Gulf_medFilt <- dplyr::filter(genes_TX_Gulf, row_median>3) # median filtering step 2
+genes_TX_Gulf_log2 <- log2(dplyr::select(genes_TX_Gulf_medFilt, -row_median) + 1) # log2 transform genes 
+genes_TX_Gulf_quantNorm <- as.data.frame(normalize.quantiles(as.matrix(t(genes_TX_Gulf_log2)))) # quant normalize log-transformed genes 
+rownames(genes_TX_Gulf_quantNorm) <- colnames(dplyr::select(genes_TX_Gulf_medFilt, -row_median)) # set rownames
+colnames(genes_TX_Gulf_quantNorm) <- rownames(genes_TX_Gulf_medFilt) # set colnames 
+genes_TX_GulfNorm <- as.data.frame(t(genes_TX_Gulf_quantNorm)) # transpose
+
+# TX_Atlantic
+genes_TX_Atlantic$row_median <- apply(genes_TX_Atlantic, 1, median, na.rm=TRUE) # median filtering step 1
+genes_TX_Atlantic_medFilt <- dplyr::filter(genes_TX_Atlantic, row_median>3) # median filtering step 2
+genes_TX_Atlantic_log2 <- log2(dplyr::select(genes_TX_Atlantic_medFilt, -row_median) + 1) # log2 transform genes 
+genes_TX_Atlantic_quantNorm <- as.data.frame(normalize.quantiles(as.matrix(t(genes_TX_Atlantic_log2)))) # quant normalize log-transformed genes 
+rownames(genes_TX_Atlantic_quantNorm) <- colnames(dplyr::select(genes_TX_Atlantic_medFilt, -row_median)) # set rownames
+colnames(genes_TX_Atlantic_quantNorm) <- rownames(genes_TX_Atlantic_medFilt) # set colnames 
+genes_TX_AtlanticNorm <- as.data.frame(t(genes_TX_Atlantic_quantNorm)) # transpose
+
+# MI_Midwest
+genes_MI_Midwest$row_median <- apply(genes_MI_Midwest, 1, median, na.rm=TRUE) # median filtering step 1
+genes_MI_Midwest_medFilt <- dplyr::filter(genes_MI_Midwest, row_median>3) # median filtering step 2
+genes_MI_Midwest_log2 <- log2(dplyr::select(genes_MI_Midwest_medFilt, -row_median) + 1) # log2 transform genes 
+genes_MI_Midwest_quantNorm <- as.data.frame(normalize.quantiles(as.matrix(t(genes_MI_Midwest_log2)))) # quant normalize log-transformed genes 
+rownames(genes_MI_Midwest_quantNorm) <- colnames(dplyr::select(genes_MI_Midwest_medFilt, -row_median)) # set rownames
+colnames(genes_MI_Midwest_quantNorm) <- rownames(genes_MI_Midwest_medFilt) # set colnames 
+genes_MI_MidwestNorm <- as.data.frame(t(genes_MI_Midwest_quantNorm)) # transpose
+
+# MI_Gulf
+genes_MI_Gulf$row_median <- apply(genes_MI_Gulf, 1, median, na.rm=TRUE) # median filtering step 1
+genes_MI_Gulf_medFilt <- dplyr::filter(genes_MI_Gulf, row_median>3) # median filtering step 2
+genes_MI_Gulf_log2 <- log2(dplyr::select(genes_MI_Gulf_medFilt, -row_median) + 1) # log2 transform genes 
+genes_MI_Gulf_quantNorm <- as.data.frame(normalize.quantiles(as.matrix(t(genes_MI_Gulf_log2)))) # quant normalize log-transformed genes 
+rownames(genes_MI_Gulf_quantNorm) <- colnames(dplyr::select(genes_MI_Gulf_medFilt, -row_median)) # set rownames
+colnames(genes_MI_Gulf_quantNorm) <- rownames(genes_MI_Gulf_medFilt) # set colnames 
+genes_MI_GulfNorm <- as.data.frame(t(genes_MI_Gulf_quantNorm)) # transpose
+
+# MI_Atlantic
+genes_MI_Atlantic$row_median <- apply(genes_MI_Atlantic, 1, median, na.rm=TRUE) # median filtering step 1
+genes_MI_Atlantic_medFilt <- dplyr::filter(genes_MI_Atlantic, row_median>3) # median filtering step 2
+genes_MI_Atlantic_log2 <- log2(dplyr::select(genes_MI_Atlantic_medFilt, -row_median) + 1) # log2 transform genes 
+genes_MI_Atlantic_quantNorm <- as.data.frame(normalize.quantiles(as.matrix(t(genes_MI_Atlantic_log2)))) # quant normalize log-transformed genes 
+rownames(genes_MI_Atlantic_quantNorm) <- colnames(dplyr::select(genes_MI_Atlantic_medFilt, -row_median)) # set rownames
+colnames(genes_MI_Atlantic_quantNorm) <- rownames(genes_MI_Atlantic_medFilt) # set colnames 
+genes_MI_AtlanticNorm <- as.data.frame(t(genes_MI_Atlantic_quantNorm)) # transpose
+
+```
+
+# now subtracting MI / TX to get the GxE values 
 ```{r subtracting for GxE}
 
-genes_GxE_Midwest <- genes_MI_Midwest - genes_TX_Midwest
-genes_GxE_Atlantic <- genes_MI_Atlantic - genes_TX_Atlantic
-genes_GxE_Gulf <- genes_MI_Gulf - genes_TX_Gulf
+# first filtering to the genes common to the two normalized datasets
+Midwest_GxE_geneList <- intersect(rownames(genes_MI_MidwestNorm), rownames(genes_TX_MidwestNorm))
+Gulf_GxE_geneList <- intersect(rownames(genes_MI_GulfNorm), rownames(genes_TX_GulfNorm))
+Atlantic_GxE_geneList <- intersect(rownames(genes_MI_AtlanticNorm), rownames(genes_TX_AtlanticNorm))
+
+# filter by gene list
+# Midwest
+filtered_MI_Midwest <- genes_MI_MidwestNorm %>% filter(rownames(genes_MI_MidwestNorm) %in% Midwest_GxE_geneList)
+filtered_TX_Midwest <- genes_TX_MidwestNorm %>% filter(rownames(genes_TX_MidwestNorm) %in% Midwest_GxE_geneList)
+
+# Gulf
+filtered_MI_Gulf <- genes_MI_GulfNorm %>% filter(rownames(genes_MI_GulfNorm) %in% Gulf_GxE_geneList)
+filtered_TX_Gulf <- genes_TX_GulfNorm %>% filter(rownames(genes_TX_GulfNorm) %in% Gulf_GxE_geneList)
+
+# Atlantic
+filtered_MI_Atlantic <- genes_MI_AtlanticNorm %>% filter(rownames(genes_MI_AtlanticNorm) %in% Atlantic_GxE_geneList)
+filtered_TX_Atlantic <- genes_TX_AtlanticNorm %>% filter(rownames(genes_TX_AtlanticNorm) %in% Atlantic_GxE_geneList)
+
+# subtract
+genes_GxE_Midwest <- filtered_MI_Midwest - filtered_TX_Midwest 
+genes_GxE_Atlantic <-  filtered_MI_Atlantic - filtered_TX_Atlantic
+genes_GxE_Gulf <-  filtered_MI_Gulf - filtered_TX_Gulf
 
 # filtering GxE files by median difference in gene expression between TX and MI
 
@@ -196,19 +243,17 @@ genes_GxE_Atlantic$row_median <- apply(genes_GxE_Atlantic, 1, median, na.rm=TRUE
 genes_GxE_Midwest_filt <- dplyr::filter(genes_GxE_Midwest, row_median > 0)
 genes_GxE_Gulf_filt <- dplyr::filter(genes_GxE_Gulf, row_median > 0)
 genes_GxE_Atlantic_filt <- dplyr::filter(genes_GxE_Atlantic, row_median > 0)
-
 ```
 
 # writing the gene expression files
-
 ```{r writing gene expression files}
-write.csv(genes_MI_Midwest, "~/Dropbox/LowryLab/data/expression/genes_MI_Midwest.csv")
-write.csv(genes_MI_Gulf, "~/Dropbox/LowryLab/data/expression/genes_MI_Gulf.csv")
-write.csv(genes_MI_Atlantic, "~/Dropbox/LowryLab/data/expression/genes_MI_Atlantic.csv")
+write.csv(genes_MI_MidwestNorm, "~/Dropbox/LowryLab/data/expression/genes_MI_Midwest.csv")
+write.csv(genes_MI_GulfNorm, "~/Dropbox/LowryLab/data/expression/genes_MI_Gulf.csv")
+write.csv(genes_MI_AtlanticNorm, "~/Dropbox/LowryLab/data/expression/genes_MI_Atlantic.csv")
 
-write.csv(genes_TX_Midwest, "~/Dropbox/LowryLab/data/expression/genes_TX_Midwest.csv")
-write.csv(genes_TX_Gulf, "~/Dropbox/LowryLab/data/expression/genes_TX_Gulf.csv")
-write.csv(genes_TX_Atlantic, "~/Dropbox/LowryLab/data/expression/genes_TX_Atlantic.csv")
+write.csv(genes_TX_MidwestNorm, "~/Dropbox/LowryLab/data/expression/genes_TX_Midwest.csv")
+write.csv(genes_TX_GulfNorm, "~/Dropbox/LowryLab/data/expression/genes_TX_Gulf.csv")
+write.csv(genes_TX_AtlanticNorm, "~/Dropbox/LowryLab/data/expression/genes_TX_Atlantic.csv")
 
 write.csv(dplyr::select(genes_GxE_Midwest_filt, -row_median), "~/Dropbox/LowryLab/data/expression/genes_GxE_Midwest_filt.csv")
 write.csv(dplyr::select(genes_GxE_Gulf_filt, -row_median), "~/Dropbox/LowryLab/data/expression/genes_GxE_Gulf_filt.csv")
@@ -216,8 +261,8 @@ write.csv(dplyr::select(genes_GxE_Atlantic_filt, -row_median), "~/Dropbox/LowryL
 
 ```
 
-## setting up matrix eQTL settings
 
+## setting up matrix eQTL settings
 ```{r matrix eQTL settings, echo=FALSE}
 
 # setting up matrix eQTL settings
@@ -227,8 +272,7 @@ errorCovariance = numeric();
 
 ```
 
-## read in gene expression data
-
+## read in gene expression data. if you've already formatted / written the gene expression files, you can start here
 ```{r expression, message = FALSE}
 
 # reading in gene expression data for Midwest, Gulf, and Atlantic 
@@ -278,10 +322,11 @@ geneGxE_Atlantic = SlicedData$new()
 geneGxE_Atlantic$fileDelimiter = ",";    
 geneGxE_Atlantic$LoadFile("~/Dropbox/LowryLab/data/expression/genes_GxE_Atlantic_filt.csv")
 
+
+
 ```
 
 ## read in gene location and snp location file 
-
 ```{r snps_genes}
 
 # gene name, chromosome, start, stop
@@ -304,8 +349,7 @@ genepos = read.table(gene_location_file_name,
 
 ```
 
-## format and write the covariates files 
-
+## format and write the covariates files. if you've already done this you can skip it
 ```{r covariates formatting}
 
 # read in the PCA eigenvectors produced by plink
@@ -326,7 +370,6 @@ write.csv(Atlantic_cov, "~/Dropbox/lowryLab/data/expression/cov_allChroms_Atlant
 ```
 
 ## read in the covariates file
-
 ```{r covariates}
 
 ## Load covariates file, Midwest. in this case it's the first 5 PC's (plink)
@@ -361,13 +404,12 @@ cvrt_Atlantic$LoadFile("~/Dropbox/lowryLab/data/expression/cov_allChroms_Atlanti
 ```
 
 ## read in Midwest genotypes 
-
 ```{r read in genotypes, Midwest}
 
 # reading in the data first 
 
 # 1K
-Midwest_chrom1K = "~/Dropbox/lowryLab/data/genotypes/Chr01K_Midwest_matrix.txt"
+Midwest_chrom1K = "~/Dropbox/lowryLab/data/genotypes/Midwest_1K_hetFilt.txt"
 
 # loading genotype data 
 Midwest_allsnps_1K = SlicedData$new();
@@ -377,7 +419,7 @@ Midwest_allsnps_1K$fileSliceSize = 10000;      # read file in pieces of 2,000 ro
 Midwest_allsnps_1K$LoadFile(Midwest_chrom1K)
 
 # 1N
-Midwest_chrom1N = "~/Dropbox/lowryLab/data/genotypes/Chr01N_Midwest_matrix.txt"
+Midwest_chrom1N = "~/Dropbox/lowryLab/data/genotypes/Midwest_1N_hetFilt.txt"
 
 # loading genotype data 
 Midwest_allsnps_1N = SlicedData$new();
@@ -387,7 +429,7 @@ Midwest_allsnps_1N$fileSliceSize = 10000;      # read file in pieces of 2,000 ro
 Midwest_allsnps_1N$LoadFile(Midwest_chrom1N)
 
 # 2K
-Midwest_chrom2K = "~/Dropbox/lowryLab/data/genotypes/Chr02K_Midwest_matrix.txt"
+Midwest_chrom2K = "~/Dropbox/lowryLab/data/genotypes/Midwest_2K_hetFilt.txt"
 
 # loading genotype data 
 Midwest_allsnps_2K = SlicedData$new();
@@ -397,7 +439,7 @@ Midwest_allsnps_2K$fileSliceSize = 10000;      # read file in pieces of 2,000 ro
 Midwest_allsnps_2K$LoadFile(Midwest_chrom2K)
 
 # 2N
-Midwest_chrom2N = "~/Dropbox/lowryLab/data/genotypes/Chr02N_Midwest_matrix.txt"
+Midwest_chrom2N = "~/Dropbox/lowryLab/data/genotypes/Midwest_2N_hetFilt.txt"
 
 # loading genotype data 
 Midwest_allsnps_2N = SlicedData$new();
@@ -407,7 +449,7 @@ Midwest_allsnps_2N$fileSliceSize = 10000;      # read file in pieces of 2,000 ro
 Midwest_allsnps_2N$LoadFile(Midwest_chrom2N)
 
 # 3K
-Midwest_chrom3K = "~/Dropbox/lowryLab/data/genotypes/Chr03K_Midwest_matrix.txt"
+Midwest_chrom3K = "~/Dropbox/lowryLab/data/genotypes/Midwest_3K_hetFilt.txt"
 
 # loading genotype data 
 Midwest_allsnps_3K = SlicedData$new();
@@ -417,7 +459,7 @@ Midwest_allsnps_3K$fileSliceSize = 10000;      # read file in pieces of 2,000 ro
 Midwest_allsnps_3K$LoadFile(Midwest_chrom3K)
 
 # 3N
-Midwest_chrom3N = "~/Dropbox/lowryLab/data/genotypes/Chr03N_Midwest_matrix.txt"
+Midwest_chrom3N = "~/Dropbox/lowryLab/data/genotypes/Midwest_3N_hetFilt.txt"
 
 # loading genotype data 
 Midwest_allsnps_3N = SlicedData$new();
@@ -427,7 +469,7 @@ Midwest_allsnps_3N$fileSliceSize = 10000;      # read file in pieces of 2,000 ro
 Midwest_allsnps_3N$LoadFile(Midwest_chrom3N)
 
 # 4K
-Midwest_chrom4K = "~/Dropbox/lowryLab/data/genotypes/Chr04K_Midwest_matrix.txt"
+Midwest_chrom4K = "~/Dropbox/lowryLab/data/genotypes/Midwest_4K_hetFilt.txt"
 
 # loading genotype data 
 Midwest_allsnps_4K = SlicedData$new();
@@ -437,7 +479,7 @@ Midwest_allsnps_4K$fileSliceSize = 10000;      # read file in pieces of 2,000 ro
 Midwest_allsnps_4K$LoadFile(Midwest_chrom4K)
 
 # 4N
-Midwest_chrom4N = "~/Dropbox/lowryLab/data/genotypes/Chr04N_Midwest_matrix.txt"
+Midwest_chrom4N = "~/Dropbox/lowryLab/data/genotypes/Midwest_4N_hetFilt.txt"
 
 # loading genotype data 
 Midwest_allsnps_4N = SlicedData$new();
@@ -447,7 +489,7 @@ Midwest_allsnps_4N$fileSliceSize = 10000;      # read file in pieces of 2,000 ro
 Midwest_allsnps_4N$LoadFile(Midwest_chrom4N)
 
 # 5K
-Midwest_chrom5K = "~/Dropbox/lowryLab/data/genotypes/Chr05K_Midwest_matrix.txt"
+Midwest_chrom5K = "~/Dropbox/lowryLab/data/genotypes/Midwest_5K_hetFilt.txt"
 
 # loading genotype data 
 Midwest_allsnps_5K = SlicedData$new();
@@ -457,7 +499,7 @@ Midwest_allsnps_5K$fileSliceSize = 10000;      # read file in pieces of 2,000 ro
 Midwest_allsnps_5K$LoadFile(Midwest_chrom5K)
 
 # 5N
-Midwest_chrom5N = "~/Dropbox/lowryLab/data/genotypes/Chr05N_Midwest_matrix.txt"
+Midwest_chrom5N = "~/Dropbox/lowryLab/data/genotypes/Midwest_5N_hetFilt.txt"
 
 # loading genotype data 
 Midwest_allsnps_5N = SlicedData$new();
@@ -467,7 +509,7 @@ Midwest_allsnps_5N$fileSliceSize = 10000;      # read file in pieces of 2,000 ro
 Midwest_allsnps_5N$LoadFile(Midwest_chrom5N)
 
 # 6K
-Midwest_chrom6K = "~/Dropbox/lowryLab/data/genotypes/Chr06K_Midwest_matrix.txt"
+Midwest_chrom6K = "~/Dropbox/lowryLab/data/genotypes/Midwest_6K_hetFilt.txt"
 
 # loading genotype data 
 Midwest_allsnps_6K = SlicedData$new();
@@ -477,7 +519,7 @@ Midwest_allsnps_6K$fileSliceSize = 10000;      # read file in pieces of 2,000 ro
 Midwest_allsnps_6K$LoadFile(Midwest_chrom6K)
 
 # 6N
-Midwest_chrom6N = "~/Dropbox/lowryLab/data/genotypes/Chr06N_Midwest_matrix.txt"
+Midwest_chrom6N = "~/Dropbox/lowryLab/data/genotypes/Midwest_6N_hetFilt.txt"
 
 # loading genotype data 
 Midwest_allsnps_6N = SlicedData$new();
@@ -487,7 +529,7 @@ Midwest_allsnps_6N$fileSliceSize = 10000;      # read file in pieces of 2,000 ro
 Midwest_allsnps_6N$LoadFile(Midwest_chrom6N)
 
 # 7K
-Midwest_chrom7K = "~/Dropbox/lowryLab/data/genotypes/Chr07K_Midwest_matrix.txt"
+Midwest_chrom7K = "~/Dropbox/lowryLab/data/genotypes/Midwest_7K_hetFilt.txt"
 
 # loading genotype data 
 Midwest_allsnps_7K = SlicedData$new();
@@ -497,7 +539,7 @@ Midwest_allsnps_7K$fileSliceSize = 10000;      # read file in pieces of 2,000 ro
 Midwest_allsnps_7K$LoadFile(Midwest_chrom7K)
 
 # 7
-Midwest_chrom7N = "~/Dropbox/lowryLab/data/genotypes/Chr07N_Midwest_matrix.txt"
+Midwest_chrom7N = "~/Dropbox/lowryLab/data/genotypes/Midwest_7N_hetFilt.txt"
 
 # loading genotype data 
 Midwest_allsnps_7N = SlicedData$new();
@@ -507,7 +549,7 @@ Midwest_allsnps_7N$fileSliceSize = 10000;      # read file in pieces of 2,000 ro
 Midwest_allsnps_7N$LoadFile(Midwest_chrom7N)
 
 # 8K
-Midwest_chrom8K = "~/Dropbox/lowryLab/data/genotypes/Chr08K_Midwest_matrix.txt"
+Midwest_chrom8K = "~/Dropbox/lowryLab/data/genotypes/Midwest_8K_hetFilt.txt"
 
 # loading genotype data 
 Midwest_allsnps_8K = SlicedData$new();
@@ -517,7 +559,7 @@ Midwest_allsnps_8K$fileSliceSize = 10000;      # read file in pieces of 2,000 ro
 Midwest_allsnps_8K$LoadFile(Midwest_chrom8K)
 
 # 8N
-Midwest_chrom8N = "~/Dropbox/lowryLab/data/genotypes/Chr08N_Midwest_matrix.txt"
+Midwest_chrom8N = "~/Dropbox/lowryLab/data/genotypes/Midwest_8N_hetFilt.txt"
 
 # loading genotype data 
 Midwest_allsnps_8N = SlicedData$new();
@@ -527,7 +569,7 @@ Midwest_allsnps_8N$fileSliceSize = 10000;      # read file in pieces of 2,000 ro
 Midwest_allsnps_8N$LoadFile(Midwest_chrom8N)
 
 # 9K
-Midwest_chrom9K = "~/Dropbox/lowryLab/data/genotypes/Chr09K_Midwest_matrix.txt"
+Midwest_chrom9K = "~/Dropbox/lowryLab/data/genotypes/Midwest_9K_hetFilt.txt"
 
 # loading genotype data 
 Midwest_allsnps_9K = SlicedData$new();
@@ -537,7 +579,7 @@ Midwest_allsnps_9K$fileSliceSize = 10000;      # read file in pieces of 2,000 ro
 Midwest_allsnps_9K$LoadFile(Midwest_chrom9K)
 
 # 9N
-Midwest_chrom9N = "~/Dropbox/lowryLab/data/genotypes/Chr09N_Midwest_matrix.txt"
+Midwest_chrom9N = "~/Dropbox/lowryLab/data/genotypes/Midwest_9N_hetFilt.txt"
 
 # loading genotype data 
 Midwest_allsnps_9N = SlicedData$new();
@@ -545,16 +587,17 @@ Midwest_allsnps_9N$fileDelimiter = "\t";       # denote missing values;
 Midwest_allsnps_9N$fileSkipColumns = 1;          # one column of row labels
 Midwest_allsnps_9N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
 Midwest_allsnps_9N$LoadFile(Midwest_chrom9N)
+
 ```
 
 ## read in Gulf genotypes
-
 ```{r read in genotypes, Gulf}
+
 
 # reading in the data first 
 
 # 1K
-Gulf_chrom1K = "~/Dropbox/lowryLab/data/genotypes/Chr01K_Gulf_matrix.txt"
+Gulf_chrom1K = "~/Dropbox/lowryLab/data/genotypes/Gulf_1K_hetFilt.txt"
 
 # loading genotype data 
 Gulf_allsnps_1K = SlicedData$new();
@@ -564,7 +607,7 @@ Gulf_allsnps_1K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
 Gulf_allsnps_1K$LoadFile(Gulf_chrom1K)
 
 # 1N
-Gulf_chrom1N = "~/Dropbox/lowryLab/data/genotypes/Chr01N_Gulf_matrix.txt"
+Gulf_chrom1N = "~/Dropbox/lowryLab/data/genotypes/Gulf_1N_hetFilt.txt"
 
 # loading genotype data 
 Gulf_allsnps_1N = SlicedData$new();
@@ -574,7 +617,7 @@ Gulf_allsnps_1N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
 Gulf_allsnps_1N$LoadFile(Gulf_chrom1N)
 
 # 2K
-Gulf_chrom2K = "~/Dropbox/lowryLab/data/genotypes/Chr02K_Gulf_matrix.txt"
+Gulf_chrom2K = "~/Dropbox/lowryLab/data/genotypes/Gulf_2K_hetFilt.txt"
 
 # loading genotype data 
 Gulf_allsnps_2K = SlicedData$new();
@@ -584,7 +627,7 @@ Gulf_allsnps_2K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
 Gulf_allsnps_2K$LoadFile(Gulf_chrom2K)
 
 # 2N
-Gulf_chrom2N = "~/Dropbox/lowryLab/data/genotypes/Chr02N_Gulf_matrix.txt"
+Gulf_chrom2N = "~/Dropbox/lowryLab/data/genotypes/Gulf_2N_hetFilt.txt"
 
 # loading genotype data 
 Gulf_allsnps_2N = SlicedData$new();
@@ -594,7 +637,7 @@ Gulf_allsnps_2N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
 Gulf_allsnps_2N$LoadFile(Gulf_chrom2N)
 
 # 3K
-Gulf_chrom3K = "~/Dropbox/lowryLab/data/genotypes/Chr03K_Gulf_matrix.txt"
+Gulf_chrom3K = "~/Dropbox/lowryLab/data/genotypes/Gulf_3K_hetFilt.txt"
 
 # loading genotype data 
 Gulf_allsnps_3K = SlicedData$new();
@@ -604,7 +647,7 @@ Gulf_allsnps_3K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
 Gulf_allsnps_3K$LoadFile(Gulf_chrom3K)
 
 # 3N
-Gulf_chrom3N = "~/Dropbox/lowryLab/data/genotypes/Chr03N_Gulf_matrix.txt"
+Gulf_chrom3N = "~/Dropbox/lowryLab/data/genotypes/Gulf_3N_hetFilt.txt"
 
 # loading genotype data 
 Gulf_allsnps_3N = SlicedData$new();
@@ -614,7 +657,7 @@ Gulf_allsnps_3N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
 Gulf_allsnps_3N$LoadFile(Gulf_chrom3N)
 
 # 4K
-Gulf_chrom4K = "~/Dropbox/lowryLab/data/genotypes/Chr04K_Gulf_matrix.txt"
+Gulf_chrom4K = "~/Dropbox/lowryLab/data/genotypes/Gulf_4K_hetFilt.txt"
 
 # loading genotype data 
 Gulf_allsnps_4K = SlicedData$new();
@@ -624,7 +667,7 @@ Gulf_allsnps_4K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
 Gulf_allsnps_4K$LoadFile(Gulf_chrom4K)
 
 # 4N
-Gulf_chrom4N = "~/Dropbox/lowryLab/data/genotypes/Chr04N_Gulf_matrix.txt"
+Gulf_chrom4N = "~/Dropbox/lowryLab/data/genotypes/Gulf_4N_hetFilt.txt"
 
 # loading genotype data 
 Gulf_allsnps_4N = SlicedData$new();
@@ -634,7 +677,7 @@ Gulf_allsnps_4N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
 Gulf_allsnps_4N$LoadFile(Gulf_chrom4N)
 
 # 5K
-Gulf_chrom5K = "~/Dropbox/lowryLab/data/genotypes/Chr05K_Gulf_matrix.txt"
+Gulf_chrom5K = "~/Dropbox/lowryLab/data/genotypes/Gulf_5K_hetFilt.txt"
 
 # loading genotype data 
 Gulf_allsnps_5K = SlicedData$new();
@@ -644,7 +687,7 @@ Gulf_allsnps_5K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
 Gulf_allsnps_5K$LoadFile(Gulf_chrom5K)
 
 # 5N
-Gulf_chrom5N = "~/Dropbox/lowryLab/data/genotypes/Chr05N_Gulf_matrix.txt"
+Gulf_chrom5N = "~/Dropbox/lowryLab/data/genotypes/Gulf_5N_hetFilt.txt"
 
 # loading genotype data 
 Gulf_allsnps_5N = SlicedData$new();
@@ -654,7 +697,7 @@ Gulf_allsnps_5N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
 Gulf_allsnps_5N$LoadFile(Gulf_chrom5N)
 
 # 6K
-Gulf_chrom6K = "~/Dropbox/lowryLab/data/genotypes/Chr06K_Gulf_matrix.txt"
+Gulf_chrom6K = "~/Dropbox/lowryLab/data/genotypes/Gulf_6K_hetFilt.txt"
 
 # loading genotype data 
 Gulf_allsnps_6K = SlicedData$new();
@@ -664,7 +707,7 @@ Gulf_allsnps_6K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
 Gulf_allsnps_6K$LoadFile(Gulf_chrom6K)
 
 # 6N
-Gulf_chrom6N = "~/Dropbox/lowryLab/data/genotypes/Chr06N_Gulf_matrix.txt"
+Gulf_chrom6N = "~/Dropbox/lowryLab/data/genotypes/Gulf_6N_hetFilt.txt"
 
 # loading genotype data 
 Gulf_allsnps_6N = SlicedData$new();
@@ -674,7 +717,7 @@ Gulf_allsnps_6N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
 Gulf_allsnps_6N$LoadFile(Gulf_chrom6N)
 
 # 7K
-Gulf_chrom7K = "~/Dropbox/lowryLab/data/genotypes/Chr07K_Gulf_matrix.txt"
+Gulf_chrom7K = "~/Dropbox/lowryLab/data/genotypes/Gulf_7K_hetFilt.txt"
 
 # loading genotype data 
 Gulf_allsnps_7K = SlicedData$new();
@@ -684,7 +727,7 @@ Gulf_allsnps_7K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
 Gulf_allsnps_7K$LoadFile(Gulf_chrom7K)
 
 # 7
-Gulf_chrom7N = "~/Dropbox/lowryLab/data/genotypes/Chr07N_Gulf_matrix.txt"
+Gulf_chrom7N = "~/Dropbox/lowryLab/data/genotypes/Gulf_7N_hetFilt.txt"
 
 # loading genotype data 
 Gulf_allsnps_7N = SlicedData$new();
@@ -694,7 +737,7 @@ Gulf_allsnps_7N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
 Gulf_allsnps_7N$LoadFile(Gulf_chrom7N)
 
 # 8K
-Gulf_chrom8K = "~/Dropbox/lowryLab/data/genotypes/Chr08K_Gulf_matrix.txt"
+Gulf_chrom8K = "~/Dropbox/lowryLab/data/genotypes/Gulf_8K_hetFilt.txt"
 
 # loading genotype data 
 Gulf_allsnps_8K = SlicedData$new();
@@ -704,7 +747,7 @@ Gulf_allsnps_8K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
 Gulf_allsnps_8K$LoadFile(Gulf_chrom8K)
 
 # 8N
-Gulf_chrom8N = "~/Dropbox/lowryLab/data/genotypes/Chr08N_Gulf_matrix.txt"
+Gulf_chrom8N = "~/Dropbox/lowryLab/data/genotypes/Gulf_8N_hetFilt.txt"
 
 # loading genotype data 
 Gulf_allsnps_8N = SlicedData$new();
@@ -714,7 +757,7 @@ Gulf_allsnps_8N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
 Gulf_allsnps_8N$LoadFile(Gulf_chrom8N)
 
 # 9K
-Gulf_chrom9K = "~/Dropbox/lowryLab/data/genotypes/Chr09K_Gulf_matrix.txt"
+Gulf_chrom9K = "~/Dropbox/lowryLab/data/genotypes/Gulf_9K_hetFilt.txt"
 
 # loading genotype data 
 Gulf_allsnps_9K = SlicedData$new();
@@ -724,7 +767,7 @@ Gulf_allsnps_9K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
 Gulf_allsnps_9K$LoadFile(Gulf_chrom9K)
 
 # 9N
-Gulf_chrom9N = "~/Dropbox/lowryLab/data/genotypes/Chr09N_Gulf_matrix.txt"
+Gulf_chrom9N = "~/Dropbox/lowryLab/data/genotypes/Gulf_9N_hetFilt.txt"
 
 # loading genotype data 
 Gulf_allsnps_9N = SlicedData$new();
@@ -732,15 +775,15 @@ Gulf_allsnps_9N$fileDelimiter = "\t";       # denote missing values;
 Gulf_allsnps_9N$fileSkipColumns = 1;          # one column of row labels
 Gulf_allsnps_9N$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
 Gulf_allsnps_9N$LoadFile(Gulf_chrom9N)
+
 ```
 
 # read in Atlantic genotypes 
-
 ```{r read in genotypes, Atlantic}
 # reading in the data first 
 
 # 1K
-Atlantic_chrom1K = "~/Dropbox/lowryLab/data/genotypes/Chr01K_Atlantic_matrix.txt"
+Atlantic_chrom1K = "~/Dropbox/lowryLab/data/genotypes/Atlantic_1K_hetFilt.txt"
 
 # loading genotype data 
 Atlantic_allsnps_1K = SlicedData$new();
@@ -750,7 +793,7 @@ Atlantic_allsnps_1K$fileSliceSize = 10000;      # read file in pieces of 2,000 r
 Atlantic_allsnps_1K$LoadFile(Atlantic_chrom1K)
 
 # 1N
-Atlantic_chrom1N = "~/Dropbox/lowryLab/data/genotypes/Chr01N_Atlantic_matrix.txt"
+Atlantic_chrom1N = "~/Dropbox/lowryLab/data/genotypes/Atlantic_1N_hetFilt.txt"
 
 # loading genotype data 
 Atlantic_allsnps_1N = SlicedData$new();
@@ -760,7 +803,7 @@ Atlantic_allsnps_1N$fileSliceSize = 10000;      # read file in pieces of 2,000 r
 Atlantic_allsnps_1N$LoadFile(Atlantic_chrom1N)
 
 # 2K
-Atlantic_chrom2K = "~/Dropbox/lowryLab/data/genotypes/Chr02K_Atlantic_matrix.txt"
+Atlantic_chrom2K = "~/Dropbox/lowryLab/data/genotypes/Atlantic_2K_hetFilt.txt"
 
 # loading genotype data 
 Atlantic_allsnps_2K = SlicedData$new();
@@ -770,7 +813,7 @@ Atlantic_allsnps_2K$fileSliceSize = 10000;      # read file in pieces of 2,000 r
 Atlantic_allsnps_2K$LoadFile(Atlantic_chrom2K)
 
 # 2N
-Atlantic_chrom2N = "~/Dropbox/lowryLab/data/genotypes/Chr02N_Atlantic_matrix.txt"
+Atlantic_chrom2N = "~/Dropbox/lowryLab/data/genotypes/Atlantic_2N_hetFilt.txt"
 
 # loading genotype data 
 Atlantic_allsnps_2N = SlicedData$new();
@@ -780,7 +823,7 @@ Atlantic_allsnps_2N$fileSliceSize = 10000;      # read file in pieces of 2,000 r
 Atlantic_allsnps_2N$LoadFile(Atlantic_chrom2N)
 
 # 3K
-Atlantic_chrom3K = "~/Dropbox/lowryLab/data/genotypes/Chr03K_Atlantic_matrix.txt"
+Atlantic_chrom3K = "~/Dropbox/lowryLab/data/genotypes/Atlantic_3K_hetFilt.txt"
 
 # loading genotype data 
 Atlantic_allsnps_3K = SlicedData$new();
@@ -790,7 +833,7 @@ Atlantic_allsnps_3K$fileSliceSize = 10000;      # read file in pieces of 2,000 r
 Atlantic_allsnps_3K$LoadFile(Atlantic_chrom3K)
 
 # 3N
-Atlantic_chrom3N = "~/Dropbox/lowryLab/data/genotypes/Chr03N_Atlantic_matrix.txt"
+Atlantic_chrom3N = "~/Dropbox/lowryLab/data/genotypes/Atlantic_3N_hetFilt.txt"
 
 # loading genotype data 
 Atlantic_allsnps_3N = SlicedData$new();
@@ -800,7 +843,7 @@ Atlantic_allsnps_3N$fileSliceSize = 10000;      # read file in pieces of 2,000 r
 Atlantic_allsnps_3N$LoadFile(Atlantic_chrom3N)
 
 # 4K
-Atlantic_chrom4K = "~/Dropbox/lowryLab/data/genotypes/Chr04K_Atlantic_matrix.txt"
+Atlantic_chrom4K = "~/Dropbox/lowryLab/data/genotypes/Atlantic_4K_hetFilt.txt"
 
 # loading genotype data 
 Atlantic_allsnps_4K = SlicedData$new();
@@ -810,7 +853,7 @@ Atlantic_allsnps_4K$fileSliceSize = 10000;      # read file in pieces of 2,000 r
 Atlantic_allsnps_4K$LoadFile(Atlantic_chrom4K)
 
 # 4N
-Atlantic_chrom4N = "~/Dropbox/lowryLab/data/genotypes/Chr04N_Atlantic_matrix.txt"
+Atlantic_chrom4N = "~/Dropbox/lowryLab/data/genotypes/Atlantic_4N_hetFilt.txt"
 
 # loading genotype data 
 Atlantic_allsnps_4N = SlicedData$new();
@@ -820,7 +863,7 @@ Atlantic_allsnps_4N$fileSliceSize = 10000;      # read file in pieces of 2,000 r
 Atlantic_allsnps_4N$LoadFile(Atlantic_chrom4N)
 
 # 5K
-Atlantic_chrom5K = "~/Dropbox/lowryLab/data/genotypes/Chr05K_Atlantic_matrix.txt"
+Atlantic_chrom5K = "~/Dropbox/lowryLab/data/genotypes/Atlantic_5K_hetFilt.txt"
 
 # loading genotype data 
 Atlantic_allsnps_5K = SlicedData$new();
@@ -830,7 +873,7 @@ Atlantic_allsnps_5K$fileSliceSize = 10000;      # read file in pieces of 2,000 r
 Atlantic_allsnps_5K$LoadFile(Atlantic_chrom5K)
 
 # 5N
-Atlantic_chrom5N = "~/Dropbox/lowryLab/data/genotypes/Chr05N_Atlantic_matrix.txt"
+Atlantic_chrom5N = "~/Dropbox/lowryLab/data/genotypes/Atlantic_5N_hetFilt.txt"
 
 # loading genotype data 
 Atlantic_allsnps_5N = SlicedData$new();
@@ -840,7 +883,7 @@ Atlantic_allsnps_5N$fileSliceSize = 10000;      # read file in pieces of 2,000 r
 Atlantic_allsnps_5N$LoadFile(Atlantic_chrom5N)
 
 # 6K
-Atlantic_chrom6K = "~/Dropbox/lowryLab/data/genotypes/Chr06K_Atlantic_matrix.txt"
+Atlantic_chrom6K = "~/Dropbox/lowryLab/data/genotypes/Atlantic_6K_hetFilt.txt"
 
 # loading genotype data 
 Atlantic_allsnps_6K = SlicedData$new();
@@ -850,7 +893,7 @@ Atlantic_allsnps_6K$fileSliceSize = 10000;      # read file in pieces of 2,000 r
 Atlantic_allsnps_6K$LoadFile(Atlantic_chrom6K)
 
 # 6N
-Atlantic_chrom6N = "~/Dropbox/lowryLab/data/genotypes/Chr06N_Atlantic_matrix.txt"
+Atlantic_chrom6N = "~/Dropbox/lowryLab/data/genotypes/Atlantic_6N_hetFilt.txt"
 
 # loading genotype data 
 Atlantic_allsnps_6N = SlicedData$new();
@@ -860,7 +903,7 @@ Atlantic_allsnps_6N$fileSliceSize = 10000;      # read file in pieces of 2,000 r
 Atlantic_allsnps_6N$LoadFile(Atlantic_chrom6N)
 
 # 7K
-Atlantic_chrom7K = "~/Dropbox/lowryLab/data/genotypes/Chr07K_Atlantic_matrix.txt"
+Atlantic_chrom7K = "~/Dropbox/lowryLab/data/genotypes/Atlantic_7K_hetFilt.txt"
 
 # loading genotype data 
 Atlantic_allsnps_7K = SlicedData$new();
@@ -870,7 +913,7 @@ Atlantic_allsnps_7K$fileSliceSize = 10000;      # read file in pieces of 2,000 r
 Atlantic_allsnps_7K$LoadFile(Atlantic_chrom7K)
 
 # 7
-Atlantic_chrom7N = "~/Dropbox/lowryLab/data/genotypes/Chr07N_Atlantic_matrix.txt"
+Atlantic_chrom7N = "~/Dropbox/lowryLab/data/genotypes/Atlantic_7N_hetFilt.txt"
 
 # loading genotype data 
 Atlantic_allsnps_7N = SlicedData$new();
@@ -880,7 +923,7 @@ Atlantic_allsnps_7N$fileSliceSize = 10000;      # read file in pieces of 2,000 r
 Atlantic_allsnps_7N$LoadFile(Atlantic_chrom7N)
 
 # 8K
-Atlantic_chrom8K = "~/Dropbox/lowryLab/data/genotypes/Chr08K_Atlantic_matrix.txt"
+Atlantic_chrom8K = "~/Dropbox/lowryLab/data/genotypes/Atlantic_8K_hetFilt.txt"
 
 # loading genotype data 
 Atlantic_allsnps_8K = SlicedData$new();
@@ -890,7 +933,7 @@ Atlantic_allsnps_8K$fileSliceSize = 10000;      # read file in pieces of 2,000 r
 Atlantic_allsnps_8K$LoadFile(Atlantic_chrom8K)
 
 # 8N
-Atlantic_chrom8N = "~/Dropbox/lowryLab/data/genotypes/Chr08N_Atlantic_matrix.txt"
+Atlantic_chrom8N = "~/Dropbox/lowryLab/data/genotypes/Atlantic_8N_hetFilt.txt"
 
 # loading genotype data 
 Atlantic_allsnps_8N = SlicedData$new();
@@ -900,7 +943,7 @@ Atlantic_allsnps_8N$fileSliceSize = 10000;      # read file in pieces of 2,000 r
 Atlantic_allsnps_8N$LoadFile(Atlantic_chrom8N)
 
 # 9K
-Atlantic_chrom9K = "~/Dropbox/lowryLab/data/genotypes/Chr09K_Atlantic_matrix.txt"
+Atlantic_chrom9K = "~/Dropbox/lowryLab/data/genotypes/Atlantic_9K_hetFilt.txt"
 
 # loading genotype data 
 Atlantic_allsnps_9K = SlicedData$new();
@@ -910,7 +953,7 @@ Atlantic_allsnps_9K$fileSliceSize = 10000;      # read file in pieces of 2,000 r
 Atlantic_allsnps_9K$LoadFile(Atlantic_chrom9K)
 
 # 9N
-Atlantic_chrom9N = "~/Dropbox/lowryLab/data/genotypes/Chr09N_Atlantic_matrix.txt"
+Atlantic_chrom9N = "~/Dropbox/lowryLab/data/genotypes/Atlantic_9N_hetFilt.txt"
 
 # loading genotype data 
 Atlantic_allsnps_9N = SlicedData$new();
@@ -921,7 +964,6 @@ Atlantic_allsnps_9N$LoadFile(Atlantic_chrom9N)
 ```
 
 # map eQTLs, MI Midwest 
-
 ```{r run matrix eQTL, MI Midwest}
 
 
@@ -935,7 +977,7 @@ me_MI_Midwest_1K = Matrix_eQTL_main(
   cvrt = cvrt_Midwest,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_1K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_1K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -955,7 +997,7 @@ me_MI_Midwest_1N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_1N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_1N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -974,7 +1016,7 @@ me_MI_Midwest_2K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_2K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_2K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -993,7 +1035,7 @@ me_MI_Midwest_2N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_2N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_2N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1012,7 +1054,7 @@ me_MI_Midwest_3K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_3K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_3K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1031,7 +1073,7 @@ me_MI_Midwest_3N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_3N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_3N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1050,7 +1092,7 @@ me_MI_Midwest_4K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_4K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_4K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1069,7 +1111,7 @@ me_MI_Midwest_4N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_4N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_4N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1088,7 +1130,7 @@ me_MI_Midwest_5K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_5K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_5K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1107,7 +1149,7 @@ me_MI_Midwest_5N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_5N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_5N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1126,7 +1168,7 @@ me_MI_Midwest_6K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_6K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_6K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1145,7 +1187,7 @@ me_MI_Midwest_6N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_6N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_6N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1164,7 +1206,7 @@ me_MI_Midwest_7K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_7K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_7K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1183,7 +1225,7 @@ me_MI_Midwest_7N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_7N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_7N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1202,7 +1244,7 @@ me_MI_Midwest_8K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_8K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_8K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1221,7 +1263,7 @@ me_MI_Midwest_8N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_8N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_8N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1240,7 +1282,7 @@ me_MI_Midwest_9K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_9K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_9K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1259,7 +1301,7 @@ me_MI_Midwest_9N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_9N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_9N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1287,7 +1329,7 @@ me_TX_Midwest_1K = Matrix_eQTL_main(
   cvrt = cvrt_Midwest,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_1K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_1K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1307,7 +1349,7 @@ me_TX_Midwest_1N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_1N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_1N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1326,7 +1368,7 @@ me_TX_Midwest_2K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_2K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_2K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1345,7 +1387,7 @@ me_TX_Midwest_2N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_2N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_2N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1364,7 +1406,7 @@ me_TX_Midwest_3K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_3K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_3K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1383,7 +1425,7 @@ me_TX_Midwest_3N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_3N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_3N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1402,7 +1444,7 @@ me_TX_Midwest_4K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_4K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_4K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1421,7 +1463,7 @@ me_TX_Midwest_4N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_4N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_4N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1440,7 +1482,7 @@ me_TX_Midwest_5K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_5K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_5K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1459,7 +1501,7 @@ me_TX_Midwest_5N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_5N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_5N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1478,7 +1520,7 @@ me_TX_Midwest_6K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_6K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_6K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1497,7 +1539,7 @@ me_TX_Midwest_6N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_6N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_6N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1516,7 +1558,7 @@ me_TX_Midwest_7K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_7K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_7K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1535,7 +1577,7 @@ me_TX_Midwest_7N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_7N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_7N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1554,7 +1596,7 @@ me_TX_Midwest_8K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_8K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_8K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1573,7 +1615,7 @@ me_TX_Midwest_8N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_8N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_8N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1592,7 +1634,7 @@ me_TX_Midwest_9K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_9K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_9K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1611,7 +1653,7 @@ me_TX_Midwest_9N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_9N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_9N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -1987,7 +2029,7 @@ me_MI_Gulf_1K = Matrix_eQTL_main(
   cvrt = cvrt_Gulf,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_1K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_1K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2007,7 +2049,7 @@ me_MI_Gulf_1N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_1N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_1N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2026,7 +2068,7 @@ me_MI_Gulf_2K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_2K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_2K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2045,7 +2087,7 @@ me_MI_Gulf_2N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_2N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_2N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2064,7 +2106,7 @@ me_MI_Gulf_3K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_3K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_3K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2083,7 +2125,7 @@ me_MI_Gulf_3N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_3N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_3N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2102,7 +2144,7 @@ me_MI_Gulf_4K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_4K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_4K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2121,7 +2163,7 @@ me_MI_Gulf_4N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_4N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_4N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2140,7 +2182,7 @@ me_MI_Gulf_5K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_5K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_5K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2159,7 +2201,7 @@ me_MI_Gulf_5N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_5N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_5N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2178,7 +2220,7 @@ me_MI_Gulf_6K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_6K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_6K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2197,7 +2239,7 @@ me_MI_Gulf_6N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_6N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_6N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2216,7 +2258,7 @@ me_MI_Gulf_7K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_7K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_7K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2235,7 +2277,7 @@ me_MI_Gulf_7N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_7N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_7N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2254,7 +2296,7 @@ me_MI_Gulf_8K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_8K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_8K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2273,7 +2315,7 @@ me_MI_Gulf_8N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_8N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_8N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2292,7 +2334,7 @@ me_MI_Gulf_9K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_9K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_9K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2311,7 +2353,7 @@ me_MI_Gulf_9N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_9N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_9N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2337,7 +2379,7 @@ me_TX_Gulf_1K = Matrix_eQTL_main(
   cvrt = cvrt_Gulf,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_1K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_1K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2357,7 +2399,7 @@ me_TX_Gulf_1N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_1N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_1N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2376,7 +2418,7 @@ me_TX_Gulf_2K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_2K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_2K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2395,7 +2437,7 @@ me_TX_Gulf_2N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_2N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_2N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2414,7 +2456,7 @@ me_TX_Gulf_3K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_3K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_3K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2433,7 +2475,7 @@ me_TX_Gulf_3N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_3N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_3N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2452,7 +2494,7 @@ me_TX_Gulf_4K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_4K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_4K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2471,7 +2513,7 @@ me_TX_Gulf_4N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_4N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_4N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2490,7 +2532,7 @@ me_TX_Gulf_5K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_5K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_5K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2509,7 +2551,7 @@ me_TX_Gulf_5N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_5N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_5N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2528,7 +2570,7 @@ me_TX_Gulf_6K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_6K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_6K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2547,7 +2589,7 @@ me_TX_Gulf_6N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_6N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_6N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2566,7 +2608,7 @@ me_TX_Gulf_7K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_7K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_7K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2585,7 +2627,7 @@ me_TX_Gulf_7N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_7N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_7N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2604,7 +2646,7 @@ me_TX_Gulf_8K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_8K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_8K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2623,7 +2665,7 @@ me_TX_Gulf_8N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_8N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_8N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2642,7 +2684,7 @@ me_TX_Gulf_9K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_9K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_9K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -2661,7 +2703,7 @@ me_TX_Gulf_9N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_9N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_9N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3037,7 +3079,7 @@ me_MI_Atlantic_1K = Matrix_eQTL_main(
   cvrt = cvrt_Atlantic,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_1K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_1K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3057,7 +3099,7 @@ me_MI_Atlantic_1N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_1N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_1N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3076,7 +3118,7 @@ me_MI_Atlantic_2K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_2K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_2K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3095,7 +3137,7 @@ me_MI_Atlantic_2N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_2N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_2N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3114,7 +3156,7 @@ me_MI_Atlantic_3K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_3K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_3K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3133,7 +3175,7 @@ me_MI_Atlantic_3N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_3N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_3N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3152,7 +3194,7 @@ me_MI_Atlantic_4K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_4K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_4K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3171,7 +3213,7 @@ me_MI_Atlantic_4N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_4N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_4N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3190,7 +3232,7 @@ me_MI_Atlantic_5K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_5K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_5K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3209,7 +3251,7 @@ me_MI_Atlantic_5N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_5N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_5N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3228,7 +3270,7 @@ me_MI_Atlantic_6K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_6K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_6K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3247,7 +3289,7 @@ me_MI_Atlantic_6N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_6N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_6N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3266,7 +3308,7 @@ me_MI_Atlantic_7K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_7K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_7K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3285,7 +3327,7 @@ me_MI_Atlantic_7N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_7N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_7N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3304,7 +3346,7 @@ me_MI_Atlantic_8K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_8K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_8K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3323,7 +3365,7 @@ me_MI_Atlantic_8N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_8N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_8N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3342,7 +3384,7 @@ me_MI_Atlantic_9K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_9K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_9K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3361,7 +3403,7 @@ me_MI_Atlantic_9N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_9N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_9N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3387,7 +3429,7 @@ me_TX_Atlantic_1K = Matrix_eQTL_main(
   cvrt = cvrt_Atlantic,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_1K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_1K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3407,7 +3449,7 @@ me_TX_Atlantic_1N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_1N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_1N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3426,7 +3468,7 @@ me_TX_Atlantic_2K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_2K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_2K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3445,7 +3487,7 @@ me_TX_Atlantic_2N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_2N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_2N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3464,7 +3506,7 @@ me_TX_Atlantic_3K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_3K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_3K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3483,7 +3525,7 @@ me_TX_Atlantic_3N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_3N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_3N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3502,7 +3544,7 @@ me_TX_Atlantic_4K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_4K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_4K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3521,7 +3563,7 @@ me_TX_Atlantic_4N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_4N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_4N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3540,7 +3582,7 @@ me_TX_Atlantic_5K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_5K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_5K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3559,7 +3601,7 @@ me_TX_Atlantic_5N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_5N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_5N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3578,7 +3620,7 @@ me_TX_Atlantic_6K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_6K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_6K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3597,7 +3639,7 @@ me_TX_Atlantic_6N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_6N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_6N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3616,7 +3658,7 @@ me_TX_Atlantic_7K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_7K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_7K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3635,7 +3677,7 @@ me_TX_Atlantic_7N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_7N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_7N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3654,7 +3696,7 @@ me_TX_Atlantic_8K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_8K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_8K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3673,7 +3715,7 @@ me_TX_Atlantic_8N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_8N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_8N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3692,7 +3734,7 @@ me_TX_Atlantic_9K = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_9K.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_9K_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3711,7 +3753,7 @@ me_TX_Atlantic_9N = Matrix_eQTL_main(
   cisDist = 1e6,
   output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_9N.txt",
   output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_9N_cis.txt",
-  pvOutputThreshold = 1e-11,
+  pvOutputThreshold = 1e-6,
   pvOutputThreshold.cis = 1e-2, 
   useModel = useModel,
   errorCovariance = errorCovariance,
@@ -3721,6 +3763,7 @@ me_TX_Atlantic_9N = Matrix_eQTL_main(
   noFDRsaveMemory = FALSE)
 
 ```
+
 
 # map eQTLs, GxE Atlantic
 
@@ -4729,7 +4772,7 @@ Gulf_MI_eQTLs <- all_eQTLs %>%
 
 # write all eQTls to save them
 
-write.csv(Gulf_MI_eQTLs, "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_all_eQTLs.csv")
+write.csv(Gulf_MI_eQTLs, "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_all_eQTLs_hetFilt.csv")
 ```
 
 # read back in the eQTLs for post-processing, MI Atlantic
@@ -5237,13 +5280,1249 @@ all_eQTLs <- rbind(cis_labeled, alltrans_labeled)
 
 # now separate the SNP label for plotting
 Atlantic_TX_eQTLs <- all_eQTLs %>%
-  separate(SNP, into = c("genome_Chrom", "genome_bp"), sep = "_")
+  tidyr::separate(SNP, into = c("genome_Chrom", "genome_bp"), sep = "_")
 
 # write all eQTls to save them
 
 write.csv(Atlantic_TX_eQTLs, "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_all_eQTLs.csv")
 ```
 
+# filtering, Gulf MI
+```{r spurious gene filtering, Gulf MI}
+
+# identifying genes to be filtered out (too many spurious trans-eQTLs)
+summarize_Gulf_MI <- filter(Gulf_MI_eQTLs,
+                                         FDR < 0.1) %>% 
+  group_by(geneid) %>% 
+  summarise(n = n())
 
 
+# only keeping trans eGenes with less than 25 eQTLs
+Gulf_MI_transFilt <- filter(Gulf_MI_eQTLs, 
+       type == "trans",
+       FDR < 0.1,
+       gene %in% filter(summarize_Gulf_MI, n < 25)$geneid)
+
+# keeping all cis eQTls that fit FDR corrections 
+Gulf_MI_cisFilt <- filter(Gulf_MI_eQTLs, 
+       type == "cis",
+       FDR < 0.1)
+
+# adding them together
+Gulf_MI_eQTLs_filt <- rbind(Gulf_MI_transFilt,
+                                Gulf_MI_cisFilt)
+
+
+Gulf_MI_eQTLs_filt$chr <- factor(Gulf_MI_eQTLs_filt$chr,
+                                         levels = c("Chr09N",
+                                                    "Chr09K",
+                                                    "Chr08N",
+                                                    "Chr08K",
+                                                    "Chr07N",
+                                                    "Chr07K",
+                                                    "Chr06N",
+                                                    "Chr06K",
+                                                    "Chr05N",
+                                                    "Chr05K",
+                                                    "Chr04N",
+                                                    "Chr04K",
+                                                    "Chr03N",
+                                                    "Chr03K",
+                                                    "Chr02N",
+                                                    "Chr02K",
+                                                    "Chr01N",
+                                                    "Chr01K"))
+
+
+ggplot(Gulf_MI_eQTLs_filt,
+       aes(y = as.numeric(s1)/1000000,
+           x = as.numeric(genome_bp)/1000000,
+           col = -log10(p.value))) + #alpha = -log10(p.value))) +
+  facet_grid(chr ~ genome_Chrom,
+             scale = "free",
+             space = "free") + 
+  theme_bw() +
+  theme(strip.background = element_rect(fill="white"),
+        panel.spacing = unit(0, "lines"),
+        legend.position = "none",
+        panel.grid = element_blank()) +
+  geom_point() +
+  scale_color_viridis() + 
+  ggtitle("Gulf eQTLs, MI")
+
+
+write.csv(Gulf_MI_eQTLs_filt, "~/Dropbox/LowryLab/data/eQTL_output/Gulf_MI_eQTLs_filt.csv")
+
+```
+
+# filtering & output, Gulf TX
+```{r spurious gene filtering, Gulf TX}
+
+# identifying genes to be filtered out (too many spurious trans-eQTLs)
+summarize_Gulf_TX <- filter(Gulf_TX_eQTLs,
+                                         FDR < 0.1) %>% 
+  group_by(geneid) %>% 
+  summarise(n = n())
+
+
+# only keeping trans eGenes with less than 25 eQTLs
+Gulf_TX_transFilt <- filter(Gulf_TX_eQTLs, 
+       type == "trans",
+       FDR < 0.1,
+       gene %in% filter(summarize_Gulf_TX, n < 25)$geneid)
+
+# keeping all cis eQTls that fit FDR corrections 
+Gulf_TX_cisFilt <- filter(Gulf_TX_eQTLs, 
+       type == "cis",
+       FDR < 0.1)
+
+# adding them together
+Gulf_TX_eQTLs_filt <- rbind(Gulf_TX_transFilt,
+                            Gulf_TX_cisFilt)
+
+
+Gulf_TX_eQTLs_filt$chr <- factor(Gulf_TX_eQTLs_filt$chr,
+                                         levels = c("Chr09N",
+                                                    "Chr09K",
+                                                    "Chr08N",
+                                                    "Chr08K",
+                                                    "Chr07N",
+                                                    "Chr07K",
+                                                    "Chr06N",
+                                                    "Chr06K",
+                                                    "Chr05N",
+                                                    "Chr05K",
+                                                    "Chr04N",
+                                                    "Chr04K",
+                                                    "Chr03N",
+                                                    "Chr03K",
+                                                    "Chr02N",
+                                                    "Chr02K",
+                                                    "Chr01N",
+                                                    "Chr01K"))
+
+
+ggplot(Gulf_TX_eQTLs_filt,
+       aes(y = as.numeric(s1)/1000000,
+           x = as.numeric(genome_bp)/1000000,
+           col = -log10(p.value))) + #alpha = -log10(p.value))) +
+  facet_grid(chr ~ genome_Chrom,
+             scale = "free",
+             space = "free") + 
+  theme_bw() +
+  theme(strip.background = element_rect(fill="white"),
+        panel.spacing = unit(0, "lines"),
+        legend.position = "none",
+        panel.grid = element_blank()) +
+  geom_point() +
+  scale_color_viridis() + 
+  ggtitle("Gulf eQTLs, TX")
+
+write.csv(Gulf_TX_eQTLs_filt, "~/Dropbox/LowryLab/data/eQTL_output/Gulf_TX_eQTLs_filt.csv")
+
+```
+
+# filtering & output, Atlantic MI
+```{r spurious gene filtering, Atlantic MI}
+
+# identifying genes to be filtered out (too many spurious trans-eQTLs)
+summarize_Atlantic_MI <- filter(Atlantic_MI_eQTLs,
+                                         FDR < 0.1) %>% 
+  group_by(geneid) %>% 
+  summarise(n = n())
+
+# only keeping trans eGenes with less than 25 eQTLs
+Atlantic_MI_transFilt <- filter(Atlantic_MI_eQTLs, 
+       type == "trans",
+       FDR < 0.1,
+       gene %in% filter(summarize_Atlantic_MI, n < 25)$geneid)
+
+# keeping all cis eQTls that fit FDR corrections 
+Atlantic_MI_cisFilt <- filter(Atlantic_MI_eQTLs, 
+       type == "cis",
+       FDR < 0.1)
+
+# adding them together
+Atlantic_MI_eQTLs_filt <- rbind(Atlantic_MI_transFilt,
+                                Atlantic_MI_cisFilt)
+
+
+Atlantic_MI_eQTLs_filt$chr <- factor(Atlantic_MI_eQTLs_filt$chr,
+                                         levels = c("Chr09N",
+                                                    "Chr09K",
+                                                    "Chr08N",
+                                                    "Chr08K",
+                                                    "Chr07N",
+                                                    "Chr07K",
+                                                    "Chr06N",
+                                                    "Chr06K",
+                                                    "Chr05N",
+                                                    "Chr05K",
+                                                    "Chr04N",
+                                                    "Chr04K",
+                                                    "Chr03N",
+                                                    "Chr03K",
+                                                    "Chr02N",
+                                                    "Chr02K",
+                                                    "Chr01N",
+                                                    "Chr01K"))
+
+
+ggplot(Atlantic_MI_eQTLs_filt,
+       aes(y = as.numeric(s1)/1000000,
+           x = as.numeric(genome_bp)/1000000,
+           col = -log10(p.value))) + #alpha = -log10(p.value))) +
+  facet_grid(chr ~ genome_Chrom,
+             scale = "free",
+             space = "free") + 
+  theme_bw() +
+  theme(strip.background = element_rect(fill="white"),
+        panel.spacing = unit(0, "lines"),
+        legend.position = "none",
+        panel.grid = element_blank()) +
+  geom_point() +
+  scale_color_viridis() + 
+  ggtitle("Atlantic eQTLs, MI")
+
+write.csv(Atlantic_MI_eQTLs_filt, "~/Dropbox/LowryLab/data/eQTL_output/Atlantic_MI_eQTLs_filt.csv")
+```
+
+# filtering & output, Atlantic TX
+```{r spurious gene filtering, Atlantic TX}
+
+# identifying genes to be filtered out (too many spurious trans-eQTLs)
+summarize_Atlantic_TX <- filter(Atlantic_TX_eQTLs,
+                                         FDR < 0.1) %>% 
+  group_by(geneid) %>% 
+  summarise(n = n())
+
+# only keeping trans eGenes with less than 25 eQTLs
+Atlantic_TX_transFilt <- filter(Atlantic_TX_eQTLs, 
+       type == "trans",
+       FDR < 0.1,
+       gene %in% filter(summarize_Atlantic_TX, n < 25)$geneid)
+
+# keeping all cis eQTls that fit FDR corrections 
+Atlantic_TX_cisFilt <- filter(Atlantic_TX_eQTLs, 
+       type == "cis",
+       FDR < 0.1)
+
+# adding them together
+Atlantic_TX_eQTLs_filt <- rbind(Atlantic_TX_transFilt,
+                                Atlantic_TX_cisFilt)
+
+
+Atlantic_TX_eQTLs_filt$chr <- factor(Atlantic_TX_eQTLs_filt$chr,
+                                         levels = c("Chr09N",
+                                                    "Chr09K",
+                                                    "Chr08N",
+                                                    "Chr08K",
+                                                    "Chr07N",
+                                                    "Chr07K",
+                                                    "Chr06N",
+                                                    "Chr06K",
+                                                    "Chr05N",
+                                                    "Chr05K",
+                                                    "Chr04N",
+                                                    "Chr04K",
+                                                    "Chr03N",
+                                                    "Chr03K",
+                                                    "Chr02N",
+                                                    "Chr02K",
+                                                    "Chr01N",
+                                                    "Chr01K"))
+
+
+ggplot(Atlantic_TX_eQTLs_filt,
+       aes(y = as.numeric(s1)/1000000,
+           x = as.numeric(genome_bp)/1000000,
+           col = -log10(p.value))) + #alpha = -log10(p.value))) +
+  facet_grid(chr ~ genome_Chrom,
+             scale = "free",
+             space = "free") + 
+  theme_bw() +
+  theme(strip.background = element_rect(fill="white"),
+        panel.spacing = unit(0, "lines"),
+        legend.position = "none",
+        panel.grid = element_blank()) +
+  geom_point() +
+  scale_color_viridis() + 
+  ggtitle("Atlantic eQTLs, TX")
+
+write.csv(Atlantic_TX_eQTLs_filt, "~/Dropbox/LowryLab/data/eQTL_output/Atlantic_TX_eQTLs_filt.csv")
+```
+
+
+# filtering & output, Midwest MI
+```{r spurious gene filtering, Midwest MI}
+
+# identifying genes to be filtered out (too many spurious trans-eQTLs)
+summarize_Midwest_MI <- filter(Midwest_MI_eQTLs,
+                                         FDR < 0.1) %>% 
+  group_by(geneid) %>% 
+  summarise(n = n())
+
+# only keeping trans eGenes with less than 25 eQTLs
+Midwest_MI_transFilt <- filter(Midwest_MI_eQTLs, 
+       type == "trans",
+       FDR < 0.1,
+       gene %in% filter(summarize_Midwest_MI, n < 25)$geneid)
+
+# keeping all cis eQTls that fit FDR corrections 
+Midwest_MI_cisFilt <- filter(Midwest_MI_eQTLs, 
+       type == "cis",
+       FDR < 0.1)
+
+# adding them together
+Midwest_MI_eQTLs_filt <- rbind(Midwest_MI_transFilt,
+                                Midwest_MI_cisFilt)
+
+
+Midwest_MI_eQTLs_filt$chr <- factor(Midwest_MI_eQTLs_filt$chr,
+                                         levels = c("Chr09N",
+                                                    "Chr09K",
+                                                    "Chr08N",
+                                                    "Chr08K",
+                                                    "Chr07N",
+                                                    "Chr07K",
+                                                    "Chr06N",
+                                                    "Chr06K",
+                                                    "Chr05N",
+                                                    "Chr05K",
+                                                    "Chr04N",
+                                                    "Chr04K",
+                                                    "Chr03N",
+                                                    "Chr03K",
+                                                    "Chr02N",
+                                                    "Chr02K",
+                                                    "Chr01N",
+                                                    "Chr01K"))
+
+
+ggplot(Midwest_MI_eQTLs_filt,
+       aes(y = as.numeric(s1)/1000000,
+           x = as.numeric(genome_bp)/1000000,
+           col = -log10(p.value))) + #alpha = -log10(p.value))) +
+  facet_grid(chr ~ genome_Chrom,
+             scale = "free",
+             space = "free") + 
+  theme_bw() +
+  theme(strip.background = element_rect(fill="white"),
+        panel.spacing = unit(0, "lines"),
+        legend.position = "none",
+        panel.grid = element_blank()) +
+  geom_point() +
+  scale_color_viridis() + 
+  ggtitle("Midwest eQTLs, MI")
+
+write.csv(Midwest_MI_eQTLs_filt, "~/Dropbox/LowryLab/data/eQTL_output/Midwest_MI_eQTLs_filt.csv")
+```
+
+
+# filtering & output, Midwest TX
+```{r spurious gene filtering, Midwest TX}
+
+# identifying genes to be filtered out (too many spurious trans-eQTLs)
+summarize_Midwest_TX <- filter(Midwest_TX_eQTLs,
+                                         FDR < 0.1) %>% 
+  group_by(geneid) %>% 
+  summarise(n = n())
+
+# only keeping trans eGenes with less than 25 eQTLs
+Midwest_TX_transFilt <- filter(Midwest_TX_eQTLs, 
+       type == "trans",
+       FDR < 0.1,
+       gene %in% filter(summarize_Midwest_TX, n < 25)$geneid)
+
+# keeping all cis eQTls that fit FDR corrections 
+Midwest_TX_cisFilt <- filter(Midwest_TX_eQTLs, 
+       type == "cis",
+       FDR < 0.1)
+
+# adding them together
+Midwest_TX_eQTLs_filt <- rbind(Midwest_TX_transFilt,
+                                Midwest_TX_cisFilt)
+
+
+Midwest_TX_eQTLs_filt$chr <- factor(Midwest_TX_eQTLs_filt$chr,
+                                         levels = c("Chr09N",
+                                                    "Chr09K",
+                                                    "Chr08N",
+                                                    "Chr08K",
+                                                    "Chr07N",
+                                                    "Chr07K",
+                                                    "Chr06N",
+                                                    "Chr06K",
+                                                    "Chr05N",
+                                                    "Chr05K",
+                                                    "Chr04N",
+                                                    "Chr04K",
+                                                    "Chr03N",
+                                                    "Chr03K",
+                                                    "Chr02N",
+                                                    "Chr02K",
+                                                    "Chr01N",
+                                                    "Chr01K"))
+
+
+ggplot(Midwest_TX_eQTLs_filt,
+       aes(y = as.numeric(s1)/1000000,
+           x = as.numeric(genome_bp)/1000000,
+           col = -log10(p.value))) + #alpha = -log10(p.value))) +
+  facet_grid(chr ~ genome_Chrom,
+             scale = "free",
+             space = "free") + 
+  theme_bw() +
+  theme(strip.background = element_rect(fill="white"),
+        panel.spacing = unit(0, "lines"),
+        legend.position = "none",
+        panel.grid = element_blank()) +
+  geom_point() +
+  scale_color_viridis() + 
+  ggtitle("Midwest eQTLs, TX")
+
+write.csv(Midwest_TX_eQTLs_filt, "~/Dropbox/LowryLab/data/eQTL_output/Midwest_TX_eQTLs_filt.csv")
+```
+
+##  meta-analyses of the filtered eQTLs 
+
+# first just counting up the types of each eQTL
+```{r making table of # of cis / trans eQTLs }
+
+filter(Atlantic_MI_eQTLs_filt, type == "cis")
+length(unique(filter(Atlantic_MI_eQTLs_filt, type == "cis")$gene))
+
+filter(Atlantic_MI_eQTLs_filt, type == "trans")
+length(unique(filter(Atlantic_MI_eQTLs_filt, type == "trans")$gene))
+
+filter(Atlantic_TX_eQTLs_filt, type == "cis")
+length(unique(filter(Atlantic_TX_eQTLs_filt, type == "cis")$gene))
+
+filter(Atlantic_TX_eQTLs_filt, type == "trans")
+length(unique(filter(Atlantic_TX_eQTLs_filt, type == "trans")$gene))
+
+       
+```
+
+# now looking at intersection of eQTLs btwn habitats 
+```{r intersections of eQTLs }
+
+# intersection by habitat, cis Atlantic
+Atlantic_intersection_cis <- intersect(filter(dplyr::select(Atlantic_MI_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "cis"),
+          filter(dplyr::select(Atlantic_TX_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "cis"))
+
+length(unique(Atlantic_intersection_cis$gene))
+
+# intersection by habitat, trans Atlantic
+Atlantic_intersection_trans <- intersect(filter(dplyr::select(Atlantic_MI_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "trans"),
+          filter(dplyr::select(Atlantic_TX_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "trans"))
+
+length(unique(Atlantic_intersection_trans$gene))
+
+# intersection by habitat, cis Midwest
+Midwest_intersection_cis <- intersect(filter(dplyr::select(Midwest_MI_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "cis"),
+          filter(dplyr::select(Midwest_TX_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "cis"))
+
+nrow(Midwest_intersection_cis)
+length(unique(Midwest_intersection_cis$gene))
+
+# intersection by habitat, trans Midwest
+Midwest_intersection_trans <- intersect(filter(dplyr::select(Midwest_MI_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "trans"),
+          filter(dplyr::select(Midwest_TX_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "trans"))
+
+nrow(Midwest_intersection_trans)
+length(unique(Midwest_intersection_trans$gene))
+
+
+# intersection by habitat, cis Gulf
+Gulf_intersection_cis <- intersect(filter(dplyr::select(Gulf_MI_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "cis"),
+          filter(dplyr::select(Gulf_TX_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "cis"))
+
+nrow(Gulf_intersection_cis)
+length(unique(Gulf_intersection_cis$gene))
+
+# intersection by habitat, trans Gulf
+Gulf_intersection_trans <- intersect(filter(dplyr::select(Gulf_MI_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "trans"),
+          filter(dplyr::select(Gulf_TX_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "trans"))
+
+nrow(Gulf_intersection_trans)
+length(unique(Gulf_intersection_trans$gene))
+
+```
+
+# investigating intersection of eQTLs between populations 
+
+# Gulf Atlantic comparisons 
+```{r Atlantic Gulf comparisons}
+
+# intersection by habitat, cis Atlantic
+Atlantic_Gulf_TX_intersection_cis <- intersect(filter(dplyr::select(Gulf_TX_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "cis"),
+          filter(dplyr::select(Atlantic_TX_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "cis"))
+
+nrow(Atlantic_Gulf_TX_intersection_cis)
+length(unique(Atlantic_Gulf_TX_intersection_cis$gene))
+
+# intersection by habitat, trans Atlantic
+Atlantic_Gulf_TX_intersection_trans <- intersect(filter(dplyr::select(Gulf_TX_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "trans"),
+          filter(dplyr::select(Atlantic_TX_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "trans"))
+
+nrow(Atlantic_Gulf_TX_intersection_trans)
+length(unique(Atlantic_Gulf_TX_intersection_trans$gene))
+
+
+# intersection by habitat, cis Atlantic
+Atlantic_Gulf_MI_intersection_cis <- intersect(filter(dplyr::select(Gulf_MI_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "cis"),
+          filter(dplyr::select(Atlantic_MI_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "cis"))
+
+nrow(Atlantic_Gulf_MI_intersection_cis)
+length(unique(Atlantic_Gulf_MI_intersection_cis$gene))
+
+# intersection by habitat, trans Atlantic
+Atlantic_Gulf_MI_intersection_trans <- intersect(filter(dplyr::select(Gulf_MI_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "trans"),
+          filter(dplyr::select(Atlantic_MI_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "trans"))
+
+nrow(Atlantic_Gulf_MI_intersection_trans)
+length(unique(Atlantic_Gulf_MI_intersection_trans$gene))
+
+```
+
+# Midwest Atlantic compare intersection 
+```{r Atlantic Midwest comparisons}
+
+
+Atlantic_Midwest_TX_intersection_cis <- intersect(filter(dplyr::select(Midwest_TX_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "cis"),
+          filter(dplyr::select(Atlantic_TX_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "cis"))
+
+nrow(Atlantic_Midwest_TX_intersection_cis)
+length(unique(Atlantic_Midwest_TX_intersection_cis$gene))
+
+
+Atlantic_Midwest_TX_intersection_trans <- intersect(filter(dplyr::select(Midwest_TX_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "trans"),
+          filter(dplyr::select(Atlantic_TX_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "trans"))
+
+nrow(Atlantic_Midwest_TX_intersection_trans)
+length(unique(Atlantic_Midwest_TX_intersection_trans$gene))
+
+
+
+Atlantic_Midwest_MI_intersection_cis <- intersect(filter(dplyr::select(Midwest_MI_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "cis"),
+          filter(dplyr::select(Atlantic_MI_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "cis"))
+
+nrow(Atlantic_Midwest_MI_intersection_cis)
+length(unique(Atlantic_Midwest_MI_intersection_cis$gene))
+
+
+Atlantic_Midwest_MI_intersection_trans <- intersect(filter(dplyr::select(Midwest_MI_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "trans"),
+          filter(dplyr::select(Atlantic_MI_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "trans"))
+
+nrow(Atlantic_Midwest_MI_intersection_trans)
+length(unique(Atlantic_Midwest_MI_intersection_trans$gene))
+```
+
+# Gulf Midwest compare intersection 
+```{r Gulf Midwest comparisons}
+
+
+Gulf_Midwest_TX_intersection_cis <- intersect(filter(dplyr::select(Midwest_TX_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "cis"),
+          filter(dplyr::select(Gulf_TX_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "cis"))
+
+nrow(Gulf_Midwest_TX_intersection_cis)
+length(unique(Gulf_Midwest_TX_intersection_cis$gene))
+
+
+Gulf_Midwest_TX_intersection_trans <- intersect(filter(dplyr::select(Midwest_TX_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "trans"),
+          filter(dplyr::select(Gulf_TX_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "trans"))
+
+nrow(Gulf_Midwest_TX_intersection_trans)
+length(unique(Gulf_Midwest_TX_intersection_trans$gene))
+
+
+
+Gulf_Midwest_MI_intersection_cis <- intersect(filter(dplyr::select(Midwest_MI_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "cis"),
+          filter(dplyr::select(Gulf_MI_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "cis"))
+
+nrow(Gulf_Midwest_MI_intersection_cis)
+length(unique(Gulf_Midwest_MI_intersection_cis$gene))
+
+
+Gulf_Midwest_MI_intersection_trans <- intersect(filter(dplyr::select(Midwest_MI_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "trans"),
+          filter(dplyr::select(Gulf_MI_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "trans"))
+
+nrow(Gulf_Midwest_MI_intersection_trans)
+length(unique(Gulf_Midwest_MI_intersection_trans$gene))
+```
+
+# make lists of those intersected genes 
+```{r intersection gene lists}
+# compiling and writing the list of intersection genes 
+Atlantic_universal_genes <- rbind(Atlantic_intersection_cis, Atlantic_intersection_trans)
+Atlantic_universal_genes$presence <- "TX_and_MI"
+
+Gulf_universal_genes <- rbind(Gulf_intersection_cis, Gulf_intersection_trans)
+Gulf_universal_genes$presence <- "TX_and_MI"
+
+Midwest_universal_genes <- rbind(Midwest_intersection_cis, Midwest_intersection_trans)
+Midwest_universal_genes$presence <- "TX_and_MI"
+
+
+# now getting the set diff for each (Present ONLY in one habitat but not the others)
+
+# doing a little setup to make this less cumbersome 
+
+# Gulf
+Gulf_MI_trans <- filter(dplyr::select(Gulf_MI_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "trans")
+Gulf_MI_cis <- filter(dplyr::select(Gulf_MI_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "cis")
+Gulf_TX_trans <- filter(dplyr::select(Gulf_TX_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "trans")
+Gulf_TX_cis <- filter(dplyr::select(Gulf_TX_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "cis")
+
+# Atlantic
+Atlantic_MI_trans <- filter(dplyr::select(Atlantic_MI_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "trans")
+Atlantic_MI_cis <- filter(dplyr::select(Atlantic_MI_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "cis")
+Atlantic_TX_trans <- filter(dplyr::select(Atlantic_TX_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "trans")
+Atlantic_TX_cis <- filter(dplyr::select(Atlantic_TX_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "cis")
+
+# Midwest
+Midwest_MI_trans <- filter(dplyr::select(Midwest_MI_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "trans")
+Midwest_MI_cis <- filter(dplyr::select(Midwest_MI_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "cis")
+Midwest_TX_trans <- filter(dplyr::select(Midwest_TX_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "trans")
+Midwest_TX_cis <- filter(dplyr::select(Midwest_TX_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "cis")
+
+# Gulf
+
+# MI only
+# now making the unique lists
+MIonly_Gulf_trans <- setdiff(Gulf_MI_trans, Gulf_TX_trans)
+MIonly_Gulf_cis <- setdiff(Gulf_MI_cis, Gulf_TX_cis)
+
+# adding a label column 
+MIonly_Gulf_trans$presence <- "MI_only"
+MIonly_Gulf_cis$presence <- "MI_only"
+
+# TX only
+# now making the unique lists
+TXonly_Gulf_trans <- setdiff(Gulf_TX_trans, Gulf_MI_trans)
+TXonly_Gulf_cis <- setdiff(Gulf_TX_cis, Gulf_MI_cis)
+
+# adding a label column 
+TXonly_Gulf_trans$presence <- "TX_only"
+TXonly_Gulf_cis$presence <- "TX_only"
+
+# bind 'em
+Gulf_presence_labeled <- rbind(MIonly_Gulf_trans,
+      MIonly_Gulf_cis,
+      TXonly_Gulf_trans,
+      TXonly_Gulf_cis,
+      Gulf_universal_genes)
+
+
+# Atlantic
+
+# MI only
+# now making the unique lists
+MIonly_Atlantic_trans <- setdiff(Atlantic_MI_trans, Atlantic_TX_trans)
+MIonly_Atlantic_cis <- setdiff(Atlantic_MI_cis, Atlantic_TX_cis)
+
+# adding a label column 
+MIonly_Atlantic_trans$presence <- "MI_only"
+MIonly_Atlantic_cis$presence <- "MI_only"
+
+# TX only
+# now making the unique lists
+TXonly_Atlantic_trans <- setdiff(Atlantic_TX_trans, Atlantic_MI_trans)
+TXonly_Atlantic_cis <- setdiff(Atlantic_TX_cis, Atlantic_MI_cis)
+
+# adding a label column 
+TXonly_Atlantic_trans$presence <- "TX_only"
+TXonly_Atlantic_cis$presence <- "TX_only"
+
+# bind 'em
+Atlantic_presence_labeled <- rbind(MIonly_Atlantic_trans,
+      MIonly_Atlantic_cis,
+      TXonly_Atlantic_trans,
+      TXonly_Atlantic_cis,
+      Atlantic_universal_genes)
+
+# Midwest
+
+# MI only
+# now making the unique lists
+MIonly_Midwest_trans <- setdiff(Midwest_MI_trans, Midwest_TX_trans)
+MIonly_Midwest_cis <- setdiff(Midwest_MI_cis, Midwest_TX_cis)
+
+# adding a label column 
+MIonly_Midwest_trans$presence <- "MI_only"
+MIonly_Midwest_cis$presence <- "MI_only"
+
+# TX only
+# now making the unique lists
+TXonly_Midwest_trans <- setdiff(Midwest_TX_trans, Midwest_MI_trans)
+TXonly_Midwest_cis <- setdiff(Midwest_TX_cis, Midwest_MI_cis)
+
+# adding a label column 
+TXonly_Midwest_trans$presence <- "TX_only"
+TXonly_Midwest_cis$presence <- "TX_only"
+
+# bind 'em
+Midwest_presence_labeled <- rbind(MIonly_Midwest_trans,
+      MIonly_Midwest_cis,
+      TXonly_Midwest_trans,
+      TXonly_Midwest_cis,
+      Midwest_universal_genes)
+```
+
+# combine habitats and plot 
+
+```{r plotting but combining habitats}
+ggplot(Midwest_presence_labeled,
+       aes(y = as.numeric(s1)/1000000,
+           x = as.numeric(genome_bp)/1000000,
+           col = presence)) + #alpha = -log10(p.value))) +
+  facet_grid(chr ~ genome_Chrom,
+             scale = "free",
+             space = "free") + 
+  theme_bw() +
+  theme(strip.background = element_rect(fill="white"),
+        panel.spacing = unit(0, "lines"),
+        #legend.position = "none",
+        panel.grid = element_blank()) +
+  geom_point() +
+  ggtitle("Midwest eQTLs") +
+  scale_color_manual(values=c("dodgerblue",
+                     "black",
+                     "red"))
+
+ggplot(Atlantic_presence_labeled,
+       aes(y = as.numeric(s1)/1000000,
+           x = as.numeric(genome_bp)/1000000,
+           col = presence)) + #alpha = -log10(p.value))) +
+  facet_grid(chr ~ genome_Chrom,
+             scale = "free",
+             space = "free") + 
+  theme_bw() +
+  theme(strip.background = element_rect(fill="white"),
+        panel.spacing = unit(0, "lines"),
+        #legend.position = "none",
+        panel.grid = element_blank()) +
+  geom_point() +
+  ggtitle("Atlantic eQTLs") +
+  scale_color_manual(values=c("dodgerblue",
+                     "black",
+                     "red"))
+
+nrow(filter(Midwest_presence_labeled, 
+            presence == "TX_and_MI"))
+nrow(filter(Midwest_presence_labeled, 
+            presence == "TX_only"))
+nrow(filter(Midwest_presence_labeled, 
+            presence == "MI_only"))
+
+# writing the labeled csvs 
+write.csv(Atlantic_presence_labeled, 
+          "~/Dropbox/LowryLab/data/eQTL_output/Atlantic_eQTLs_bothHabs.csv")
+
+write.csv(Gulf_presence_labeled, 
+          "~/Dropbox/LowryLab/data/eQTL_output/Gulf_eQTLs_bothHabs.csv")
+
+write.csv(Midwest_presence_labeled, 
+          "~/Dropbox/LowryLab/data/eQTL_output/Midwest_eQTLs_bothHabs.csv")
+```
+
+# scanning for trans eQTLs 
+
+```{r trans hotspots}
+
+# summarizing num of trans eQTLs across the genome 
+
+# Atlantic trans summary
+Atlantic_transHot <- (filter(Atlantic_presence_labeled,
+       type == "trans") %>% 
+  group_by(genome_bp,
+           genome_Chrom,
+           presence) %>% 
+  summarise(n = n()))
+
+# Gulf trans summary
+Gulf_transHot <- (filter(Gulf_presence_labeled,
+       type == "trans") %>% 
+  group_by(genome_bp,
+           genome_Chrom,
+           presence) %>% 
+  summarise(n = n()))
+
+# Midwest trans summary
+Midwest_transHot <- (filter(Midwest_presence_labeled,
+       type == "trans") %>% 
+  group_by(genome_bp,
+           genome_Chrom,
+           presence) %>% 
+  summarise(n = n()))
+```
+
+# summarize number of eQTLs on each chromosome
+```{r summ chrom nums}
+
+# summarize by chromosome 
+chrom_summ_Gulf_MI <- filter(Gulf_MI_eQTLs_filt,FDR < 0.1) %>% 
+  group_by(genome_Chrom,
+           type) %>% 
+  summarise(n = n())
+
+chrom_summ_Gulf_TX <- filter(Gulf_TX_eQTLs_filt,FDR < 0.1) %>% 
+  group_by(genome_Chrom,
+           type) %>% 
+  summarise(n = n())
+
+chrom_summ_Midwest_TX <- filter(Midwest_TX_eQTLs_filt,FDR < 0.1) %>% 
+  group_by(genome_Chrom,
+           type) %>% 
+  summarise(n = n())
+
+chrom_summ_Midwest_MI <- filter(Midwest_MI_eQTLs_filt,FDR < 0.1) %>% 
+  group_by(genome_Chrom,
+           type) %>% 
+  summarise(n = n())
+
+chrom_summ_Atlantic_MI <- filter(Atlantic_MI_eQTLs_filt,FDR < 0.1) %>% 
+  group_by(genome_Chrom,
+           type) %>% 
+  summarise(n = n())
+
+chrom_summ_Atlantic_TX <- filter(Atlantic_TX_eQTLs_filt,FDR < 0.1) %>% 
+  group_by(genome_Chrom,
+           type) %>% 
+  summarise(n = n())
+
+# label the summarize files by genome (n or k)
+
+# Gulf MI 
+K_GulfMI <- filter(chrom_summ_Gulf_MI,
+       genome_Chrom == "Chr01K" |
+       genome_Chrom == "Chr02K" |
+      genome_Chrom == "Chr03K" |
+        genome_Chrom == "Chr04K" |
+        genome_Chrom == "Chr05K" |
+        genome_Chrom == "Chr06K" |
+        genome_Chrom == "Chr07K" |
+        genome_Chrom == "Chr08K" |
+        genome_Chrom == "Chr09K")
+
+K_GulfMI$subgenome <- "K"
+
+N_GulfMI <- filter(chrom_summ_Gulf_MI,
+       genome_Chrom == "Chr01N" |
+       genome_Chrom == "Chr02N" |
+       genome_Chrom == "Chr03N" |
+        genome_Chrom == "Chr04N" |
+        genome_Chrom == "Chr05N" |
+        genome_Chrom == "Chr06N" |
+        genome_Chrom == "Chr07N" |
+        genome_Chrom == "Chr08N" |
+        genome_Chrom == "Chr09N")
+
+N_GulfMI$subgenome <- "N"
+
+NK_GulfMI <- rbind(K_GulfMI, N_GulfMI)
+
+K_GulfTX <- filter(chrom_summ_Gulf_TX,
+       genome_Chrom == "Chr01K" |
+       genome_Chrom == "Chr02K" |
+      genome_Chrom == "Chr03K" |
+        genome_Chrom == "Chr04K" |
+        genome_Chrom == "Chr05K" |
+        genome_Chrom == "Chr06K" |
+        genome_Chrom == "Chr07K" |
+        genome_Chrom == "Chr08K" |
+        genome_Chrom == "Chr09K")
+
+K_GulfTX$subgenome <- "K"
+
+N_GulfTX <- filter(chrom_summ_Gulf_TX,
+       genome_Chrom == "Chr01N" |
+       genome_Chrom == "Chr02N" |
+       genome_Chrom == "Chr03N" |
+        genome_Chrom == "Chr04N" |
+        genome_Chrom == "Chr05N" |
+        genome_Chrom == "Chr06N" |
+        genome_Chrom == "Chr07N" |
+        genome_Chrom == "Chr08N" |
+        genome_Chrom == "Chr09N")
+
+N_GulfTX$subgenome <- "N"
+
+NK_GulfTX <- rbind(K_GulfTX, N_GulfTX)
+
+
+
+
+# Atlantic MI 
+K_AtlanticMI <- filter(chrom_summ_Atlantic_MI,
+       genome_Chrom == "Chr01K" |
+       genome_Chrom == "Chr02K" |
+      genome_Chrom == "Chr03K" |
+        genome_Chrom == "Chr04K" |
+        genome_Chrom == "Chr05K" |
+        genome_Chrom == "Chr06K" |
+        genome_Chrom == "Chr07K" |
+        genome_Chrom == "Chr08K" |
+        genome_Chrom == "Chr09K")
+
+K_AtlanticMI$subgenome <- "K"
+
+N_AtlanticMI <- filter(chrom_summ_Atlantic_MI,
+       genome_Chrom == "Chr01N" |
+       genome_Chrom == "Chr02N" |
+       genome_Chrom == "Chr03N" |
+        genome_Chrom == "Chr04N" |
+        genome_Chrom == "Chr05N" |
+        genome_Chrom == "Chr06N" |
+        genome_Chrom == "Chr07N" |
+        genome_Chrom == "Chr08N" |
+        genome_Chrom == "Chr09N")
+
+N_AtlanticMI$subgenome <- "N"
+
+NK_AtlanticMI <- rbind(K_AtlanticMI, N_AtlanticMI)
+
+K_AtlanticTX <- filter(chrom_summ_Atlantic_TX,
+       genome_Chrom == "Chr01K" |
+       genome_Chrom == "Chr02K" |
+      genome_Chrom == "Chr03K" |
+        genome_Chrom == "Chr04K" |
+        genome_Chrom == "Chr05K" |
+        genome_Chrom == "Chr06K" |
+        genome_Chrom == "Chr07K" |
+        genome_Chrom == "Chr08K" |
+        genome_Chrom == "Chr09K")
+
+K_AtlanticTX$subgenome <- "K"
+
+N_AtlanticTX <- filter(chrom_summ_Atlantic_TX,
+       genome_Chrom == "Chr01N" |
+       genome_Chrom == "Chr02N" |
+       genome_Chrom == "Chr03N" |
+        genome_Chrom == "Chr04N" |
+        genome_Chrom == "Chr05N" |
+        genome_Chrom == "Chr06N" |
+        genome_Chrom == "Chr07N" |
+        genome_Chrom == "Chr08N" |
+        genome_Chrom == "Chr09N")
+
+N_AtlanticTX$subgenome <- "N"
+
+NK_AtlanticTX <- rbind(K_AtlanticTX, N_AtlanticTX)
+
+
+
+# Midwest MI 
+K_MidwestMI <- filter(chrom_summ_Midwest_MI,
+       genome_Chrom == "Chr01K" |
+       genome_Chrom == "Chr02K" |
+      genome_Chrom == "Chr03K" |
+        genome_Chrom == "Chr04K" |
+        genome_Chrom == "Chr05K" |
+        genome_Chrom == "Chr06K" |
+        genome_Chrom == "Chr07K" |
+        genome_Chrom == "Chr08K" |
+        genome_Chrom == "Chr09K")
+
+K_MidwestMI$subgenome <- "K"
+
+N_MidwestMI <- filter(chrom_summ_Midwest_MI,
+       genome_Chrom == "Chr01N" |
+       genome_Chrom == "Chr02N" |
+       genome_Chrom == "Chr03N" |
+        genome_Chrom == "Chr04N" |
+        genome_Chrom == "Chr05N" |
+        genome_Chrom == "Chr06N" |
+        genome_Chrom == "Chr07N" |
+        genome_Chrom == "Chr08N" |
+        genome_Chrom == "Chr09N")
+
+N_MidwestMI$subgenome <- "N"
+
+NK_MidwestMI <- rbind(K_MidwestMI, N_MidwestMI)
+
+K_MidwestTX <- filter(chrom_summ_Midwest_TX,
+       genome_Chrom == "Chr01K" |
+       genome_Chrom == "Chr02K" |
+      genome_Chrom == "Chr03K" |
+        genome_Chrom == "Chr04K" |
+        genome_Chrom == "Chr05K" |
+        genome_Chrom == "Chr06K" |
+        genome_Chrom == "Chr07K" |
+        genome_Chrom == "Chr08K" |
+        genome_Chrom == "Chr09K")
+
+K_MidwestTX$subgenome <- "K"
+
+N_MidwestTX <- filter(chrom_summ_Midwest_TX,
+       genome_Chrom == "Chr01N" |
+       genome_Chrom == "Chr02N" |
+       genome_Chrom == "Chr03N" |
+        genome_Chrom == "Chr04N" |
+        genome_Chrom == "Chr05N" |
+        genome_Chrom == "Chr06N" |
+        genome_Chrom == "Chr07N" |
+        genome_Chrom == "Chr08N" |
+        genome_Chrom == "Chr09N")
+
+N_MidwestTX$subgenome <- "N"
+
+NK_MidwestTX <- rbind(K_MidwestTX, N_MidwestTX)
+
+ggplot(NK_GulfTX,
+       aes(x = genome_Chrom,
+           y = n,
+           fill = subgenome,
+           col = subgenome)) +
+  geom_bar(stat="identity",
+           position = "dodge") +
+  facet_wrap(~type)
+
+ggplot(NK_GulfMI,
+       aes(x = genome_Chrom,
+           y = n,
+           fill = subgenome,
+           col = subgenome)) +
+  geom_bar(stat="identity",
+           position = "dodge") +
+  facet_wrap(~type)
+
+ggplot(NK_AtlanticTX,
+       aes(x = genome_Chrom,
+           y = n,
+           fill = subgenome,
+           col = subgenome)) +
+  geom_bar(stat="identity",
+           position = "dodge") +
+  facet_wrap(~type)
+
+ggplot(NK_MidwestTX,
+       aes(x = genome_Chrom,
+           y = n,
+           fill = subgenome,
+           col = subgenome)) +
+  geom_bar(stat="identity",
+           position = "dodge") +
+  facet_wrap(~type)
+
+NK_MidwestTX$pop <- "Midwest"
+NK_MidwestTX$hab <- "TX"
+
+NK_MidwestMI$pop <- "Midwest"
+NK_MidwestMI$hab <- "MI"
+
+NK_AtlanticTX$pop <- "Atlantic"
+NK_AtlanticTX$hab < "TX"
+
+NK_AtlanticMI$pop <- "Atlantic"
+NK_AtlanticMI$hab <- "MI"
+
+NK_GulfMI$pop <- "Gulf"
+NK_GulfMI$hab <- "MI"
+
+NK_GulfTX$pop <- "Gulf"
+NK_GulfTX$hab <- "TX"
+
+eQTL_all_chromSumm <- rbind(NK_MidwestTX,
+                            NK_MidwestMI,
+                            NK_AtlanticTX,
+                            NK_AtlanticMI,
+                            NK_GulfMI,
+                            NK_GulfTX)
+
+write.csv(eQTL_all_chromSumm,
+          "~/Dropbox/LowryLab/data/eQTL_output/eQTL_all_chromSumm.csv")
+
+```
+
+# SFS investigations 
+```{r read in site frequency spectrum of all the SNPs}
+
+# read in the site frequency spectrum for Gulf, Atlantic, Midwest 
+
+Gulf <- read.csv("~/Dropbox/LowryLab/data/SFS/Gulf.frq",
+         sep = "\t",
+         row.names = NULL)
+
+Atlantic <- read.csv("~/Dropbox/LowryLab/data/SFS/Atlantic.frq",
+                 sep = "\t",
+                 row.names = NULL)
+
+Midwest <- read.csv("~/Dropbox/LowryLab/data/SFS/Midwest.frq",
+                 sep = "\t",
+                 row.names = NULL)
+
+
+# folding for all Atlantic SNPs 
+Atlantic_greater <- filter(Atlantic, X.FREQ. >= 0.5) 
+Atlantic_less <- filter(Atlantic, X.FREQ. < 0.5) 
+Atlantic_greater <- mutate(Atlantic_greater, freq_folded = 1 - Atlantic_greater$X.FREQ.)
+Atlantic_less <- mutate(Atlantic_less, freq_folded = Atlantic_less$X.FREQ.)
+Atlantic_folded <- rbind(Atlantic_greater, Atlantic_less)
+
+
+# folding for all Gulf SNPs 
+Gulf_greater <- filter(Gulf, X.FREQ. >= 0.5) 
+Gulf_less <- filter(Gulf, X.FREQ. < 0.5) 
+Gulf_greater <- mutate(Gulf_greater, freq_folded = 1 - Gulf_greater$X.FREQ.)
+Gulf_less <- mutate(Gulf_less, freq_folded = Gulf_less$X.FREQ.)
+Gulf_folded <- rbind(Gulf_greater, Gulf_less)
+
+
+# folding for all Midwest SNPs 
+Midwest_greater <- filter(Midwest, X.FREQ. >= 0.5) 
+Midwest_less <- filter(Midwest, X.FREQ. < 0.5) 
+Midwest_greater <- mutate(Midwest_greater, freq_folded = 1 - Midwest_greater$X.FREQ.)
+Midwest_less <- mutate(Midwest_less, freq_folded = Midwest_less$X.FREQ.)
+Midwest_folded <- rbind(Midwest_greater, Midwest_less)
+
+# label so there are column names in common
+
+Atlantic_folded$genome_Chrom <- Atlantic_folded$row.names
+Atlantic_folded$genome_bp <- Atlantic_folded$CHROM
+
+Gulf_folded$genome_Chrom <- Gulf_folded$row.names
+Gulf_folded$genome_bp <- Gulf_folded$CHROM
+
+Midwest_folded$genome_Chrom <- Midwest_folded$row.names
+Midwest_folded$genome_bp <- Midwest_folded$CHROM
+
+```
+
+# SFS merging / plotting
+```{r merge and plot}
+
+Gulf_MI_SFS <- merge(Gulf_MI_eQTLs_filt, Gulf_folded)
+Gulf_TX_SFS <- merge(Gulf_TX_eQTLs_filt, Gulf_folded)
+Atlantic_MI_SFS <- merge(Atlantic_MI_eQTLs_filt, Gulf_folded)
+Atlantic_TX_SFS <- merge(Atlantic_TX_eQTLs_filt, Gulf_folded)
+Midwest_MI_SFS <- merge(Midwest_MI_eQTLs_filt, Gulf_folded)
+Midwest_TX_SFS <- merge(Midwest_TX_eQTLs_filt, Gulf_folded)
+
+
+# Atlantic MI 
+Atlantic_MI_sfsPlot <- ggplot(Atlantic_MI_SFS,
+       aes(x = freq_folded)) + 
+  geom_histogram(bins=10,
+                 fill = "white",
+                 col = "black") + 
+  facet_wrap(~type,
+             scales = "free", nrow=2, strip.position = "left") + 
+  theme_bw() + 
+  ggtitle("MI eQTLs, Atlantic") + 
+  geom_vline(data=filter(Atlantic_MI_SFS, type == "trans"), aes(xintercept=.18), colour="red", linewidth = 1) + 
+  geom_vline(data=filter(Atlantic_MI_SFS, type == "cis"), aes(xintercept=.22), colour="red", linewidth = 1) +
+  theme(axis.title.x = element_blank(),
+        title = element_text(size = 9))
+
+# Atlantic TX 
+Atlantic_TX_sfsPlot <- ggplot(Atlantic_TX_SFS,
+       aes(x = freq_folded)) + 
+  geom_histogram(bins=10,
+                 fill = "white",
+                 col = "black") + 
+  facet_wrap(~type,
+             scales = "free", nrow=2, strip.position = "left") + 
+  theme_bw() + 
+  ggtitle("TX eQTLs, Atlantic") + 
+  geom_vline(data=filter(Atlantic_MI_SFS, type == "trans"), aes(xintercept=.19), colour="red", linewidth = 1) + 
+  geom_vline(data=filter(Atlantic_MI_SFS, type == "cis"), aes(xintercept=.23), colour="red", linewidth = 1) +
+  theme(axis.title.y = element_blank(),
+        axis.title.x = element_blank(),
+        title = element_text(size = 9))
+
+# Gulf MI 
+Gulf_MI_sfsPlot <- ggplot(Gulf_MI_SFS,
+       aes(x = freq_folded)) + 
+  geom_histogram(bins=10,
+                 fill = "white",
+                 col = "black") + 
+  facet_wrap(~type,
+             scales = "free", nrow=2, strip.position = "left") + 
+  theme_bw() + 
+  ggtitle("MI eQTLs, Gulf") + 
+  geom_vline(data=filter(Gulf_MI_SFS, type == "trans"), aes(xintercept=.21), colour="red", linewidth = 1) + 
+  geom_vline(data=filter(Gulf_MI_SFS, type == "cis"), aes(xintercept=.26), colour="red", linewidth = 1) +
+  theme(axis.title.x = element_blank(),
+        title = element_text(size = 9))
+
+# Gulf TX 
+Gulf_TX_sfsPlot <- ggplot(Gulf_TX_SFS,
+       aes(x = freq_folded)) + 
+  geom_histogram(bins=10,
+                 fill = "white",
+                 col = "black") + 
+  facet_wrap(~type,
+             scales = "free", nrow=2, strip.position = "left") + 
+  theme_bw() + 
+  ggtitle("TX eQTLs, Gulf") + 
+  geom_vline(data=filter(Gulf_MI_SFS, type == "trans"), aes(xintercept=.21), colour="red", linewidth = 1) + 
+  geom_vline(data=filter(Gulf_MI_SFS, type == "cis"), aes(xintercept=.25), colour="red", linewidth = 1) +
+  theme(axis.title.y = element_blank(),
+        axis.title.x = element_blank(),
+        title = element_text(size = 9))
+
+mean(filter(Atlantic_TX_SFS, type == "cis")$freq_folded)
+mean(filter(Atlantic_TX_SFS, type == "trans")$freq_folded)
+
+mean(filter(Gulf_TX_SFS, type == "cis")$freq_folded)
+mean(filter(Gulf_TX_SFS, type == "trans")$freq_folded)
+
+mean(filter(Gulf_MI_SFS, type == "cis")$freq_folded)
+mean(filter(Gulf_MI_SFS, type == "trans")$freq_folded)
+
+library(gridExtra)
+
+grid.arrange(Gulf_TX_sfsPlot, Gulf_MI_sfsPlot, nrow =1 )
+
+grid.arrange(Atlantic_MI_sfsPlot, Atlantic_TX_sfsPlot,
+             Gulf_MI_sfsPlot, Gulf_TX_sfsPlot, nrow =2,
+             bottom = "Folded Site Frequency Spectrum")
+
+grid.arrange(Gulf_MI_sfsPlot, Gulf_TX_sfsPlot, nrow =1,
+             bottom = "Folded Site Frequency Spectrum")
+
+hist(Gulf_folded$freq_folded)
+
+mean(Gulf_folded$freq_folded)
+mean(filter(Gulf_MI_SFS, type == "cis")$freq_folded)
+mean(filter(Gulf_MI_SFS, type == "trans")$freq_folded)
+
+
+mean(Gulf_folded$freq_folded)
+mean(filter(Gulf_TX_SFS, type == "cis")$freq_folded)
+mean(filter(Gulf_TX_SFS, type == "trans")$freq_folded)
+
+mean(Atlantic_folded$freq_folded)
+mean(filter(Atlantic_TX_SFS, type == "cis")$freq_folded)
+mean(filter(Atlantic_TX_SFS, type == "trans")$freq_folded)
+
+
+```
+
+# Tajima's D merging / plotting 
+
+```{r Tajima's D comparisons }
+# read in Tajima's D
+Atlantic_TajD <- read.csv("~/Dropbox/LowryLab/data/genotypes/Atlantic.Tajima.D", sep = "\t")
+Midwest_TajD <- read.csv("~/Dropbox/LowryLab/data/genotypes/Midwest.Tajima.D", sep = "\t")
+Gulf_TajD <- read.csv("~/Dropbox/LowryLab/data/genotypes/Gulf.Tajima.D", sep = "\t")
+
+Gulf_TajD
+
+Gulf_MI_SFS <- merge(Gulf_MI_eQTLs_filt, Gulf_folded)
+Gulf_TX_SFS <- merge(Gulf_TX_eQTLs_filt, Gulf_folded)
+Atlantic_MI_SFS <- merge(Atlantic_MI_eQTLs_filt, Gulf_folded)
+Atlantic_TX_SFS <- merge(Atlantic_TX_eQTLs_filt, Gulf_folded)
+Midwest_MI_SFS <- merge(Midwest_MI_eQTLs_filt, Gulf_folded)
+Midwest_TX_SFS <- merge(Midwest_TX_eQTLs_filt, Gulf_folded)
+
+Gulf_MI_eQTLs_filt
+
+# road block -- need to figure out how to merge bins with SNPs 
+```
+
+
+```
 

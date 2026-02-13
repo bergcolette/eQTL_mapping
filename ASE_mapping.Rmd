@@ -19,19 +19,18 @@ library(viridis)
 ```{r read in data}
 
 # reading in the KBSM F1's first 
-KBSM_F1_1 <- read.csv("~/Dropbox/LowryLab/data/BUWBG.table", sep="\t")
-KBSM_F1_2 <- read.csv("~/Dropbox/LowryLab/data/BUWBU.table", sep="\t")
-KBSM_F1_3 <- read.csv("~/Dropbox/LowryLab/data/BUWHW.table", sep="\t")
-KBSM_F1_4 <- read.csv("~/Dropbox/LowryLab/data/BUWHY.table", sep="\t")
-KBSM_F1_5 <- read.csv("~/Dropbox/LowryLab/data/BUWNX.table", sep="\t")
+KBSM_F1_1 <- read.csv("~/Dropbox/LowryLab/data/ASE/BUWBG.table", sep="\t")
+KBSM_F1_2 <- read.csv("~/Dropbox/LowryLab/data/ASE/BUWBU.table", sep="\t")
+KBSM_F1_3 <- read.csv("~/Dropbox/LowryLab/data/ASE/BUWHW.table", sep="\t")
+KBSM_F1_4 <- read.csv("~/Dropbox/LowryLab/data/ASE/BUWHY.table", sep="\t")
+KBSM_F1_5 <- read.csv("~/Dropbox/LowryLab/data/ASE/BUWNX.table", sep="\t")
 
 ```
 
 
-```{r}
+```{r binom test}
 # making a function for a binomial test 
 
-dplyr::mutate(KBSM_F1_1, binom_test_p = binom.test(refCount, totalCount, 0.5)$p.value)
 
 KBSM_F1_1_tested <- filter(KBSM_F1_1, 
                            totalCount > 5,
@@ -47,8 +46,8 @@ ggplot(filter(KBSM_F1_1_tested, p_value < 0.0000002),
   geom_point() +
   scale_color_viridis()
 
-nrow(KBSM_F1_1_tested)
+filter(KBSM_F1_1_tested, p_value < 0.0000002)
 
-0.05/204838
+tail(KBSM_F1_1)
 ```
 
