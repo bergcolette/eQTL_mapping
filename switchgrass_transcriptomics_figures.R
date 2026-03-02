@@ -1,3 +1,6 @@
+library(ggplot2)
+library(dplyr)
+
 ## Drafting / plotting main figures for the switchgrass transcriptoomics paper 
 
 # figure 1: mapping eQTLs 
@@ -21,6 +24,24 @@ GxE_Gulf_eQTLs <- read.csv("~/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_all_eQT
 GxE_Midwest_eQTLs <- read.csv("~/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_all_eQTLs.csv")
 
 
+MI_Atlantic_cis <- filter(MI_Atlantic_eQTLs, 
+                          type == "cis",
+                          FDR < 0.1)
+
+MI_Atlantic_trans <- filter(MI_Atlantic_eQTLs, 
+                          type == "trans",
+                          FDR < 0.1)
+
+
+
+MI_Atlantic_trans
+
+write.table(filter(select(MI_Atlantic_eQTLs, genome_Chrom, genome_bp, type), 
+                 type == "cis"), "MI_Atlantic_cis_pos.txt",
+          sep="\t")
+
+filter(MI_Atlantic_eQTLs, type=="cis")
+
 # for the plots to look good the Chroms need to be ordered 9 -> 1 
 GxE_Midwest_eQTLs$genome_Chrom <- factor(GxE_Midwest_eQTLs$genome_Chrom,
                        levels = c("Chr09N",
@@ -43,7 +64,7 @@ GxE_Midwest_eQTLs$genome_Chrom <- factor(GxE_Midwest_eQTLs$genome_Chrom,
                                   "Chr01K"))
 
 
-GxE_Gulf_eQTLs$Chrom <- factor(GxE_Gulf_eQTLs$Chrom,
+GxE_Gulf_eQTLs$genome_Chrom <- factor(GxE_Gulf_eQTLs$genome_Chrom,
                                   levels = c("Chr09N",
                                              "Chr09K",
                                              "Chr08N",
@@ -63,7 +84,7 @@ GxE_Gulf_eQTLs$Chrom <- factor(GxE_Gulf_eQTLs$Chrom,
                                              "Chr01N",
                                              "Chr01K"))
 
-GxE_Atlantic_eQTLs$Chrom <- factor(GxE_Atlantic_eQTLs$Chrom,
+GxE_Atlantic_eQTLs$genome_Chrom <- factor(GxE_Atlantic_eQTLs$genome_Chrom,
                                   levels = c("Chr09N",
                                              "Chr09K",
                                              "Chr08N",
@@ -83,7 +104,7 @@ GxE_Atlantic_eQTLs$Chrom <- factor(GxE_Atlantic_eQTLs$Chrom,
                                              "Chr01N",
                                              "Chr01K"))
 
-MI_Midwest_eQTLs$Chrom <- factor(MI_Midwest_eQTLs$Chrom,
+MI_Midwest_eQTLs$genome_Chrom <- factor(MI_Midwest_eQTLs$genome_Chrom,
                                    levels = c("Chr09N",
                                               "Chr09K",
                                               "Chr08N",
@@ -103,7 +124,7 @@ MI_Midwest_eQTLs$Chrom <- factor(MI_Midwest_eQTLs$Chrom,
                                               "Chr01N",
                                               "Chr01K"))
 
-TX_Midwest_eQTLs$Chrom <- factor(TX_Midwest_eQTLs$Chrom,
+TX_Midwest_eQTLs$genome_Chrom <- factor(TX_Midwest_eQTLs$genome_Chrom,
                                  levels = c("Chr09N",
                                             "Chr09K",
                                             "Chr08N",
@@ -123,7 +144,7 @@ TX_Midwest_eQTLs$Chrom <- factor(TX_Midwest_eQTLs$Chrom,
                                             "Chr01N",
                                             "Chr01K"))
 
-MI_Gulf_eQTLs$Chrom <- factor(MI_Gulf_eQTLs$Chrom,
+MI_Gulf_eQTLs$genome_Chrom <- factor(MI_Gulf_eQTLs$genome_Chrom,
                                  levels = c("Chr09N",
                                             "Chr09K",
                                             "Chr08N",
@@ -143,7 +164,7 @@ MI_Gulf_eQTLs$Chrom <- factor(MI_Gulf_eQTLs$Chrom,
                                             "Chr01N",
                                             "Chr01K"))
 
-TX_Gulf_eQTLs$Chrom <- factor(TX_Gulf_eQTLs$Chrom,
+TX_Gulf_eQTLs$genome_Chrom <- factor(TX_Gulf_eQTLs$genome_Chrom,
                                  levels = c("Chr09N",
                                             "Chr09K",
                                             "Chr08N",
@@ -163,7 +184,7 @@ TX_Gulf_eQTLs$Chrom <- factor(TX_Gulf_eQTLs$Chrom,
                                             "Chr01N",
                                             "Chr01K"))
 
-MI_Atlantic_eQTLs$Chrom <- factor(MI_Atlantic_eQTLs$Chrom,
+MI_Atlantic_eQTLs$genome_Chrom <- factor(MI_Atlantic_eQTLs$genome_Chrom,
                                  levels = c("Chr09N",
                                             "Chr09K",
                                             "Chr08N",
@@ -183,7 +204,7 @@ MI_Atlantic_eQTLs$Chrom <- factor(MI_Atlantic_eQTLs$Chrom,
                                             "Chr01N",
                                             "Chr01K"))
 
-TX_Atlantic_eQTLs$Chrom <- factor(TX_Atlantic_eQTLs$Chrom,
+TX_Atlantic_eQTLs$genome_Chrom <- factor(TX_Atlantic_eQTLs$genome_Chrom,
                                  levels = c("Chr09N",
                                             "Chr09K",
                                             "Chr08N",
@@ -204,15 +225,14 @@ TX_Atlantic_eQTLs$Chrom <- factor(TX_Atlantic_eQTLs$Chrom,
                                             "Chr01K"))
 
 
-ggplot(dplyr::filter(GxE_Midwest_eQTLs,
-                     genome_Chrom != "scaffold_174",
-                     genome_Chrom !="scaffold_19",
-                     genome_Chrom != "scaffold_24",
+ggplot(dplyr::filter(TX_Atlantic_eQTLs_FDRfilt,
+                     genome_Chrom == "Chr02K",
+                     genome_bp > 400000,
+                     genome_bp < 500000,
                      FDR < 0.1),
        aes(x = as.numeric(genome_bp)/1000000,
            y = as.numeric(s1)/1000000,
-           color=-log10(p.value),
-           alpha = -log10(p.value))) +
+           color=-log10(p.value))) +
   theme_bw() +
   facet_grid(chr~genome_Chrom,
              space = "free",
@@ -222,8 +242,13 @@ ggplot(dplyr::filter(GxE_Midwest_eQTLs,
         legend.position = "none") +
   geom_point(size = 0.25) +
   scale_color_viridis() +
-  ylab("Genome Position (Mb)") +
-  xlab("Gene Position (Mb)")  +
-  ggtitle("GxE eQTLs, Midwest Only")
+  xlab("Genome Position (Mb)") +
+  ylab("Gene Position (Mb)")  +
+  ggtitle("MI eQTLs, Atlantic Only")
 
 
+Chr02K_genotypes <- read.csv("~/Dropbox/LowryLab/data/genotypes/Chr02K_Atlantic_matrix.txt",
+                             sep = "\t",
+                             header = FALSE)
+
+Chr02K_genotypes

@@ -1,5 +1,5 @@
 #!/bin/bash --login
-#SBATCH --job-name=aligning_AP13_DAC6
+#SBATCH --job-name=fastaAlternateReference
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --time=4:00:00
@@ -9,9 +9,27 @@
 #SBATCH --output=%x-%j.SLURMout
 
 module purge
-module load SRA-Toolkit/3.0.10-gompi-2023a
+module load GATK 
 
-# downloading AP13 and DAC6 for alignment to AP13 reference genome
-
-fastq-dump --outdir /mnt/scratch/bergcole/ASE --split-files SRR3709212
-fastq-dump --outdir /mnt/scratch/bergcole/ASE --split-files SRR8440701
+gatk FastaAlternateReferenceMaker \
+  -R /mnt/gs21/scratch/bergcole/Pvirgatumvar_AP13HAP1_772_v6.0.fa \
+  -O /mnt/gs21/scratch/bergcole/ASE/DAC6_alt.fasta \
+  -L Chr01K \
+  -L Chr02K \
+  -L Chr03K \
+  -L Chr04K \
+  -L Chr05K \
+  -L Chr06K \
+  -L Chr07K \
+  -L Chr08K \
+  -L Chr09K \
+  -L Chr01N \
+  -L Chr02N \
+  -L Chr03N \
+  -L Chr04N \
+  -L Chr05N \
+  -L Chr06N \
+  -L Chr07N \
+  -L Chr08N \
+  -L Chr09N \
+  -V /mnt/gs21/scratch/bergcole/ASE/AP13_DAC6_allChroms_biallelic.recode.vcf \

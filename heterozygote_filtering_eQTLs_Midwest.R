@@ -1,0 +1,91 @@
+# doing genotype-based filtering
+
+# read in genotypes from all 18 chromosomes (Midwest)
+# subgenome N
+Chr01N_Midwest <- read.csv("~/Dropbox/lowryLab/data/genotypes/Chr01N_Midwest_matrix.txt", sep = "\t", header = FALSE)
+Chr02N_Midwest <- read.csv("~/Dropbox/lowryLab/data/genotypes/Chr02N_Midwest_matrix.txt", sep = "\t", header = FALSE)
+Chr03N_Midwest <- read.csv("~/Dropbox/lowryLab/data/genotypes/Chr03N_Midwest_matrix.txt", sep = "\t", header = FALSE)
+Chr04N_Midwest <- read.csv("~/Dropbox/lowryLab/data/genotypes/Chr04N_Midwest_matrix.txt", sep = "\t", header = FALSE)
+Chr05N_Midwest <- read.csv("~/Dropbox/lowryLab/data/genotypes/Chr05N_Midwest_matrix.txt", sep = "\t", header = FALSE)
+Chr06N_Midwest <- read.csv("~/Dropbox/lowryLab/data/genotypes/Chr06N_Midwest_matrix.txt", sep = "\t", header = FALSE)
+Chr07N_Midwest <- read.csv("~/Dropbox/lowryLab/data/genotypes/Chr07N_Midwest_matrix.txt", sep = "\t", header = FALSE)
+Chr08N_Midwest <- read.csv("~/Dropbox/lowryLab/data/genotypes/Chr08N_Midwest_matrix.txt", sep = "\t", header = FALSE)
+Chr09N_Midwest <- read.csv("~/Dropbox/lowryLab/data/genotypes/Chr09N_Midwest_matrix.txt", sep = "\t", header = FALSE)
+
+# subgenome K 
+Chr01K_Midwest <- read.csv("~/Dropbox/lowryLab/data/genotypes/Chr01K_Midwest_matrix.txt", sep = "\t", header = FALSE)
+Chr02K_Midwest <- read.csv("~/Dropbox/lowryLab/data/genotypes/Chr02K_Midwest_matrix.txt", sep = "\t", header = FALSE)
+Chr03K_Midwest <- read.csv("~/Dropbox/lowryLab/data/genotypes/Chr03K_Midwest_matrix.txt", sep = "\t", header = FALSE)
+Chr04K_Midwest <- read.csv("~/Dropbox/lowryLab/data/genotypes/Chr04K_Midwest_matrix.txt", sep = "\t", header = FALSE)
+Chr05K_Midwest <- read.csv("~/Dropbox/lowryLab/data/genotypes/Chr05K_Midwest_matrix.txt", sep = "\t", header = FALSE)
+Chr06K_Midwest <- read.csv("~/Dropbox/lowryLab/data/genotypes/Chr06K_Midwest_matrix.txt", sep = "\t", header = FALSE)
+Chr07K_Midwest <- read.csv("~/Dropbox/lowryLab/data/genotypes/Chr07K_Midwest_matrix.txt", sep = "\t", header = FALSE)
+Chr08K_Midwest <- read.csv("~/Dropbox/lowryLab/data/genotypes/Chr08K_Midwest_matrix.txt", sep = "\t", header = FALSE)
+Chr09K_Midwest <- read.csv("~/Dropbox/lowryLab/data/genotypes/Chr09K_Midwest_matrix.txt", sep = "\t", header = FALSE)
+
+# now counting the hets 
+Midwest_1K_hetC <- Chr01K_Midwest %>% rowwise() %>% mutate(count_hets = count(c_across(V2:V87) == 1)) %>% ungroup()
+Midwest_2K_hetC <- Chr02K_Midwest %>% rowwise() %>% mutate(count_hets = count(c_across(V2:V87) == 1)) %>% ungroup()
+Midwest_3K_hetC <- Chr03K_Midwest %>% rowwise() %>% mutate(count_hets = count(c_across(V2:V87) == 1)) %>% ungroup()
+Midwest_4K_hetC <- Chr04K_Midwest %>% rowwise() %>% mutate(count_hets = count(c_across(V2:V87) == 1)) %>% ungroup()
+Midwest_5K_hetC <- Chr05K_Midwest %>% rowwise() %>% mutate(count_hets = count(c_across(V2:V87) == 1)) %>% ungroup()
+Midwest_6K_hetC <- Chr06K_Midwest %>% rowwise() %>% mutate(count_hets = count(c_across(V2:V87) == 1)) %>% ungroup()
+Midwest_7K_hetC <- Chr07K_Midwest %>% rowwise() %>% mutate(count_hets = count(c_across(V2:V87) == 1)) %>% ungroup()
+Midwest_8K_hetC <- Chr08K_Midwest %>% rowwise() %>% mutate(count_hets = count(c_across(V2:V87) == 1)) %>% ungroup()
+Midwest_9K_hetC <- Chr09K_Midwest %>% rowwise() %>% mutate(count_hets = count(c_across(V2:V87) == 1)) %>% ungroup()
+Midwest_1N_hetC <- Chr01N_Midwest %>% rowwise() %>% mutate(count_hets = count(c_across(V2:V87) == 1)) %>% ungroup()
+Midwest_2N_hetC <- Chr02N_Midwest %>% rowwise() %>% mutate(count_hets = count(c_across(V2:V87) == 1)) %>% ungroup()
+Midwest_3N_hetC <- Chr03N_Midwest %>% rowwise() %>% mutate(count_hets = count(c_across(V2:V87) == 1)) %>% ungroup()
+Midwest_4N_hetC <- Chr04N_Midwest %>% rowwise() %>% mutate(count_hets = count(c_across(V2:V87) == 1)) %>% ungroup()
+Midwest_5N_hetC <- Chr05N_Midwest %>% rowwise() %>% mutate(count_hets = count(c_across(V2:V87) == 1)) %>% ungroup()
+Midwest_6N_hetC <- Chr06N_Midwest %>% rowwise() %>% mutate(count_hets = count(c_across(V2:V87) == 1)) %>% ungroup()
+Midwest_7N_hetC <- Chr07N_Midwest %>% rowwise() %>% mutate(count_hets = count(c_across(V2:V87) == 1)) %>% ungroup()
+Midwest_8N_hetC <- Chr08N_Midwest %>% rowwise() %>% mutate(count_hets = count(c_across(V2:V87) == 1)) %>% ungroup()
+Midwest_9N_hetC <- Chr09N_Midwest %>% rowwise() %>% mutate(count_hets = count(c_across(V2:V87) == 1)) %>% ungroup()
+
+hist(Midwest_7N_hetC$count_hets)
+
+
+# filter by num hets and removing the het count row. this is based on the outliers for the dist. of heterozygotes 
+Midwest_1K_filt <- dplyr::select(filter(Midwest_1K_hetC, count_hets < 70), -count_hets)
+Midwest_2K_filt <- dplyr::select(filter(Midwest_2K_hetC, count_hets < 70), -count_hets)
+Midwest_3K_filt <- dplyr::select(filter(Midwest_3K_hetC, count_hets < 70), -count_hets)
+Midwest_4K_filt <- dplyr::select(filter(Midwest_4K_hetC, count_hets < 70), -count_hets)
+Midwest_5K_filt <- dplyr::select(filter(Midwest_5K_hetC, count_hets < 70), -count_hets)
+Midwest_6K_filt <- dplyr::select(filter(Midwest_6K_hetC, count_hets < 70), -count_hets)
+Midwest_7K_filt <- dplyr::select(filter(Midwest_7K_hetC, count_hets < 70), -count_hets)
+Midwest_8K_filt <- dplyr::select(filter(Midwest_8K_hetC, count_hets < 70), -count_hets)
+Midwest_9K_filt <- dplyr::select(filter(Midwest_9K_hetC, count_hets < 70), -count_hets)
+Midwest_1N_filt <- dplyr::select(filter(Midwest_1N_hetC, count_hets < 70), -count_hets)
+Midwest_2N_filt <- dplyr::select(filter(Midwest_2N_hetC, count_hets < 70), -count_hets)
+Midwest_3N_filt <- dplyr::select(filter(Midwest_3N_hetC, count_hets < 70), -count_hets)
+Midwest_4N_filt <- dplyr::select(filter(Midwest_4N_hetC, count_hets < 70), -count_hets)
+Midwest_5N_filt <- dplyr::select(filter(Midwest_5N_hetC, count_hets < 70), -count_hets)
+Midwest_6N_filt <- dplyr::select(filter(Midwest_6N_hetC, count_hets < 70), -count_hets)
+Midwest_7N_filt <- dplyr::select(filter(Midwest_7N_hetC, count_hets < 70), -count_hets)
+Midwest_8N_filt <- dplyr::select(filter(Midwest_8N_hetC, count_hets < 70), -count_hets)
+Midwest_9N_filt <- dplyr::select(filter(Midwest_9N_hetC, count_hets < 70), -count_hets)
+
+# writing to csv 
+write.table(Midwest_1K_filt, "~/Dropbox/lowryLab/data/genotypes/Midwest_1K_hetFilt.txt", quote = FALSE, sep = "\t", col.names = FALSE, row.names = FALSE)
+write.table(Midwest_2K_filt, "~/Dropbox/lowryLab/data/genotypes/Midwest_2K_hetFilt.txt", quote = FALSE, sep = "\t", col.names = FALSE, row.names = FALSE)
+write.table(Midwest_3K_filt, "~/Dropbox/lowryLab/data/genotypes/Midwest_3K_hetFilt.txt", quote = FALSE, sep = "\t", col.names = FALSE, row.names = FALSE)
+write.table(Midwest_4K_filt, "~/Dropbox/lowryLab/data/genotypes/Midwest_4K_hetFilt.txt", quote = FALSE, sep = "\t", col.names = FALSE, row.names = FALSE)
+write.table(Midwest_5K_filt, "~/Dropbox/lowryLab/data/genotypes/Midwest_5K_hetFilt.txt", quote = FALSE, sep = "\t", col.names = FALSE, row.names = FALSE)
+write.table(Midwest_6K_filt, "~/Dropbox/lowryLab/data/genotypes/Midwest_6K_hetFilt.txt", quote = FALSE, sep = "\t", col.names = FALSE, row.names = FALSE)
+write.table(Midwest_7K_filt, "~/Dropbox/lowryLab/data/genotypes/Midwest_7K_hetFilt.txt", quote = FALSE, sep = "\t", col.names = FALSE, row.names = FALSE)
+write.table(Midwest_8K_filt, "~/Dropbox/lowryLab/data/genotypes/Midwest_8K_hetFilt.txt", quote = FALSE, sep = "\t", col.names = FALSE, row.names = FALSE)
+write.table(Midwest_9K_filt, "~/Dropbox/lowryLab/data/genotypes/Midwest_9K_hetFilt.txt", quote = FALSE, sep = "\t", col.names = FALSE, row.names = FALSE)
+
+write.table(Midwest_1N_filt, "~/Dropbox/lowryLab/data/genotypes/Midwest_1N_hetFilt.txt", quote = FALSE, sep = "\t", col.names = FALSE, row.names = FALSE)
+write.table(Midwest_2N_filt, "~/Dropbox/lowryLab/data/genotypes/Midwest_2N_hetFilt.txt", quote = FALSE, sep = "\t", col.names = FALSE, row.names = FALSE)
+write.table(Midwest_3N_filt, "~/Dropbox/lowryLab/data/genotypes/Midwest_3N_hetFilt.txt", quote = FALSE, sep = "\t", col.names = FALSE, row.names = FALSE)
+write.table(Midwest_4N_filt, "~/Dropbox/lowryLab/data/genotypes/Midwest_4N_hetFilt.txt", quote = FALSE, sep = "\t", col.names = FALSE, row.names = FALSE)
+write.table(Midwest_5N_filt, "~/Dropbox/lowryLab/data/genotypes/Midwest_5N_hetFilt.txt", quote = FALSE, sep = "\t", col.names = FALSE, row.names = FALSE)
+write.table(Midwest_6N_filt, "~/Dropbox/lowryLab/data/genotypes/Midwest_6N_hetFilt.txt", quote = FALSE, sep = "\t", col.names = FALSE, row.names = FALSE)
+write.table(Midwest_7N_filt, "~/Dropbox/lowryLab/data/genotypes/Midwest_7N_hetFilt.txt", quote = FALSE, sep = "\t", col.names = FALSE, row.names = FALSE)
+write.table(Midwest_8N_filt, "~/Dropbox/lowryLab/data/genotypes/Midwest_8N_hetFilt.txt", quote = FALSE, sep = "\t", col.names = FALSE, row.names = FALSE)
+write.table(Midwest_9N_filt, "~/Dropbox/lowryLab/data/genotypes/Midwest_9N_hetFilt.txt", quote = FALSE, sep = "\t", col.names = FALSE, row.names = FALSE)
+
+
+

@@ -1,0 +1,540 @@
+---
+title: "Untitled"
+author: "Colette Berg"
+date: "2025-10-06"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r GxE_Atlantic trans eQTLs}
+# read in the trans eQTL output
+Chr01K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_1K.txt", sep = "\t")
+Chr01N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_1N.txt", sep = "\t")
+Chr02K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_2K.txt", sep = "\t")
+Chr02N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_2N.txt", sep = "\t")
+Chr03K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_3K.txt", sep = "\t")
+Chr03N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_3N.txt", sep = "\t")
+Chr04K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_4K.txt", sep = "\t")
+Chr04N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_4N.txt", sep = "\t")
+Chr05K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_5K.txt", sep = "\t")
+Chr05N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_5N.txt", sep = "\t")
+Chr06K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_6K.txt", sep = "\t")
+Chr06N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_6N.txt", sep = "\t")
+Chr07K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_7K.txt", sep = "\t")
+Chr07N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_7N.txt", sep = "\t")
+Chr08K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_8K.txt", sep = "\t")
+Chr08N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_8N.txt", sep = "\t")
+Chr09K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_9K.txt", sep = "\t")
+Chr09N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_9N.txt", sep = "\t")
+
+
+# adding all the trans-eQTLs into a list 
+allCis <- rbind(Chr01K_trans,
+                Chr01N_trans,
+                Chr02K_trans,
+                Chr02N_trans,
+                Chr03K_trans,
+                Chr03N_trans,
+                Chr04K_trans,
+                Chr04N_trans,
+                Chr05K_trans,
+                Chr05N_trans,
+                Chr06K_trans,
+                Chr06N_trans,
+                Chr07K_trans,
+                Chr07N_trans,
+                Chr08K_trans,
+                Chr08N_trans,
+                Chr09K_trans,
+                Chr09N_trans)
+
+allCis$type <- "trans"
+
+trans_labeled_GxE_Atlantic <- merge(allCis, genePos, by="gene")
+
+trans_labeled_GxE_Atlantic$popSite <- "GxE_Atlantic"
+```
+
+
+```{r GxE_Gulf trans eQTLs}
+# read in the trans eQTL output
+Chr01K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_1K.txt", sep = "\t")
+Chr01N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_1N.txt", sep = "\t")
+Chr02K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_2K.txt", sep = "\t")
+Chr02N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_2N.txt", sep = "\t")
+Chr03K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_3K.txt", sep = "\t")
+Chr03N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_3N.txt", sep = "\t")
+Chr04K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_4K.txt", sep = "\t")
+Chr04N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_4N.txt", sep = "\t")
+Chr05K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_5K.txt", sep = "\t")
+Chr05N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_5N.txt", sep = "\t")
+Chr06K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_6K.txt", sep = "\t")
+Chr06N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_6N.txt", sep = "\t")
+Chr07K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_7K.txt", sep = "\t")
+Chr07N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_7N.txt", sep = "\t")
+Chr08K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_8K.txt", sep = "\t")
+Chr08N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_8N.txt", sep = "\t")
+Chr09K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_9K.txt", sep = "\t")
+Chr09N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_9N.txt", sep = "\t")
+
+
+# adding all the trans-eQTLs into a list 
+allCis <- rbind(Chr01K_trans,
+                Chr01N_trans,
+                Chr02K_trans,
+                Chr02N_trans,
+                Chr03K_trans,
+                Chr03N_trans,
+                Chr04K_trans,
+                Chr04N_trans,
+                Chr05K_trans,
+                Chr05N_trans,
+                Chr06K_trans,
+                Chr06N_trans,
+                Chr07K_trans,
+                Chr07N_trans,
+                Chr08K_trans,
+                Chr08N_trans,
+                Chr09K_trans,
+                Chr09N_trans)
+
+allCis$type <- "trans"
+
+trans_labeled_GxE_Gulf <- merge(allCis, genePos, by="gene")
+
+trans_labeled_GxE_Gulf$popSite <- "GxE_Gulf"
+```
+
+```{r GxE Midwest trans eQTLs}
+# read in the trans eQTL output
+Chr01K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_1K.txt", sep = "\t")
+Chr01N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_1N.txt", sep = "\t")
+Chr02K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_2K.txt", sep = "\t")
+Chr02N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_2N.txt", sep = "\t")
+Chr03K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_3K.txt", sep = "\t")
+Chr03N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_3N.txt", sep = "\t")
+Chr04K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_4K.txt", sep = "\t")
+Chr04N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_4N.txt", sep = "\t")
+Chr05K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_5K.txt", sep = "\t")
+Chr05N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_5N.txt", sep = "\t")
+Chr06K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_6K.txt", sep = "\t")
+Chr06N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_6N.txt", sep = "\t")
+Chr07K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_7K.txt", sep = "\t")
+Chr07N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_7N.txt", sep = "\t")
+Chr08K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_8K.txt", sep = "\t")
+Chr08N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_8N.txt", sep = "\t")
+Chr09K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_9K.txt", sep = "\t")
+Chr09N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_9N.txt", sep = "\t")
+
+
+# adding all the trans-eQTLs into a list 
+allCis <- rbind(Chr01K_trans,
+                Chr01N_trans,
+                Chr02K_trans,
+                Chr02N_trans,
+                Chr03K_trans,
+                Chr03N_trans,
+                Chr04K_trans,
+                Chr04N_trans,
+                Chr05K_trans,
+                Chr05N_trans,
+                Chr06K_trans,
+                Chr06N_trans,
+                Chr07K_trans,
+                Chr07N_trans,
+                Chr08K_trans,
+                Chr08N_trans,
+                Chr09K_trans,
+                Chr09N_trans)
+
+allCis$type <- "trans"
+
+trans_labeled_GxE_Midwest <- merge(allCis, genePos, by="gene")
+
+trans_labeled_GxE_Midwest$popSite <- "GxE_Midwest"
+```
+
+
+```{r TX_Atlantic trans eQTLs}
+# read in the trans eQTL output
+Chr01K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_1K.txt", sep = "\t")
+Chr01N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_1N.txt", sep = "\t")
+Chr02K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_2K.txt", sep = "\t")
+Chr02N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_2N.txt", sep = "\t")
+Chr03K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_3K.txt", sep = "\t")
+Chr03N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_3N.txt", sep = "\t")
+Chr04K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_4K.txt", sep = "\t")
+Chr04N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_4N.txt", sep = "\t")
+Chr05K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_5K.txt", sep = "\t")
+Chr05N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_5N.txt", sep = "\t")
+Chr06K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_6K.txt", sep = "\t")
+Chr06N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_6N.txt", sep = "\t")
+Chr07K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_7K.txt", sep = "\t")
+Chr07N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_7N.txt", sep = "\t")
+Chr08K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_8K.txt", sep = "\t")
+Chr08N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_8N.txt", sep = "\t")
+Chr09K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_9K.txt", sep = "\t")
+Chr09N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_9N.txt", sep = "\t")
+
+
+# adding all the trans-eQTLs into a list 
+allCis <- rbind(Chr01K_trans,
+                Chr01N_trans,
+                Chr02K_trans,
+                Chr02N_trans,
+                Chr03K_trans,
+                Chr03N_trans,
+                Chr04K_trans,
+                Chr04N_trans,
+                Chr05K_trans,
+                Chr05N_trans,
+                Chr06K_trans,
+                Chr06N_trans,
+                Chr07K_trans,
+                Chr07N_trans,
+                Chr08K_trans,
+                Chr08N_trans,
+                Chr09K_trans,
+                Chr09N_trans)
+
+allCis$type <- "trans"
+
+trans_labeled_TX_Atlantic <- merge(allCis, genePos, by="gene")
+
+trans_labeled_TX_Atlantic$popSite <- "TX_Atlantic"
+
+```
+
+```{r TX_Midwest trans eQTLs}
+# read in the trans eQTL output
+Chr01K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_1K.txt", sep = "\t")
+Chr01N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_1N.txt", sep = "\t")
+Chr02K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_2K.txt", sep = "\t")
+Chr02N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_2N.txt", sep = "\t")
+Chr03K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_3K.txt", sep = "\t")
+Chr03N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_3N.txt", sep = "\t")
+Chr04K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_4K.txt", sep = "\t")
+Chr04N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_4N.txt", sep = "\t")
+Chr05K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_5K.txt", sep = "\t")
+Chr05N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_5N.txt", sep = "\t")
+Chr06K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_6K.txt", sep = "\t")
+Chr06N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_6N.txt", sep = "\t")
+Chr07K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_7K.txt", sep = "\t")
+Chr07N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_7N.txt", sep = "\t")
+Chr08K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_8K.txt", sep = "\t")
+Chr08N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_8N.txt", sep = "\t")
+Chr09K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_9K.txt", sep = "\t")
+Chr09N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_9N.txt", sep = "\t")
+
+
+# adding all the trans-eQTLs into a list 
+allCis <- rbind(Chr01K_trans,
+                Chr01N_trans,
+                Chr02K_trans,
+                Chr02N_trans,
+                Chr03K_trans,
+                Chr03N_trans,
+                Chr04K_trans,
+                Chr04N_trans,
+                Chr05K_trans,
+                Chr05N_trans,
+                Chr06K_trans,
+                Chr06N_trans,
+                Chr07K_trans,
+                Chr07N_trans,
+                Chr08K_trans,
+                Chr08N_trans,
+                Chr09K_trans,
+                Chr09N_trans)
+
+allCis$type <- "trans"
+
+trans_labeled_TX_Midwest <- merge(allCis, genePos, by="gene")
+
+trans_labeled_TX_Midwest$popSite <- "TX_Midwest"
+```
+
+```{r TX_Gulf trans eQTLs}
+
+# read in the trans eQTL output
+Chr01K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_1K.txt", sep = "\t")
+Chr01N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_1N.txt", sep = "\t")
+Chr02K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_2K.txt", sep = "\t")
+Chr02N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_2N.txt", sep = "\t")
+Chr03K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_3K.txt", sep = "\t")
+Chr03N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_3N.txt", sep = "\t")
+Chr04K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_4K.txt", sep = "\t")
+Chr04N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_4N.txt", sep = "\t")
+Chr05K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_5K.txt", sep = "\t")
+Chr05N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_5N.txt", sep = "\t")
+Chr06K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_6K.txt", sep = "\t")
+Chr06N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_6N.txt", sep = "\t")
+Chr07K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_7K.txt", sep = "\t")
+Chr07N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_7N.txt", sep = "\t")
+Chr08K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_8K.txt", sep = "\t")
+Chr08N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_8N.txt", sep = "\t")
+Chr09K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_9K.txt", sep = "\t")
+Chr09N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_9N.txt", sep = "\t")
+
+
+# adding all the trans-eQTLs into a list 
+allCis <- rbind(Chr01K_trans,
+                Chr01N_trans,
+                Chr02K_trans,
+                Chr02N_trans,
+                Chr03K_trans,
+                Chr03N_trans,
+                Chr04K_trans,
+                Chr04N_trans,
+                Chr05K_trans,
+                Chr05N_trans,
+                Chr06K_trans,
+                Chr06N_trans,
+                Chr07K_trans,
+                Chr07N_trans,
+                Chr08K_trans,
+                Chr08N_trans,
+                Chr09K_trans,
+                Chr09N_trans)
+
+allCis$type <- "trans"
+
+trans_labeled_TX_Gulf <- merge(allCis, genePos, by="gene")
+
+trans_labeled_TX_Gulf$popSite <- "TX_Gulf"
+
+```
+
+
+
+```{r MI_Atlantic trans eQTLs}
+# read in the trans eQTL output
+Chr01K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_1K.txt", sep = "\t")
+Chr01N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_1N.txt", sep = "\t")
+Chr02K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_2K.txt", sep = "\t")
+Chr02N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_2N.txt", sep = "\t")
+Chr03K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_3K.txt", sep = "\t")
+Chr03N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_3N.txt", sep = "\t")
+Chr04K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_4K.txt", sep = "\t")
+Chr04N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_4N.txt", sep = "\t")
+Chr05K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_5K.txt", sep = "\t")
+Chr05N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_5N.txt", sep = "\t")
+Chr06K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_6K.txt", sep = "\t")
+Chr06N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_6N.txt", sep = "\t")
+Chr07K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_7K.txt", sep = "\t")
+Chr07N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_7N.txt", sep = "\t")
+Chr08K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_8K.txt", sep = "\t")
+Chr08N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_8N.txt", sep = "\t")
+Chr09K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_9K.txt", sep = "\t")
+Chr09N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_9N.txt", sep = "\t")
+
+
+# adding all the trans-eQTLs into a list 
+allCis <- rbind(Chr01K_trans,
+                Chr01N_trans,
+                Chr02K_trans,
+                Chr02N_trans,
+                Chr03K_trans,
+                Chr03N_trans,
+                Chr04K_trans,
+                Chr04N_trans,
+                Chr05K_trans,
+                Chr05N_trans,
+                Chr06K_trans,
+                Chr06N_trans,
+                Chr07K_trans,
+                Chr07N_trans,
+                Chr08K_trans,
+                Chr08N_trans,
+                Chr09K_trans,
+                Chr09N_trans)
+
+allCis$type <- "trans"
+
+trans_labeled_MI_Atlantic <- merge(allCis, genePos, by="gene")
+
+trans_labeled_MI_Atlantic$popSite <- "MI_Atlantic"
+```
+
+
+```{r MI_Gulf trans eQTLs}
+# read in the trans eQTL output
+Chr01K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_1K.txt", sep = "\t")
+Chr01N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_1N.txt", sep = "\t")
+Chr02K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_2K.txt", sep = "\t")
+Chr02N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_2N.txt", sep = "\t")
+Chr03K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_3K.txt", sep = "\t")
+Chr03N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_3N.txt", sep = "\t")
+Chr04K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_4K.txt", sep = "\t")
+Chr04N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_4N.txt", sep = "\t")
+Chr05K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_5K.txt", sep = "\t")
+Chr05N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_5N.txt", sep = "\t")
+Chr06K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_6K.txt", sep = "\t")
+Chr06N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_6N.txt", sep = "\t")
+Chr07K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_7K.txt", sep = "\t")
+Chr07N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_7N.txt", sep = "\t")
+Chr08K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_8K.txt", sep = "\t")
+Chr08N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_8N.txt", sep = "\t")
+Chr09K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_9K.txt", sep = "\t")
+Chr09N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_9N.txt", sep = "\t")
+
+
+# adding all the trans-eQTLs into a list 
+allCis <- rbind(Chr01K_trans,
+                Chr01N_trans,
+                Chr02K_trans,
+                Chr02N_trans,
+                Chr03K_trans,
+                Chr03N_trans,
+                Chr04K_trans,
+                Chr04N_trans,
+                Chr05K_trans,
+                Chr05N_trans,
+                Chr06K_trans,
+                Chr06N_trans,
+                Chr07K_trans,
+                Chr07N_trans,
+                Chr08K_trans,
+                Chr08N_trans,
+                Chr09K_trans,
+                Chr09N_trans)
+
+allCis$type <- "trans"
+
+trans_labeled_MI_Gulf <- merge(allCis, genePos, by="gene")
+
+trans_labeled_MI_Gulf$popSite <- "MI_Gulf"
+```
+
+```{r MI Midwest trans eQTLs}
+# read in the trans eQTL output
+Chr01K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_1K.txt", sep = "\t")
+Chr01N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_1N.txt", sep = "\t")
+Chr02K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_2K.txt", sep = "\t")
+Chr02N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_2N.txt", sep = "\t")
+Chr03K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_3K.txt", sep = "\t")
+Chr03N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_3N.txt", sep = "\t")
+Chr04K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_4K.txt", sep = "\t")
+Chr04N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_4N.txt", sep = "\t")
+Chr05K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_5K.txt", sep = "\t")
+Chr05N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_5N.txt", sep = "\t")
+Chr06K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_6K.txt", sep = "\t")
+Chr06N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_6N.txt", sep = "\t")
+Chr07K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_7K.txt", sep = "\t")
+Chr07N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_7N.txt", sep = "\t")
+Chr08K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_8K.txt", sep = "\t")
+Chr08N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_8N.txt", sep = "\t")
+Chr09K_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_9K.txt", sep = "\t")
+Chr09N_trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_9N.txt", sep = "\t")
+
+
+# adding all the trans-eQTLs into a list 
+allCis <- rbind(Chr01K_trans,
+                Chr01N_trans,
+                Chr02K_trans,
+                Chr02N_trans,
+                Chr03K_trans,
+                Chr03N_trans,
+                Chr04K_trans,
+                Chr04N_trans,
+                Chr05K_trans,
+                Chr05N_trans,
+                Chr06K_trans,
+                Chr06N_trans,
+                Chr07K_trans,
+                Chr07N_trans,
+                Chr08K_trans,
+                Chr08N_trans,
+                Chr09K_trans,
+                Chr09N_trans)
+
+allCis$type <- "trans"
+
+trans_labeled_MI_Midwest <- merge(allCis, genePos, by="gene")
+
+trans_labeled_MI_Midwest$popSite <- "MI_Midwest"
+```
+
+
+```{r}
+# getting SNP lists for calculating site frequency spectrum 
+
+# TX_Gulf_trans
+write.table(separate(as.data.frame(trans_labeled_TX_Gulf$SNP), col = `trans_labeled_TX_Gulf$SNP`, into = c("Chrom", "SNP"),
+         sep="_"),
+         "TX_Gulf_trans.txt",
+         quote=FALSE,
+         row.names=FALSE,
+         col.names=FALSE)
+
+# MI_Gulf_trans
+write.table(separate(as.data.frame(trans_labeled_MI_Gulf$SNP), col = `trans_labeled_MI_Gulf$SNP`, into = c("Chrom", "SNP"),
+         sep="_"),
+         "MI_Gulf_trans.txt",
+         quote=FALSE,
+         row.names=FALSE,
+         col.names=FALSE)
+
+# GxE_Gulf_trans
+write.table(separate(as.data.frame(trans_labeled_GxE_Gulf$SNP), col = `trans_labeled_GxE_Gulf$SNP`, into = c("Chrom", "SNP"),
+         sep="_"),
+         "GxE_Gulf_trans.txt",
+         quote=FALSE,
+         row.names=FALSE,
+         col.names=FALSE)
+
+
+
+# TX_Atlantic_trans
+write.table(separate(as.data.frame(trans_labeled_TX_Atlantic$SNP), col = `trans_labeled_TX_Atlantic$SNP`, into = c("Chrom", "SNP"),
+         sep="_"),
+         "TX_Atlantic_trans.txt",
+         quote=FALSE,
+         row.names=FALSE,
+         col.names=FALSE)
+
+# MI_Atlantic_trans
+write.table(separate(as.data.frame(trans_labeled_MI_Atlantic$SNP), col = `trans_labeled_MI_Atlantic$SNP`, into = c("Chrom", "SNP"),
+         sep="_"),
+         "MI_Atlantic_trans.txt",
+         quote=FALSE,
+         row.names=FALSE,
+         col.names=FALSE)
+
+# GxE_Atlantic_trans
+write.table(separate(as.data.frame(trans_labeled_GxE_Atlantic$SNP), col = `trans_labeled_GxE_Atlantic$SNP`, into = c("Chrom", "SNP"),
+         sep="_"),
+         "GxE_Atlantic_trans.txt",
+         quote=FALSE,
+         row.names=FALSE,
+         col.names=FALSE)
+
+# TX_Midwest_trans
+write.table(separate(as.data.frame(trans_labeled_TX_Midwest$SNP), col = `trans_labeled_TX_Midwest$SNP`, into = c("Chrom", "SNP"),
+         sep="_"),
+         "TX_Midwest_trans.txt",
+         quote=FALSE,
+         row.names=FALSE,
+         col.names=FALSE)
+
+# MI_Midwest_trans
+write.table(separate(as.data.frame(trans_labeled_MI_Midwest$SNP), col = `trans_labeled_MI_Midwest$SNP`, into = c("Chrom", "SNP"),
+         sep="_"),
+         "MI_Midwest_trans.txt",
+         quote=FALSE,
+         row.names=FALSE,
+         col.names=FALSE)
+
+# GxE_Midwest_trans
+write.table(separate(as.data.frame(trans_labeled_GxE_Midwest$SNP), col = `trans_labeled_GxE_Midwest$SNP`, into = c("Chrom", "SNP"),
+         sep="_"),
+         "GxE_Midwest_trans.txt",
+         quote=FALSE,
+         row.names=FALSE,
+         col.names=FALSE)
+```
+

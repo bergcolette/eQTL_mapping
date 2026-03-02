@@ -1,0 +1,39 @@
+#!/bin/bash --login
+#SBATCH --job-name=sort_RNA
+#SBATCH --nodes=1
+#SBATCH --time=1:00:00
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=bergcole@msu.edu
+#SBATCH --output=%x-%j.SLURMout
+#SBATCH --array=1-43
+#SBATCH --mem=96GB                         # Total memory limit
+
+# call to the RNA fastq array
+sampleID=$(awk -v ArrayTaskID=$SLURM_ARRAY_TASK_ID '$1==ArrayTaskID {print $2}' fastq.array)
+
+echo "JobID: $SLURM_JOB_ID"
+echo "Running on node: `hostname`"
+
+# first purging modules, then loading what you need 
+# load in Trimmomatic
+module purge 
+module load Trimmomatic/0.39-Java-11 
+
+# set working directory
+
+fastqDir="/mnt/scratch/bergcole/data"
+
+# trim the adapter reads with Trimmomatic 
+# this takes paired end samples in the fastqDir and outputs paired fastqs
+
+gunzip ${sampleName}.prepped.R1.fastq.gz
+gunzip ${sampleName}.prepped.R2.fastq.gz
+
+java -jar $EBROOTTRIMMOMATIC/trimmomatic-0.39.jar \
+    PE \
+    -phred33 \
+    -trimlog ${fastqDir}/trimlog.txt \
+    ${fastqDir}/${sampleName}.prepped.R1.fastq  ${vcfDir}/${sampleName}.prepped.R2.fastq \
+    ${fastqDir}/${sampleName}.1.paired.fastq ${fastqDir}/${sampleName}.1.unpaired.fastq  \
+    ${fastqDir}/${sampleName}.2.paired.fastq ${fastqDir}/${sampleName}.2.unpaired.fastq  \
+    $EBROOTTRIMMOMATIC/adapters/TruSeq3-PE.fa:2:30:7 

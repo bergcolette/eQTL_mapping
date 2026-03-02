@@ -1,0 +1,16 @@
+#!/bin/bash --login
+#SBATCH --job-name=orthofinder_run
+#SBATCH --nodes=1
+#SBATCH --time=60:00:00
+#SBATCH --mail-type=ALL
+#SBATCH --mem=96G
+#SBATCH --mail-user=bergcole@msu.edu
+#SBATCH --output=%x-%j.SLURMout
+#SBATCH --ntasks-per-node=16
+
+module purge
+module load Miniforge3
+
+conda activate SWB_vetting
+
+orthofinder -f /mnt/home/bergcole/SWB_vetting/JGI_peptideFiles -t 16 

@@ -1,0 +1,1620 @@
+#!/bin/bash --login
+#SBATCH --job-name=repAdapt_SRA_fetch
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=16
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=bergcole@msu.edu
+#SBATCH --output=%x-%j.SLURMout
+
+
+module purge 
+module load SRA-Toolkit/3.0.10-gompi-2023a
+
+# load files
+
+prefetch SRR896567
+prefetch SRR4996502
+prefetch SRR3709212
+prefetch SRR4996407
+prefetch SRR1801295
+prefetch SRR4996390
+prefetch SRR1799986
+prefetch SRR1799987
+prefetch SRR4996399
+prefetch SRR11611987
+prefetch SRR11611970
+prefetch SRR11611954
+prefetch SRR11611983
+prefetch SRR11611905
+prefetch SRR11611967
+prefetch SRR11611958
+prefetch SRR11611904
+prefetch SRR11611942
+prefetch SRR11611928
+prefetch SRR11611903
+prefetch SRR11611913
+prefetch SRR11611968
+prefetch SRR11611902
+prefetch SRR11611915
+prefetch SRR11611981
+prefetch SRR11611901
+prefetch SRR11611972
+prefetch SRR11611956
+prefetch SRR11611940
+prefetch SRR11611926
+prefetch SRR11612162
+prefetch SRR11612161
+prefetch SRR11611919
+prefetch SRR11611980
+prefetch SRR11611900
+prefetch SRR11612160
+prefetch SRR11612159
+prefetch SRR11612158
+prefetch SRR11611899
+prefetch SRR11612157
+prefetch SRR11611910
+prefetch SRR11611977
+prefetch SRR11611961
+prefetch SRR11611897
+prefetch SRR11611923
+prefetch SRR11611907
+prefetch SRR11612059
+prefetch SRR11612042
+prefetch SRR11612015
+prefetch SRR11612156
+prefetch SRR11612155
+prefetch SRR11612154
+prefetch SRR11611937
+prefetch SRR11611895
+prefetch SRR11612153
+prefetch SRR11612152
+prefetch SRR11612151
+prefetch SRR11611894
+prefetch SRR11611893
+prefetch SRR11611795
+prefetch SRR11611794
+prefetch SRR11611793
+prefetch SRR11611792
+prefetch SRR11611791
+prefetch SRR11611790
+prefetch SRR11611789
+prefetch SRR11611788
+prefetch SRR11611787
+prefetch SRR11611786
+prefetch SRR11611785
+prefetch SRR11611784
+prefetch SRR11611783
+prefetch SRR11611782
+prefetch SRR11611781
+prefetch SRR11611780
+prefetch SRR11611779
+prefetch SRR11611778
+prefetch SRR11611777
+prefetch SRR11611776
+prefetch SRR11611775
+prefetch SRR11611774
+prefetch SRR11611773
+prefetch SRR11611772
+prefetch SRR11611771
+prefetch SRR11611770
+prefetch SRR11611769
+prefetch SRR11611768
+prefetch SRR11611767
+prefetch SRR11611766
+prefetch SRR11611765
+prefetch SRR11611764
+prefetch SRR11611763
+prefetch SRR11611762
+prefetch SRR11611761
+prefetch SRR11611760
+prefetch SRR11611759
+prefetch SRR11611758
+prefetch SRR11611757
+prefetch SRR11611755
+prefetch SRR11611754
+prefetch SRR11611753
+prefetch SRR11611752
+prefetch SRR11611751
+prefetch SRR11611750
+prefetch SRR11611749
+prefetch SRR11611748
+prefetch SRR11611747
+prefetch SRR11611746
+prefetch SRR11611745
+prefetch SRR11611744
+prefetch SRR11611743
+prefetch SRR11611742
+prefetch SRR11611741
+prefetch SRR11611740
+prefetch SRR11611739
+prefetch SRR11611738
+prefetch SRR11611737
+prefetch SRR11611892
+prefetch SRR11612046
+prefetch SRR8526526
+prefetch SRR11611891
+prefetch SRR11611890
+prefetch SRR11612150
+prefetch SRR11612149
+prefetch SRR11612148
+prefetch SRR11612011
+prefetch SRR11612147
+prefetch SRR11612146
+prefetch SRR11611994
+prefetch SRR11612145
+prefetch SRR11612144
+prefetch SRR11612143
+prefetch SRR11612142
+prefetch SRR11612074
+prefetch SRR11612141
+prefetch SRR11611889
+prefetch SRR11612140
+prefetch SRR11612057
+prefetch SRR11612139
+prefetch SRR11612138
+prefetch SRR11612137
+prefetch SRR11611888
+prefetch SRR8526757
+prefetch SRR11612040
+prefetch SRR11612136
+prefetch SRR11612135
+prefetch SRR11612134
+prefetch SRR11612133
+prefetch SRR11611887
+prefetch SRR11612132
+prefetch SRR11612131
+prefetch SRR11612130
+prefetch SRR11612030
+prefetch SRR11611912
+prefetch SRR11612226
+prefetch SRR11612128
+prefetch SRR11612127
+prefetch SRR11612126
+prefetch SRR11611601
+prefetch SRR11612225
+prefetch SRR11611986
+prefetch SRR11611969
+prefetch SRR11611624
+prefetch SRR3452796
+prefetch SRR11611623
+prefetch SRR11611622
+prefetch SRR8526976
+prefetch SRR11611621
+prefetch SRR11611620
+prefetch SRR8527273
+prefetch SRR11611619
+prefetch SRR11611618
+prefetch SRR11611617
+prefetch SRR11611616
+prefetch SRR11611600
+prefetch SRR11611615
+prefetch SRR11611614
+prefetch SRR11611613
+prefetch SRR11611612
+prefetch SRR11611611
+prefetch SRR11611610
+prefetch SRR11611609
+prefetch SRR8528401
+prefetch SRR11611608
+prefetch SRR11611607
+prefetch SRR11611605
+prefetch SRR11611604
+prefetch SRR11611603
+prefetch SRR11611599
+prefetch SRR11611597
+prefetch SRR11611602
+prefetch SRR8529230
+prefetch SRR8529232
+prefetch SRR11612125
+prefetch SRR11612224
+prefetch SRR11612124
+prefetch SRR11612123
+prefetch SRR11612223
+prefetch SRR11612122
+prefetch SRR11612121
+prefetch SRR11612013
+prefetch SRR11612222
+prefetch SRR11612221
+prefetch SRR11611996
+prefetch SRR11611953
+prefetch SRR11611881
+prefetch SRR11611880
+prefetch SRR11612071
+prefetch SRR11611944
+prefetch SRR11612061
+prefetch SRR11612044
+prefetch SRR11611879
+prefetch SRR11611878
+prefetch SRR11611877
+prefetch SRR11611736
+prefetch SRR11612220
+prefetch SRR11611735
+prefetch SRR11611734
+prefetch SRR11612219
+prefetch SRR11611733
+prefetch SRR11612218
+prefetch SRR11611731
+prefetch SRR11612217
+prefetch SRR11612216
+prefetch SRR11612215
+prefetch SRR11612027
+prefetch SRR11612214
+prefetch SRR11612213
+prefetch SRR11611930
+prefetch SRR11611876
+prefetch SRR11611916
+prefetch SRR11611875
+prefetch SRR11611982
+prefetch SRR11612212
+prefetch SRR11612009
+prefetch SRR11612000
+prefetch SRR11612070
+prefetch SRR11612053
+prefetch SRR11612035
+prefetch SRR11612211
+prefetch SRR11611973
+prefetch SRR11612210
+prefetch SRR11612018
+prefetch SRR11612209
+prefetch SRR11611874
+prefetch SRR11611957
+prefetch SRR11611873
+prefetch SRR11612208
+prefetch SRR11612207
+prefetch SRR11611941
+prefetch SRR11611872
+prefetch SRR11611871
+prefetch SRR11612008
+prefetch SRR11612206
+prefetch SRR11612205
+prefetch SRR11612120
+prefetch SRR11611992
+prefetch SRR11612204
+prefetch SRR11612203
+prefetch SRR11612202
+prefetch SRR11612066
+prefetch SRR11611927
+prefetch SRR11612201
+prefetch SRR11612119
+prefetch SRR11612200
+prefetch SRR11612118
+prefetch SRR11612199
+prefetch SRR11611870
+prefetch SRR11611984
+prefetch SRR11611959
+prefetch SRR11611869
+prefetch SRR11611943
+prefetch SRR11611868
+prefetch SRR11611867
+prefetch SRR11611866
+prefetch SRR11611929
+prefetch SRR11611914
+prefetch SRR11612049
+prefetch SRR11611865
+prefetch SRR11611988
+prefetch SRR11611971
+prefetch SRR11611955
+prefetch SRR11611864
+prefetch SRR11612039
+prefetch SRR11611939
+prefetch SRR11611863
+prefetch SRR11611932
+prefetch SRR11612022
+prefetch SRR11611862
+prefetch SRR11612004
+prefetch SRR11611918
+prefetch SRR11611861
+prefetch SRR11611989
+prefetch SRR11612198
+prefetch SRR11612068
+prefetch SRR11612117
+prefetch SRR11612051
+prefetch SRR11611596
+prefetch SRR11611595
+prefetch SRR11611594
+prefetch SRR11612033
+prefetch SRR11612024
+prefetch SRR11612006
+prefetch SRR11612116
+prefetch SRR11612115
+prefetch SRR11611990
+prefetch SRR11612114
+prefetch SRR11612064
+prefetch SRR11611860
+prefetch SRR11612055
+prefetch SRR11611859
+prefetch SRR11611858
+prefetch SRR11612037
+prefetch SRR11611857
+prefetch SRR11611856
+prefetch SRR11612020
+prefetch SRR11612003
+prefetch SRR11611979
+prefetch SRR11611993
+prefetch SRR11612113
+prefetch SRR11612112
+prefetch SRR11611963
+prefetch SRR11612075
+prefetch SRR11612058
+prefetch SRR11611855
+prefetch SRR11612041
+prefetch SRR11612197
+prefetch SRR11611854
+prefetch SRR11612031
+prefetch SRR11612111
+prefetch SRR11612014
+prefetch SRR11611946
+prefetch SRR11612196
+prefetch SRR11611593
+prefetch SRR11611933
+prefetch SRR11611997
+prefetch SRR11611853
+prefetch SRR11612195
+prefetch SRR11612110
+prefetch SRR11611852
+prefetch SRR11612194
+prefetch SRR11612072
+prefetch SRR11611851
+prefetch SRR11612062
+prefetch SRR11611850
+prefetch SRR11612045
+prefetch SRR11611849
+prefetch SRR11612028
+prefetch SRR11612010
+prefetch SRR11611848
+prefetch SRR11611847
+prefetch SRR11612001
+prefetch SRR11611592
+prefetch SRR11611846
+prefetch SRR11611845
+prefetch SRR11611844
+prefetch SRR11612056
+prefetch SRR11612193
+prefetch SRR11611909
+prefetch SRR11612192
+prefetch SRR11612109
+prefetch SRR11612047
+prefetch SRR11612029
+prefetch SRR11611976
+prefetch SRR11611995
+prefetch SRR11611843
+prefetch SRR11611960
+prefetch SRR11611950
+prefetch SRR11612077
+prefetch SRR11611841
+prefetch SRR11611591
+prefetch SRR11612060
+prefetch SRR11611840
+prefetch SRR11612043
+prefetch SRR11611839
+prefetch SRR11611838
+prefetch SRR11612108
+prefetch SRR11611837
+prefetch SRR11611835
+prefetch SRR11612016
+prefetch SRR11611999
+prefetch SRR11611834
+prefetch SRR11611833
+prefetch SRR11611832
+prefetch SRR11611831
+prefetch SRR11611830
+prefetch SRR11611829
+prefetch SRR11611922
+prefetch SRR11611828
+prefetch SRR11611827
+prefetch SRR11611825
+prefetch SRR11612069
+prefetch SRR11611911
+prefetch SRR11612191
+prefetch SRR11611513
+prefetch SRR11611824
+prefetch SRR11611823
+prefetch SRR11612052
+prefetch SRR11611822
+prefetch SRR11612190
+prefetch SRR11612107
+prefetch SRR11612106
+prefetch SRR11612034
+prefetch SRR11611820
+prefetch SRR11612017
+prefetch SRR11612105
+prefetch SRR11612104
+prefetch SRR11612188
+prefetch SRR11612103
+prefetch SRR11611819
+prefetch SRR11612007
+prefetch SRR11612102
+prefetch SRR11612101
+prefetch SRR11612100
+prefetch SRR11611991
+prefetch SRR11612187
+prefetch SRR11612065
+prefetch SRR11612048
+prefetch SRR11612186
+prefetch SRR11612099
+prefetch SRR11612098
+prefetch SRR11612097
+prefetch SRR11611978
+prefetch SRR11611818
+prefetch SRR11612038
+prefetch SRR11612021
+prefetch SRR11612185
+prefetch SRR11612096
+prefetch SRR11612095
+prefetch SRR11612094
+prefetch SRR11612184
+prefetch SRR11612093
+prefetch SRR11612183
+prefetch SRR11612092
+prefetch SRR11612182
+prefetch SRR11612091
+prefetch SRR11612090
+prefetch SRR11612089
+prefetch SRR11612088
+prefetch SRR11612181
+prefetch SRR11612087
+prefetch SRR11612086
+prefetch SRR11612180
+prefetch SRR11611590
+prefetch SRR11612179
+prefetch SRR11612085
+prefetch SRR11612178
+prefetch SRR11612177
+prefetch SRR11611589
+prefetch SRR11612084
+prefetch SRR11612176
+prefetch SRR11611588
+prefetch SRR11611817
+prefetch SRR11612175
+prefetch SRR11612067
+prefetch SRR11612050
+prefetch SRR11611815
+prefetch SRR11611814
+prefetch SRR11612032
+prefetch SRR11611813
+prefetch SRR11611812
+prefetch SRR11612174
+prefetch SRR11611811
+prefetch SRR11611810
+prefetch SRR11612173
+prefetch SRR11611962
+prefetch SRR11612023
+prefetch SRR11611809
+prefetch SRR11612083
+prefetch SRR11611808
+prefetch SRR11611807
+prefetch SRR11611805
+prefetch SRR11612172
+prefetch SRR11612082
+prefetch SRR11612005
+prefetch SRR11612063
+prefetch SRR11612054
+prefetch SRR11612171
+prefetch SRR11612170
+prefetch SRR11611804
+prefetch SRR11612081
+prefetch SRR11612036
+prefetch SRR11611884
+prefetch SRR11611728
+prefetch SRR11612019
+prefetch SRR11611945
+prefetch SRR11612169
+prefetch SRR11611803
+prefetch SRR11611802
+prefetch SRR11612168
+prefetch SRR11611801
+prefetch SRR11611800
+prefetch SRR11611799
+prefetch SRR11611798
+prefetch SRR11611587
+prefetch SRR11612167
+prefetch SRR11611797
+prefetch SRR11612002
+prefetch SRR11612166
+prefetch SRR11611796
+prefetch SRR11611586
+prefetch SRR11612165
+prefetch SRR11612080
+prefetch SRR11612079
+prefetch SRR11612164
+prefetch SRR11612078
+prefetch SRR11612163
+prefetch SRR11611585
+prefetch SRR11611727
+prefetch SRR11611726
+prefetch SRR11611725
+prefetch SRR11611724
+prefetch SRR11611974
+prefetch SRR11611965
+prefetch SRR11611584
+prefetch SRR11611948
+prefetch SRR11611723
+prefetch SRR11611934
+prefetch SRR11611921
+prefetch SRR11611722
+prefetch SRR11611721
+prefetch SRR11611886
+prefetch SRR11611583
+prefetch SRR11611720
+prefetch SRR11611719
+prefetch SRR11611718
+prefetch SRR11611717
+prefetch SRR11611716
+prefetch SRR11611715
+prefetch SRR11611714
+prefetch SRR11611713
+prefetch SRR11611712
+prefetch SRR11611711
+prefetch SRR11611582
+prefetch SRR11611710
+prefetch SRR11611709
+prefetch SRR11611708
+prefetch SRR11611707
+prefetch SRR11611706
+prefetch SRR11611705
+prefetch SRR11611704
+prefetch SRR11611581
+prefetch SRR11611703
+prefetch SRR11611701
+prefetch SRR11611699
+prefetch SRR11611697
+prefetch SRR11611695
+prefetch SRR11611694
+prefetch SRR11611693
+prefetch SRR11611692
+prefetch SRR11611691
+prefetch SRR11611690
+prefetch SRR11611689
+prefetch SRR11611688
+prefetch SRR11611702
+prefetch SRR11611700
+prefetch SRR11611698
+prefetch SRR11611696
+prefetch SRR11611580
+prefetch SRR11611686
+prefetch SRR11611685
+prefetch SRR11611684
+prefetch SRR11611683
+prefetch SRR11611682
+prefetch SRR11611681
+prefetch SRR11611680
+prefetch SRR11611679
+prefetch SRR11611678
+prefetch SRR11611677
+prefetch SRR11611676
+prefetch SRR11611675
+prefetch SRR11611674
+prefetch SRR11611673
+prefetch SRR11611672
+prefetch SRR11611671
+prefetch SRR11611670
+prefetch SRR11611669
+prefetch SRR11611668
+prefetch SRR11611667
+prefetch SRR11611666
+prefetch SRR11611665
+prefetch SRR11611664
+prefetch SRR11611663
+prefetch SRR11611662
+prefetch SRR11611661
+prefetch SRR11611660
+prefetch SRR11611659
+prefetch SRR11611658
+prefetch SRR11611657
+prefetch SRR11611656
+prefetch SRR11611655
+prefetch SRR11611577
+prefetch SRR11611576
+prefetch SRR11611654
+prefetch SRR11611653
+prefetch SRR11611652
+prefetch SRR11611651
+prefetch SRR11611650
+prefetch SRR11611575
+prefetch SRR11611574
+prefetch SRR11611649
+prefetch SRR11611648
+prefetch SRR11611647
+prefetch SRR11611646
+prefetch SRR11611645
+prefetch SRR11611573
+prefetch SRR11611644
+prefetch SRR11611643
+prefetch SRR11611642
+prefetch SRR11611641
+prefetch SRR11611640
+prefetch SRR11611639
+prefetch SRR11611638
+prefetch SRR11611637
+prefetch SRR11611636
+prefetch SRR11611635
+prefetch SRR11611634
+prefetch SRR11611633
+prefetch SRR11611632
+prefetch SRR11611628
+prefetch SRR11611627
+prefetch SRR11611626
+prefetch SRR11611625
+prefetch SRR11611572
+prefetch SRR11611571
+prefetch SRR11611569
+prefetch SRR11611568
+prefetch SRR11611567
+prefetch SRR11611566
+prefetch SRR11611565
+prefetch SRR11611564
+prefetch SRR11611563
+prefetch SRR11611562
+prefetch SRR11611561
+prefetch SRR11611560
+prefetch SRR11611559
+prefetch SRR11611558
+prefetch SRR11611557
+prefetch SRR11611552
+prefetch SRR11611551
+prefetch SRR11611550
+prefetch SRR11611553
+prefetch SRR11611549
+prefetch SRR11611548
+prefetch SRR11611547
+prefetch SRR11611545
+prefetch SRR11611544
+prefetch SRR11611543
+prefetch SRR11611542
+prefetch SRR11611540
+prefetch SRR11611546
+prefetch SRR11611541
+prefetch SRR11611538
+prefetch SRR11611537
+prefetch SRR11611536
+prefetch SRR11611539
+prefetch SRR11611535
+prefetch SRR11611534
+prefetch SRR11611533
+prefetch SRR11611532
+prefetch SRR11611531
+prefetch SRR11611530
+prefetch SRR11611529
+prefetch SRR11611527
+prefetch SRR11611526
+prefetch SRR11611528
+prefetch SRR11611525
+prefetch SRR11611524
+prefetch SRR11611523
+prefetch SRR11611522
+prefetch SRR11611521
+prefetch SRR11611520
+prefetch SRR11611519
+prefetch SRR11611518
+prefetch SRR11611517
+prefetch SRR11611516
+prefetch SRR11611515
+prefetch SRR11611512
+prefetch SRR11611511
+prefetch SRR11611510
+prefetch SRR11611509
+prefetch SRR11611508
+prefetch SRR11611507
+prefetch SRR11611506
+prefetch SRR11611505
+prefetch SRR11611504
+prefetch SRR11611503
+prefetch SRR11611502
+prefetch SRR11611501
+prefetch SRR11611500
+prefetch SRR11611499
+prefetch SRR11611498
+prefetch SRR11611497
+prefetch SRR11611496
+prefetch SRR11611495
+prefetch SRR11611494
+prefetch SRR11611493
+prefetch SRR11611492
+prefetch SRR11611514
+prefetch SRR11611491
+prefetch SRR11611490
+prefetch SRR11611488
+prefetch SRR11611487
+prefetch SRR11611486
+prefetch SRR11611485
+prefetch SRR11611484
+prefetch SRR11611483
+prefetch SRR11611482
+prefetch SRR11611481
+prefetch SRR11611480
+prefetch SRR896566
+prefetch SRR1799989
+prefetch SRR3439406
+prefetch SRR3439427
+prefetch SRR1588074
+prefetch SRR3439425
+prefetch SRR1587311
+prefetch SRR1801209
+prefetch SRR3439408
+prefetch SRR1587344
+prefetch SRR1801205
+prefetch SRR1588089
+prefetch SRR1587319
+prefetch SRR1588079
+prefetch SRR1587374
+prefetch SRR1799993
+prefetch SRR4132508
+prefetch SRR4132510
+prefetch SRR4996397
+prefetch SRR4996396
+prefetch SRR1800047
+prefetch SRR1800048
+prefetch SRR1798142
+prefetch SRR1592621
+prefetch SRR16217369
+prefetch SRR16217370
+prefetch SRR16217371
+prefetch SRR16217372
+prefetch SRR16217373
+prefetch SRR16217376
+prefetch SRR16217374
+prefetch SRR16217375
+prefetch SRR16217377
+prefetch SRR16217378
+prefetch SRR16217379
+prefetch SRR16217380
+prefetch SRR16217381
+prefetch SRR16217382
+prefetch SRR16217383
+prefetch SRR16217384
+prefetch SRR16217385
+prefetch SRR16217388
+prefetch SRR16217386
+prefetch SRR16217387
+prefetch SRR16217389
+prefetch SRR16217390
+prefetch SRR16217391
+prefetch SRR16217392
+prefetch SRR16217393
+prefetch SRR16217394
+prefetch SRR16217395
+prefetch SRR16217396
+prefetch SRR16217397
+prefetch SRR16217400
+prefetch SRR16217398
+prefetch SRR16217399
+prefetch SRR16217401
+prefetch SRR16217402
+prefetch SRR16217403
+prefetch SRR16217404
+prefetch SRR16217408
+prefetch SRR16217409
+prefetch SRR16217412
+prefetch SRR16217410
+prefetch SRR16217411
+prefetch SRR16217413
+prefetch SRR16217414
+prefetch SRR16217415
+prefetch SRR16217416
+prefetch SRR16217417
+prefetch SRR16217418
+prefetch SRR16217419
+prefetch SRR16217420
+prefetch SRR16217421
+prefetch SRR16217424
+prefetch SRR16217422
+prefetch SRR16217423
+prefetch SRR16217425
+prefetch SRR16217426
+prefetch SRR16217427
+prefetch SRR16217428
+prefetch SRR16217429
+prefetch SRR16217430
+prefetch SRR16217431
+prefetch SRR16217432
+prefetch SRR16217433
+prefetch SRR16217436
+prefetch SRR16217434
+prefetch SRR16217435
+prefetch SRR16217437
+prefetch SRR16217438
+prefetch SRR16217439
+
+# download / convert to fastq / zip
+fasterq-dump --split-files --gzip SRR896567.sra
+fasterq-dump --split-files --gzip SRR4996502.sra
+fasterq-dump --split-files --gzip SRR3709212.sra
+fasterq-dump --split-files --gzip SRR4996407.sra
+fasterq-dump --split-files --gzip SRR1801295.sra
+fasterq-dump --split-files --gzip SRR4996390.sra
+fasterq-dump --split-files --gzip SRR1799986.sra
+fasterq-dump --split-files --gzip SRR1799987.sra
+fasterq-dump --split-files --gzip SRR4996399.sra
+fasterq-dump --split-files --gzip SRR11611987.sra
+fasterq-dump --split-files --gzip SRR11611970.sra
+fasterq-dump --split-files --gzip SRR11611954.sra
+fasterq-dump --split-files --gzip SRR11611983.sra
+fasterq-dump --split-files --gzip SRR11611905.sra
+fasterq-dump --split-files --gzip SRR11611967.sra
+fasterq-dump --split-files --gzip SRR11611958.sra
+fasterq-dump --split-files --gzip SRR11611904.sra
+fasterq-dump --split-files --gzip SRR11611942.sra
+fasterq-dump --split-files --gzip SRR11611928.sra
+fasterq-dump --split-files --gzip SRR11611903.sra
+fasterq-dump --split-files --gzip SRR11611913.sra
+fasterq-dump --split-files --gzip SRR11611968.sra
+fasterq-dump --split-files --gzip SRR11611902.sra
+fasterq-dump --split-files --gzip SRR11611915.sra
+fasterq-dump --split-files --gzip SRR11611981.sra
+fasterq-dump --split-files --gzip SRR11611901.sra
+fasterq-dump --split-files --gzip SRR11611972.sra
+fasterq-dump --split-files --gzip SRR11611956.sra
+fasterq-dump --split-files --gzip SRR11611940.sra
+fasterq-dump --split-files --gzip SRR11611926.sra
+fasterq-dump --split-files --gzip SRR11612162.sra
+fasterq-dump --split-files --gzip SRR11612161.sra
+fasterq-dump --split-files --gzip SRR11611919.sra
+fasterq-dump --split-files --gzip SRR11611980.sra
+fasterq-dump --split-files --gzip SRR11611900.sra
+fasterq-dump --split-files --gzip SRR11612160.sra
+fasterq-dump --split-files --gzip SRR11612159.sra
+fasterq-dump --split-files --gzip SRR11612158.sra
+fasterq-dump --split-files --gzip SRR11611899.sra
+fasterq-dump --split-files --gzip SRR11612157.sra
+fasterq-dump --split-files --gzip SRR11611910.sra
+fasterq-dump --split-files --gzip SRR11611977.sra
+fasterq-dump --split-files --gzip SRR11611961.sra
+fasterq-dump --split-files --gzip SRR11611897.sra
+fasterq-dump --split-files --gzip SRR11611923.sra
+fasterq-dump --split-files --gzip SRR11611907.sra
+fasterq-dump --split-files --gzip SRR11612059.sra
+fasterq-dump --split-files --gzip SRR11612042.sra
+fasterq-dump --split-files --gzip SRR11612015.sra
+fasterq-dump --split-files --gzip SRR11612156.sra
+fasterq-dump --split-files --gzip SRR11612155.sra
+fasterq-dump --split-files --gzip SRR11612154.sra
+fasterq-dump --split-files --gzip SRR11611937.sra
+fasterq-dump --split-files --gzip SRR11611895.sra
+fasterq-dump --split-files --gzip SRR11612153.sra
+fasterq-dump --split-files --gzip SRR11612152.sra
+fasterq-dump --split-files --gzip SRR11612151.sra
+fasterq-dump --split-files --gzip SRR11611894.sra
+fasterq-dump --split-files --gzip SRR11611893.sra
+fasterq-dump --split-files --gzip SRR11611795.sra
+fasterq-dump --split-files --gzip SRR11611794.sra
+fasterq-dump --split-files --gzip SRR11611793.sra
+fasterq-dump --split-files --gzip SRR11611792.sra
+fasterq-dump --split-files --gzip SRR11611791.sra
+fasterq-dump --split-files --gzip SRR11611790.sra
+fasterq-dump --split-files --gzip SRR11611789.sra
+fasterq-dump --split-files --gzip SRR11611788.sra
+fasterq-dump --split-files --gzip SRR11611787.sra
+fasterq-dump --split-files --gzip SRR11611786.sra
+fasterq-dump --split-files --gzip SRR11611785.sra
+fasterq-dump --split-files --gzip SRR11611784.sra
+fasterq-dump --split-files --gzip SRR11611783.sra
+fasterq-dump --split-files --gzip SRR11611782.sra
+fasterq-dump --split-files --gzip SRR11611781.sra
+fasterq-dump --split-files --gzip SRR11611780.sra
+fasterq-dump --split-files --gzip SRR11611779.sra
+fasterq-dump --split-files --gzip SRR11611778.sra
+fasterq-dump --split-files --gzip SRR11611777.sra
+fasterq-dump --split-files --gzip SRR11611776.sra
+fasterq-dump --split-files --gzip SRR11611775.sra
+fasterq-dump --split-files --gzip SRR11611774.sra
+fasterq-dump --split-files --gzip SRR11611773.sra
+fasterq-dump --split-files --gzip SRR11611772.sra
+fasterq-dump --split-files --gzip SRR11611771.sra
+fasterq-dump --split-files --gzip SRR11611770.sra
+fasterq-dump --split-files --gzip SRR11611769.sra
+fasterq-dump --split-files --gzip SRR11611768.sra
+fasterq-dump --split-files --gzip SRR11611767.sra
+fasterq-dump --split-files --gzip SRR11611766.sra
+fasterq-dump --split-files --gzip SRR11611765.sra
+fasterq-dump --split-files --gzip SRR11611764.sra
+fasterq-dump --split-files --gzip SRR11611763.sra
+fasterq-dump --split-files --gzip SRR11611762.sra
+fasterq-dump --split-files --gzip SRR11611761.sra
+fasterq-dump --split-files --gzip SRR11611760.sra
+fasterq-dump --split-files --gzip SRR11611759.sra
+fasterq-dump --split-files --gzip SRR11611758.sra
+fasterq-dump --split-files --gzip SRR11611757.sra
+fasterq-dump --split-files --gzip SRR11611755.sra
+fasterq-dump --split-files --gzip SRR11611754.sra
+fasterq-dump --split-files --gzip SRR11611753.sra
+fasterq-dump --split-files --gzip SRR11611752.sra
+fasterq-dump --split-files --gzip SRR11611751.sra
+fasterq-dump --split-files --gzip SRR11611750.sra
+fasterq-dump --split-files --gzip SRR11611749.sra
+fasterq-dump --split-files --gzip SRR11611748.sra
+fasterq-dump --split-files --gzip SRR11611747.sra
+fasterq-dump --split-files --gzip SRR11611746.sra
+fasterq-dump --split-files --gzip SRR11611745.sra
+fasterq-dump --split-files --gzip SRR11611744.sra
+fasterq-dump --split-files --gzip SRR11611743.sra
+fasterq-dump --split-files --gzip SRR11611742.sra
+fasterq-dump --split-files --gzip SRR11611741.sra
+fasterq-dump --split-files --gzip SRR11611740.sra
+fasterq-dump --split-files --gzip SRR11611739.sra
+fasterq-dump --split-files --gzip SRR11611738.sra
+fasterq-dump --split-files --gzip SRR11611737.sra
+fasterq-dump --split-files --gzip SRR11611892.sra
+fasterq-dump --split-files --gzip SRR11612046.sra
+fasterq-dump --split-files --gzip SRR8526526.sra
+fasterq-dump --split-files --gzip SRR11611891.sra
+fasterq-dump --split-files --gzip SRR11611890.sra
+fasterq-dump --split-files --gzip SRR11612150.sra
+fasterq-dump --split-files --gzip SRR11612149.sra
+fasterq-dump --split-files --gzip SRR11612148.sra
+fasterq-dump --split-files --gzip SRR11612011.sra
+fasterq-dump --split-files --gzip SRR11612147.sra
+fasterq-dump --split-files --gzip SRR11612146.sra
+fasterq-dump --split-files --gzip SRR11611994.sra
+fasterq-dump --split-files --gzip SRR11612145.sra
+fasterq-dump --split-files --gzip SRR11612144.sra
+fasterq-dump --split-files --gzip SRR11612143.sra
+fasterq-dump --split-files --gzip SRR11612142.sra
+fasterq-dump --split-files --gzip SRR11612074.sra
+fasterq-dump --split-files --gzip SRR11612141.sra
+fasterq-dump --split-files --gzip SRR11611889.sra
+fasterq-dump --split-files --gzip SRR11612140.sra
+fasterq-dump --split-files --gzip SRR11612057.sra
+fasterq-dump --split-files --gzip SRR11612139.sra
+fasterq-dump --split-files --gzip SRR11612138.sra
+fasterq-dump --split-files --gzip SRR11612137.sra
+fasterq-dump --split-files --gzip SRR11611888.sra
+fasterq-dump --split-files --gzip SRR8526757.sra
+fasterq-dump --split-files --gzip SRR11612040.sra
+fasterq-dump --split-files --gzip SRR11612136.sra
+fasterq-dump --split-files --gzip SRR11612135.sra
+fasterq-dump --split-files --gzip SRR11612134.sra
+fasterq-dump --split-files --gzip SRR11612133.sra
+fasterq-dump --split-files --gzip SRR11611887.sra
+fasterq-dump --split-files --gzip SRR11612132.sra
+fasterq-dump --split-files --gzip SRR11612131.sra
+fasterq-dump --split-files --gzip SRR11612130.sra
+fasterq-dump --split-files --gzip SRR11612030.sra
+fasterq-dump --split-files --gzip SRR11611912.sra
+fasterq-dump --split-files --gzip SRR11612226.sra
+fasterq-dump --split-files --gzip SRR11612128.sra
+fasterq-dump --split-files --gzip SRR11612127.sra
+fasterq-dump --split-files --gzip SRR11612126.sra
+fasterq-dump --split-files --gzip SRR11611601.sra
+fasterq-dump --split-files --gzip SRR11612225.sra
+fasterq-dump --split-files --gzip SRR11611986.sra
+fasterq-dump --split-files --gzip SRR11611969.sra
+fasterq-dump --split-files --gzip SRR11611624.sra
+fasterq-dump --split-files --gzip SRR3452796.sra
+fasterq-dump --split-files --gzip SRR11611623.sra
+fasterq-dump --split-files --gzip SRR11611622.sra
+fasterq-dump --split-files --gzip SRR8526976.sra
+fasterq-dump --split-files --gzip SRR11611621.sra
+fasterq-dump --split-files --gzip SRR11611620.sra
+fasterq-dump --split-files --gzip SRR8527273.sra
+fasterq-dump --split-files --gzip SRR11611619.sra
+fasterq-dump --split-files --gzip SRR11611618.sra
+fasterq-dump --split-files --gzip SRR11611617.sra
+fasterq-dump --split-files --gzip SRR11611616.sra
+fasterq-dump --split-files --gzip SRR11611600.sra
+fasterq-dump --split-files --gzip SRR11611615.sra
+fasterq-dump --split-files --gzip SRR11611614.sra
+fasterq-dump --split-files --gzip SRR11611613.sra
+fasterq-dump --split-files --gzip SRR11611612.sra
+fasterq-dump --split-files --gzip SRR11611611.sra
+fasterq-dump --split-files --gzip SRR11611610.sra
+fasterq-dump --split-files --gzip SRR11611609.sra
+fasterq-dump --split-files --gzip SRR8528401.sra
+fasterq-dump --split-files --gzip SRR11611608.sra
+fasterq-dump --split-files --gzip SRR11611607.sra
+fasterq-dump --split-files --gzip SRR11611605.sra
+fasterq-dump --split-files --gzip SRR11611604.sra
+fasterq-dump --split-files --gzip SRR11611603.sra
+fasterq-dump --split-files --gzip SRR11611599.sra
+fasterq-dump --split-files --gzip SRR11611597.sra
+fasterq-dump --split-files --gzip SRR11611602.sra
+fasterq-dump --split-files --gzip SRR8529230.sra
+fasterq-dump --split-files --gzip SRR8529232.sra
+fasterq-dump --split-files --gzip SRR11612125.sra
+fasterq-dump --split-files --gzip SRR11612224.sra
+fasterq-dump --split-files --gzip SRR11612124.sra
+fasterq-dump --split-files --gzip SRR11612123.sra
+fasterq-dump --split-files --gzip SRR11612223.sra
+fasterq-dump --split-files --gzip SRR11612122.sra
+fasterq-dump --split-files --gzip SRR11612121.sra
+fasterq-dump --split-files --gzip SRR11612013.sra
+fasterq-dump --split-files --gzip SRR11612222.sra
+fasterq-dump --split-files --gzip SRR11612221.sra
+fasterq-dump --split-files --gzip SRR11611996.sra
+fasterq-dump --split-files --gzip SRR11611953.sra
+fasterq-dump --split-files --gzip SRR11611881.sra
+fasterq-dump --split-files --gzip SRR11611880.sra
+fasterq-dump --split-files --gzip SRR11612071.sra
+fasterq-dump --split-files --gzip SRR11611944.sra
+fasterq-dump --split-files --gzip SRR11612061.sra
+fasterq-dump --split-files --gzip SRR11612044.sra
+fasterq-dump --split-files --gzip SRR11611879.sra
+fasterq-dump --split-files --gzip SRR11611878.sra
+fasterq-dump --split-files --gzip SRR11611877.sra
+fasterq-dump --split-files --gzip SRR11611736.sra
+fasterq-dump --split-files --gzip SRR11612220.sra
+fasterq-dump --split-files --gzip SRR11611735.sra
+fasterq-dump --split-files --gzip SRR11611734.sra
+fasterq-dump --split-files --gzip SRR11612219.sra
+fasterq-dump --split-files --gzip SRR11611733.sra
+fasterq-dump --split-files --gzip SRR11612218.sra
+fasterq-dump --split-files --gzip SRR11611731.sra
+fasterq-dump --split-files --gzip SRR11612217.sra
+fasterq-dump --split-files --gzip SRR11612216.sra
+fasterq-dump --split-files --gzip SRR11612215.sra
+fasterq-dump --split-files --gzip SRR11612027.sra
+fasterq-dump --split-files --gzip SRR11612214.sra
+fasterq-dump --split-files --gzip SRR11612213.sra
+fasterq-dump --split-files --gzip SRR11611930.sra
+fasterq-dump --split-files --gzip SRR11611876.sra
+fasterq-dump --split-files --gzip SRR11611916.sra
+fasterq-dump --split-files --gzip SRR11611875.sra
+fasterq-dump --split-files --gzip SRR11611982.sra
+fasterq-dump --split-files --gzip SRR11612212.sra
+fasterq-dump --split-files --gzip SRR11612009.sra
+fasterq-dump --split-files --gzip SRR11612000.sra
+fasterq-dump --split-files --gzip SRR11612070.sra
+fasterq-dump --split-files --gzip SRR11612053.sra
+fasterq-dump --split-files --gzip SRR11612035.sra
+fasterq-dump --split-files --gzip SRR11612211.sra
+fasterq-dump --split-files --gzip SRR11611973.sra
+fasterq-dump --split-files --gzip SRR11612210.sra
+fasterq-dump --split-files --gzip SRR11612018.sra
+fasterq-dump --split-files --gzip SRR11612209.sra
+fasterq-dump --split-files --gzip SRR11611874.sra
+fasterq-dump --split-files --gzip SRR11611957.sra
+fasterq-dump --split-files --gzip SRR11611873.sra
+fasterq-dump --split-files --gzip SRR11612208.sra
+fasterq-dump --split-files --gzip SRR11612207.sra
+fasterq-dump --split-files --gzip SRR11611941.sra
+fasterq-dump --split-files --gzip SRR11611872.sra
+fasterq-dump --split-files --gzip SRR11611871.sra
+fasterq-dump --split-files --gzip SRR11612008.sra
+fasterq-dump --split-files --gzip SRR11612206.sra
+fasterq-dump --split-files --gzip SRR11612205.sra
+fasterq-dump --split-files --gzip SRR11612120.sra
+fasterq-dump --split-files --gzip SRR11611992.sra
+fasterq-dump --split-files --gzip SRR11612204.sra
+fasterq-dump --split-files --gzip SRR11612203.sra
+fasterq-dump --split-files --gzip SRR11612202.sra
+fasterq-dump --split-files --gzip SRR11612066.sra
+fasterq-dump --split-files --gzip SRR11611927.sra
+fasterq-dump --split-files --gzip SRR11612201.sra
+fasterq-dump --split-files --gzip SRR11612119.sra
+fasterq-dump --split-files --gzip SRR11612200.sra
+fasterq-dump --split-files --gzip SRR11612118.sra
+fasterq-dump --split-files --gzip SRR11612199.sra
+fasterq-dump --split-files --gzip SRR11611870.sra
+fasterq-dump --split-files --gzip SRR11611984.sra
+fasterq-dump --split-files --gzip SRR11611959.sra
+fasterq-dump --split-files --gzip SRR11611869.sra
+fasterq-dump --split-files --gzip SRR11611943.sra
+fasterq-dump --split-files --gzip SRR11611868.sra
+fasterq-dump --split-files --gzip SRR11611867.sra
+fasterq-dump --split-files --gzip SRR11611866.sra
+fasterq-dump --split-files --gzip SRR11611929.sra
+fasterq-dump --split-files --gzip SRR11611914.sra
+fasterq-dump --split-files --gzip SRR11612049.sra
+fasterq-dump --split-files --gzip SRR11611865.sra
+fasterq-dump --split-files --gzip SRR11611988.sra
+fasterq-dump --split-files --gzip SRR11611971.sra
+fasterq-dump --split-files --gzip SRR11611955.sra
+fasterq-dump --split-files --gzip SRR11611864.sra
+fasterq-dump --split-files --gzip SRR11612039.sra
+fasterq-dump --split-files --gzip SRR11611939.sra
+fasterq-dump --split-files --gzip SRR11611863.sra
+fasterq-dump --split-files --gzip SRR11611932.sra
+fasterq-dump --split-files --gzip SRR11612022.sra
+fasterq-dump --split-files --gzip SRR11611862.sra
+fasterq-dump --split-files --gzip SRR11612004.sra
+fasterq-dump --split-files --gzip SRR11611918.sra
+fasterq-dump --split-files --gzip SRR11611861.sra
+fasterq-dump --split-files --gzip SRR11611989.sra
+fasterq-dump --split-files --gzip SRR11612198.sra
+fasterq-dump --split-files --gzip SRR11612068.sra
+fasterq-dump --split-files --gzip SRR11612117.sra
+fasterq-dump --split-files --gzip SRR11612051.sra
+fasterq-dump --split-files --gzip SRR11611596.sra
+fasterq-dump --split-files --gzip SRR11611595.sra
+fasterq-dump --split-files --gzip SRR11611594.sra
+fasterq-dump --split-files --gzip SRR11612033.sra
+fasterq-dump --split-files --gzip SRR11612024.sra
+fasterq-dump --split-files --gzip SRR11612006.sra
+fasterq-dump --split-files --gzip SRR11612116.sra
+fasterq-dump --split-files --gzip SRR11612115.sra
+fasterq-dump --split-files --gzip SRR11611990.sra
+fasterq-dump --split-files --gzip SRR11612114.sra
+fasterq-dump --split-files --gzip SRR11612064.sra
+fasterq-dump --split-files --gzip SRR11611860.sra
+fasterq-dump --split-files --gzip SRR11612055.sra
+fasterq-dump --split-files --gzip SRR11611859.sra
+fasterq-dump --split-files --gzip SRR11611858.sra
+fasterq-dump --split-files --gzip SRR11612037.sra
+fasterq-dump --split-files --gzip SRR11611857.sra
+fasterq-dump --split-files --gzip SRR11611856.sra
+fasterq-dump --split-files --gzip SRR11612020.sra
+fasterq-dump --split-files --gzip SRR11612003.sra
+fasterq-dump --split-files --gzip SRR11611979.sra
+fasterq-dump --split-files --gzip SRR11611993.sra
+fasterq-dump --split-files --gzip SRR11612113.sra
+fasterq-dump --split-files --gzip SRR11612112.sra
+fasterq-dump --split-files --gzip SRR11611963.sra
+fasterq-dump --split-files --gzip SRR11612075.sra
+fasterq-dump --split-files --gzip SRR11612058.sra
+fasterq-dump --split-files --gzip SRR11611855.sra
+fasterq-dump --split-files --gzip SRR11612041.sra
+fasterq-dump --split-files --gzip SRR11612197.sra
+fasterq-dump --split-files --gzip SRR11611854.sra
+fasterq-dump --split-files --gzip SRR11612031.sra
+fasterq-dump --split-files --gzip SRR11612111.sra
+fasterq-dump --split-files --gzip SRR11612014.sra
+fasterq-dump --split-files --gzip SRR11611946.sra
+fasterq-dump --split-files --gzip SRR11612196.sra
+fasterq-dump --split-files --gzip SRR11611593.sra
+fasterq-dump --split-files --gzip SRR11611933.sra
+fasterq-dump --split-files --gzip SRR11611997.sra
+fasterq-dump --split-files --gzip SRR11611853.sra
+fasterq-dump --split-files --gzip SRR11612195.sra
+fasterq-dump --split-files --gzip SRR11612110.sra
+fasterq-dump --split-files --gzip SRR11611852.sra
+fasterq-dump --split-files --gzip SRR11612194.sra
+fasterq-dump --split-files --gzip SRR11612072.sra
+fasterq-dump --split-files --gzip SRR11611851.sra
+fasterq-dump --split-files --gzip SRR11612062.sra
+fasterq-dump --split-files --gzip SRR11611850.sra
+fasterq-dump --split-files --gzip SRR11612045.sra
+fasterq-dump --split-files --gzip SRR11611849.sra
+fasterq-dump --split-files --gzip SRR11612028.sra
+fasterq-dump --split-files --gzip SRR11612010.sra
+fasterq-dump --split-files --gzip SRR11611848.sra
+fasterq-dump --split-files --gzip SRR11611847.sra
+fasterq-dump --split-files --gzip SRR11612001.sra
+fasterq-dump --split-files --gzip SRR11611592.sra
+fasterq-dump --split-files --gzip SRR11611846.sra
+fasterq-dump --split-files --gzip SRR11611845.sra
+fasterq-dump --split-files --gzip SRR11611844.sra
+fasterq-dump --split-files --gzip SRR11612056.sra
+fasterq-dump --split-files --gzip SRR11612193.sra
+fasterq-dump --split-files --gzip SRR11611909.sra
+fasterq-dump --split-files --gzip SRR11612192.sra
+fasterq-dump --split-files --gzip SRR11612109.sra
+fasterq-dump --split-files --gzip SRR11612047.sra
+fasterq-dump --split-files --gzip SRR11612029.sra
+fasterq-dump --split-files --gzip SRR11611976.sra
+fasterq-dump --split-files --gzip SRR11611995.sra
+fasterq-dump --split-files --gzip SRR11611843.sra
+fasterq-dump --split-files --gzip SRR11611960.sra
+fasterq-dump --split-files --gzip SRR11611950.sra
+fasterq-dump --split-files --gzip SRR11612077.sra
+fasterq-dump --split-files --gzip SRR11611841.sra
+fasterq-dump --split-files --gzip SRR11611591.sra
+fasterq-dump --split-files --gzip SRR11612060.sra
+fasterq-dump --split-files --gzip SRR11611840.sra
+fasterq-dump --split-files --gzip SRR11612043.sra
+fasterq-dump --split-files --gzip SRR11611839.sra
+fasterq-dump --split-files --gzip SRR11611838.sra
+fasterq-dump --split-files --gzip SRR11612108.sra
+fasterq-dump --split-files --gzip SRR11611837.sra
+fasterq-dump --split-files --gzip SRR11611835.sra
+fasterq-dump --split-files --gzip SRR11612016.sra
+fasterq-dump --split-files --gzip SRR11611999.sra
+fasterq-dump --split-files --gzip SRR11611834.sra
+fasterq-dump --split-files --gzip SRR11611833.sra
+fasterq-dump --split-files --gzip SRR11611832.sra
+fasterq-dump --split-files --gzip SRR11611831.sra
+fasterq-dump --split-files --gzip SRR11611830.sra
+fasterq-dump --split-files --gzip SRR11611829.sra
+fasterq-dump --split-files --gzip SRR11611922.sra
+fasterq-dump --split-files --gzip SRR11611828.sra
+fasterq-dump --split-files --gzip SRR11611827.sra
+fasterq-dump --split-files --gzip SRR11611825.sra
+fasterq-dump --split-files --gzip SRR11612069.sra
+fasterq-dump --split-files --gzip SRR11611911.sra
+fasterq-dump --split-files --gzip SRR11612191.sra
+fasterq-dump --split-files --gzip SRR11611513.sra
+fasterq-dump --split-files --gzip SRR11611824.sra
+fasterq-dump --split-files --gzip SRR11611823.sra
+fasterq-dump --split-files --gzip SRR11612052.sra
+fasterq-dump --split-files --gzip SRR11611822.sra
+fasterq-dump --split-files --gzip SRR11612190.sra
+fasterq-dump --split-files --gzip SRR11612107.sra
+fasterq-dump --split-files --gzip SRR11612106.sra
+fasterq-dump --split-files --gzip SRR11612034.sra
+fasterq-dump --split-files --gzip SRR11611820.sra
+fasterq-dump --split-files --gzip SRR11612017.sra
+fasterq-dump --split-files --gzip SRR11612105.sra
+fasterq-dump --split-files --gzip SRR11612104.sra
+fasterq-dump --split-files --gzip SRR11612188.sra
+fasterq-dump --split-files --gzip SRR11612103.sra
+fasterq-dump --split-files --gzip SRR11611819.sra
+fasterq-dump --split-files --gzip SRR11612007.sra
+fasterq-dump --split-files --gzip SRR11612102.sra
+fasterq-dump --split-files --gzip SRR11612101.sra
+fasterq-dump --split-files --gzip SRR11612100.sra
+fasterq-dump --split-files --gzip SRR11611991.sra
+fasterq-dump --split-files --gzip SRR11612187.sra
+fasterq-dump --split-files --gzip SRR11612065.sra
+fasterq-dump --split-files --gzip SRR11612048.sra
+fasterq-dump --split-files --gzip SRR11612186.sra
+fasterq-dump --split-files --gzip SRR11612099.sra
+fasterq-dump --split-files --gzip SRR11612098.sra
+fasterq-dump --split-files --gzip SRR11612097.sra
+fasterq-dump --split-files --gzip SRR11611978.sra
+fasterq-dump --split-files --gzip SRR11611818.sra
+fasterq-dump --split-files --gzip SRR11612038.sra
+fasterq-dump --split-files --gzip SRR11612021.sra
+fasterq-dump --split-files --gzip SRR11612185.sra
+fasterq-dump --split-files --gzip SRR11612096.sra
+fasterq-dump --split-files --gzip SRR11612095.sra
+fasterq-dump --split-files --gzip SRR11612094.sra
+fasterq-dump --split-files --gzip SRR11612184.sra
+fasterq-dump --split-files --gzip SRR11612093.sra
+fasterq-dump --split-files --gzip SRR11612183.sra
+fasterq-dump --split-files --gzip SRR11612092.sra
+fasterq-dump --split-files --gzip SRR11612182.sra
+fasterq-dump --split-files --gzip SRR11612091.sra
+fasterq-dump --split-files --gzip SRR11612090.sra
+fasterq-dump --split-files --gzip SRR11612089.sra
+fasterq-dump --split-files --gzip SRR11612088.sra
+fasterq-dump --split-files --gzip SRR11612181.sra
+fasterq-dump --split-files --gzip SRR11612087.sra
+fasterq-dump --split-files --gzip SRR11612086.sra
+fasterq-dump --split-files --gzip SRR11612180.sra
+fasterq-dump --split-files --gzip SRR11611590.sra
+fasterq-dump --split-files --gzip SRR11612179.sra
+fasterq-dump --split-files --gzip SRR11612085.sra
+fasterq-dump --split-files --gzip SRR11612178.sra
+fasterq-dump --split-files --gzip SRR11612177.sra
+fasterq-dump --split-files --gzip SRR11611589.sra
+fasterq-dump --split-files --gzip SRR11612084.sra
+fasterq-dump --split-files --gzip SRR11612176.sra
+fasterq-dump --split-files --gzip SRR11611588.sra
+fasterq-dump --split-files --gzip SRR11611817.sra
+fasterq-dump --split-files --gzip SRR11612175.sra
+fasterq-dump --split-files --gzip SRR11612067.sra
+fasterq-dump --split-files --gzip SRR11612050.sra
+fasterq-dump --split-files --gzip SRR11611815.sra
+fasterq-dump --split-files --gzip SRR11611814.sra
+fasterq-dump --split-files --gzip SRR11612032.sra
+fasterq-dump --split-files --gzip SRR11611813.sra
+fasterq-dump --split-files --gzip SRR11611812.sra
+fasterq-dump --split-files --gzip SRR11612174.sra
+fasterq-dump --split-files --gzip SRR11611811.sra
+fasterq-dump --split-files --gzip SRR11611810.sra
+fasterq-dump --split-files --gzip SRR11612173.sra
+fasterq-dump --split-files --gzip SRR11611962.sra
+fasterq-dump --split-files --gzip SRR11612023.sra
+fasterq-dump --split-files --gzip SRR11611809.sra
+fasterq-dump --split-files --gzip SRR11612083.sra
+fasterq-dump --split-files --gzip SRR11611808.sra
+fasterq-dump --split-files --gzip SRR11611807.sra
+fasterq-dump --split-files --gzip SRR11611805.sra
+fasterq-dump --split-files --gzip SRR11612172.sra
+fasterq-dump --split-files --gzip SRR11612082.sra
+fasterq-dump --split-files --gzip SRR11612005.sra
+fasterq-dump --split-files --gzip SRR11612063.sra
+fasterq-dump --split-files --gzip SRR11612054.sra
+fasterq-dump --split-files --gzip SRR11612171.sra
+fasterq-dump --split-files --gzip SRR11612170.sra
+fasterq-dump --split-files --gzip SRR11611804.sra
+fasterq-dump --split-files --gzip SRR11612081.sra
+fasterq-dump --split-files --gzip SRR11612036.sra
+fasterq-dump --split-files --gzip SRR11611884.sra
+fasterq-dump --split-files --gzip SRR11611728.sra
+fasterq-dump --split-files --gzip SRR11612019.sra
+fasterq-dump --split-files --gzip SRR11611945.sra
+fasterq-dump --split-files --gzip SRR11612169.sra
+fasterq-dump --split-files --gzip SRR11611803.sra
+fasterq-dump --split-files --gzip SRR11611802.sra
+fasterq-dump --split-files --gzip SRR11612168.sra
+fasterq-dump --split-files --gzip SRR11611801.sra
+fasterq-dump --split-files --gzip SRR11611800.sra
+fasterq-dump --split-files --gzip SRR11611799.sra
+fasterq-dump --split-files --gzip SRR11611798.sra
+fasterq-dump --split-files --gzip SRR11611587.sra
+fasterq-dump --split-files --gzip SRR11612167.sra
+fasterq-dump --split-files --gzip SRR11611797.sra
+fasterq-dump --split-files --gzip SRR11612002.sra
+fasterq-dump --split-files --gzip SRR11612166.sra
+fasterq-dump --split-files --gzip SRR11611796.sra
+fasterq-dump --split-files --gzip SRR11611586.sra
+fasterq-dump --split-files --gzip SRR11612165.sra
+fasterq-dump --split-files --gzip SRR11612080.sra
+fasterq-dump --split-files --gzip SRR11612079.sra
+fasterq-dump --split-files --gzip SRR11612164.sra
+fasterq-dump --split-files --gzip SRR11612078.sra
+fasterq-dump --split-files --gzip SRR11612163.sra
+fasterq-dump --split-files --gzip SRR11611585.sra
+fasterq-dump --split-files --gzip SRR11611727.sra
+fasterq-dump --split-files --gzip SRR11611726.sra
+fasterq-dump --split-files --gzip SRR11611725.sra
+fasterq-dump --split-files --gzip SRR11611724.sra
+fasterq-dump --split-files --gzip SRR11611974.sra
+fasterq-dump --split-files --gzip SRR11611965.sra
+fasterq-dump --split-files --gzip SRR11611584.sra
+fasterq-dump --split-files --gzip SRR11611948.sra
+fasterq-dump --split-files --gzip SRR11611723.sra
+fasterq-dump --split-files --gzip SRR11611934.sra
+fasterq-dump --split-files --gzip SRR11611921.sra
+fasterq-dump --split-files --gzip SRR11611722.sra
+fasterq-dump --split-files --gzip SRR11611721.sra
+fasterq-dump --split-files --gzip SRR11611886.sra
+fasterq-dump --split-files --gzip SRR11611583.sra
+fasterq-dump --split-files --gzip SRR11611720.sra
+fasterq-dump --split-files --gzip SRR11611719.sra
+fasterq-dump --split-files --gzip SRR11611718.sra
+fasterq-dump --split-files --gzip SRR11611717.sra
+fasterq-dump --split-files --gzip SRR11611716.sra
+fasterq-dump --split-files --gzip SRR11611715.sra
+fasterq-dump --split-files --gzip SRR11611714.sra
+fasterq-dump --split-files --gzip SRR11611713.sra
+fasterq-dump --split-files --gzip SRR11611712.sra
+fasterq-dump --split-files --gzip SRR11611711.sra
+fasterq-dump --split-files --gzip SRR11611582.sra
+fasterq-dump --split-files --gzip SRR11611710.sra
+fasterq-dump --split-files --gzip SRR11611709.sra
+fasterq-dump --split-files --gzip SRR11611708.sra
+fasterq-dump --split-files --gzip SRR11611707.sra
+fasterq-dump --split-files --gzip SRR11611706.sra
+fasterq-dump --split-files --gzip SRR11611705.sra
+fasterq-dump --split-files --gzip SRR11611704.sra
+fasterq-dump --split-files --gzip SRR11611581.sra
+fasterq-dump --split-files --gzip SRR11611703.sra
+fasterq-dump --split-files --gzip SRR11611701.sra
+fasterq-dump --split-files --gzip SRR11611699.sra
+fasterq-dump --split-files --gzip SRR11611697.sra
+fasterq-dump --split-files --gzip SRR11611695.sra
+fasterq-dump --split-files --gzip SRR11611694.sra
+fasterq-dump --split-files --gzip SRR11611693.sra
+fasterq-dump --split-files --gzip SRR11611692.sra
+fasterq-dump --split-files --gzip SRR11611691.sra
+fasterq-dump --split-files --gzip SRR11611690.sra
+fasterq-dump --split-files --gzip SRR11611689.sra
+fasterq-dump --split-files --gzip SRR11611688.sra
+fasterq-dump --split-files --gzip SRR11611702.sra
+fasterq-dump --split-files --gzip SRR11611700.sra
+fasterq-dump --split-files --gzip SRR11611698.sra
+fasterq-dump --split-files --gzip SRR11611696.sra
+fasterq-dump --split-files --gzip SRR11611580.sra
+fasterq-dump --split-files --gzip SRR11611686.sra
+fasterq-dump --split-files --gzip SRR11611685.sra
+fasterq-dump --split-files --gzip SRR11611684.sra
+fasterq-dump --split-files --gzip SRR11611683.sra
+fasterq-dump --split-files --gzip SRR11611682.sra
+fasterq-dump --split-files --gzip SRR11611681.sra
+fasterq-dump --split-files --gzip SRR11611680.sra
+fasterq-dump --split-files --gzip SRR11611679.sra
+fasterq-dump --split-files --gzip SRR11611678.sra
+fasterq-dump --split-files --gzip SRR11611677.sra
+fasterq-dump --split-files --gzip SRR11611676.sra
+fasterq-dump --split-files --gzip SRR11611675.sra
+fasterq-dump --split-files --gzip SRR11611674.sra
+fasterq-dump --split-files --gzip SRR11611673.sra
+fasterq-dump --split-files --gzip SRR11611672.sra
+fasterq-dump --split-files --gzip SRR11611671.sra
+fasterq-dump --split-files --gzip SRR11611670.sra
+fasterq-dump --split-files --gzip SRR11611669.sra
+fasterq-dump --split-files --gzip SRR11611668.sra
+fasterq-dump --split-files --gzip SRR11611667.sra
+fasterq-dump --split-files --gzip SRR11611666.sra
+fasterq-dump --split-files --gzip SRR11611665.sra
+fasterq-dump --split-files --gzip SRR11611664.sra
+fasterq-dump --split-files --gzip SRR11611663.sra
+fasterq-dump --split-files --gzip SRR11611662.sra
+fasterq-dump --split-files --gzip SRR11611661.sra
+fasterq-dump --split-files --gzip SRR11611660.sra
+fasterq-dump --split-files --gzip SRR11611659.sra
+fasterq-dump --split-files --gzip SRR11611658.sra
+fasterq-dump --split-files --gzip SRR11611657.sra
+fasterq-dump --split-files --gzip SRR11611656.sra
+fasterq-dump --split-files --gzip SRR11611655.sra
+fasterq-dump --split-files --gzip SRR11611577.sra
+fasterq-dump --split-files --gzip SRR11611576.sra
+fasterq-dump --split-files --gzip SRR11611654.sra
+fasterq-dump --split-files --gzip SRR11611653.sra
+fasterq-dump --split-files --gzip SRR11611652.sra
+fasterq-dump --split-files --gzip SRR11611651.sra
+fasterq-dump --split-files --gzip SRR11611650.sra
+fasterq-dump --split-files --gzip SRR11611575.sra
+fasterq-dump --split-files --gzip SRR11611574.sra
+fasterq-dump --split-files --gzip SRR11611649.sra
+fasterq-dump --split-files --gzip SRR11611648.sra
+fasterq-dump --split-files --gzip SRR11611647.sra
+fasterq-dump --split-files --gzip SRR11611646.sra
+fasterq-dump --split-files --gzip SRR11611645.sra
+fasterq-dump --split-files --gzip SRR11611573.sra
+fasterq-dump --split-files --gzip SRR11611644.sra
+fasterq-dump --split-files --gzip SRR11611643.sra
+fasterq-dump --split-files --gzip SRR11611642.sra
+fasterq-dump --split-files --gzip SRR11611641.sra
+fasterq-dump --split-files --gzip SRR11611640.sra
+fasterq-dump --split-files --gzip SRR11611639.sra
+fasterq-dump --split-files --gzip SRR11611638.sra
+fasterq-dump --split-files --gzip SRR11611637.sra
+fasterq-dump --split-files --gzip SRR11611636.sra
+fasterq-dump --split-files --gzip SRR11611635.sra
+fasterq-dump --split-files --gzip SRR11611634.sra
+fasterq-dump --split-files --gzip SRR11611633.sra
+fasterq-dump --split-files --gzip SRR11611632.sra
+fasterq-dump --split-files --gzip SRR11611628.sra
+fasterq-dump --split-files --gzip SRR11611627.sra
+fasterq-dump --split-files --gzip SRR11611626.sra
+fasterq-dump --split-files --gzip SRR11611625.sra
+fasterq-dump --split-files --gzip SRR11611572.sra
+fasterq-dump --split-files --gzip SRR11611571.sra
+fasterq-dump --split-files --gzip SRR11611569.sra
+fasterq-dump --split-files --gzip SRR11611568.sra
+fasterq-dump --split-files --gzip SRR11611567.sra
+fasterq-dump --split-files --gzip SRR11611566.sra
+fasterq-dump --split-files --gzip SRR11611565.sra
+fasterq-dump --split-files --gzip SRR11611564.sra
+fasterq-dump --split-files --gzip SRR11611563.sra
+fasterq-dump --split-files --gzip SRR11611562.sra
+fasterq-dump --split-files --gzip SRR11611561.sra
+fasterq-dump --split-files --gzip SRR11611560.sra
+fasterq-dump --split-files --gzip SRR11611559.sra
+fasterq-dump --split-files --gzip SRR11611558.sra
+fasterq-dump --split-files --gzip SRR11611557.sra
+fasterq-dump --split-files --gzip SRR11611552.sra
+fasterq-dump --split-files --gzip SRR11611551.sra
+fasterq-dump --split-files --gzip SRR11611550.sra
+fasterq-dump --split-files --gzip SRR11611553.sra
+fasterq-dump --split-files --gzip SRR11611549.sra
+fasterq-dump --split-files --gzip SRR11611548.sra
+fasterq-dump --split-files --gzip SRR11611547.sra
+fasterq-dump --split-files --gzip SRR11611545.sra
+fasterq-dump --split-files --gzip SRR11611544.sra
+fasterq-dump --split-files --gzip SRR11611543.sra
+fasterq-dump --split-files --gzip SRR11611542.sra
+fasterq-dump --split-files --gzip SRR11611540.sra
+fasterq-dump --split-files --gzip SRR11611546.sra
+fasterq-dump --split-files --gzip SRR11611541.sra
+fasterq-dump --split-files --gzip SRR11611538.sra
+fasterq-dump --split-files --gzip SRR11611537.sra
+fasterq-dump --split-files --gzip SRR11611536.sra
+fasterq-dump --split-files --gzip SRR11611539.sra
+fasterq-dump --split-files --gzip SRR11611535.sra
+fasterq-dump --split-files --gzip SRR11611534.sra
+fasterq-dump --split-files --gzip SRR11611533.sra
+fasterq-dump --split-files --gzip SRR11611532.sra
+fasterq-dump --split-files --gzip SRR11611531.sra
+fasterq-dump --split-files --gzip SRR11611530.sra
+fasterq-dump --split-files --gzip SRR11611529.sra
+fasterq-dump --split-files --gzip SRR11611527.sra
+fasterq-dump --split-files --gzip SRR11611526.sra
+fasterq-dump --split-files --gzip SRR11611528.sra
+fasterq-dump --split-files --gzip SRR11611525.sra
+fasterq-dump --split-files --gzip SRR11611524.sra
+fasterq-dump --split-files --gzip SRR11611523.sra
+fasterq-dump --split-files --gzip SRR11611522.sra
+fasterq-dump --split-files --gzip SRR11611521.sra
+fasterq-dump --split-files --gzip SRR11611520.sra
+fasterq-dump --split-files --gzip SRR11611519.sra
+fasterq-dump --split-files --gzip SRR11611518.sra
+fasterq-dump --split-files --gzip SRR11611517.sra
+fasterq-dump --split-files --gzip SRR11611516.sra
+fasterq-dump --split-files --gzip SRR11611515.sra
+fasterq-dump --split-files --gzip SRR11611512.sra
+fasterq-dump --split-files --gzip SRR11611511.sra
+fasterq-dump --split-files --gzip SRR11611510.sra
+fasterq-dump --split-files --gzip SRR11611509.sra
+fasterq-dump --split-files --gzip SRR11611508.sra
+fasterq-dump --split-files --gzip SRR11611507.sra
+fasterq-dump --split-files --gzip SRR11611506.sra
+fasterq-dump --split-files --gzip SRR11611505.sra
+fasterq-dump --split-files --gzip SRR11611504.sra
+fasterq-dump --split-files --gzip SRR11611503.sra
+fasterq-dump --split-files --gzip SRR11611502.sra
+fasterq-dump --split-files --gzip SRR11611501.sra
+fasterq-dump --split-files --gzip SRR11611500.sra
+fasterq-dump --split-files --gzip SRR11611499.sra
+fasterq-dump --split-files --gzip SRR11611498.sra
+fasterq-dump --split-files --gzip SRR11611497.sra
+fasterq-dump --split-files --gzip SRR11611496.sra
+fasterq-dump --split-files --gzip SRR11611495.sra
+fasterq-dump --split-files --gzip SRR11611494.sra
+fasterq-dump --split-files --gzip SRR11611493.sra
+fasterq-dump --split-files --gzip SRR11611492.sra
+fasterq-dump --split-files --gzip SRR11611514.sra
+fasterq-dump --split-files --gzip SRR11611491.sra
+fasterq-dump --split-files --gzip SRR11611490.sra
+fasterq-dump --split-files --gzip SRR11611488.sra
+fasterq-dump --split-files --gzip SRR11611487.sra
+fasterq-dump --split-files --gzip SRR11611486.sra
+fasterq-dump --split-files --gzip SRR11611485.sra
+fasterq-dump --split-files --gzip SRR11611484.sra
+fasterq-dump --split-files --gzip SRR11611483.sra
+fasterq-dump --split-files --gzip SRR11611482.sra
+fasterq-dump --split-files --gzip SRR11611481.sra
+fasterq-dump --split-files --gzip SRR11611480.sra
+fasterq-dump --split-files --gzip SRR896566.sra
+fasterq-dump --split-files --gzip SRR1799989.sra
+fasterq-dump --split-files --gzip SRR3439406.sra
+fasterq-dump --split-files --gzip SRR3439427.sra
+fasterq-dump --split-files --gzip SRR1588074.sra
+fasterq-dump --split-files --gzip SRR3439425.sra
+fasterq-dump --split-files --gzip SRR1587311.sra
+fasterq-dump --split-files --gzip SRR1801209.sra
+fasterq-dump --split-files --gzip SRR3439408.sra
+fasterq-dump --split-files --gzip SRR1587344.sra
+fasterq-dump --split-files --gzip SRR1801205.sra
+fasterq-dump --split-files --gzip SRR1588089.sra
+fasterq-dump --split-files --gzip SRR1587319.sra
+fasterq-dump --split-files --gzip SRR1588079.sra
+fasterq-dump --split-files --gzip SRR1587374.sra
+fasterq-dump --split-files --gzip SRR1799993.sra
+fasterq-dump --split-files --gzip SRR4132508.sra
+fasterq-dump --split-files --gzip SRR4132510.sra
+fasterq-dump --split-files --gzip SRR4996397.sra
+fasterq-dump --split-files --gzip SRR4996396.sra
+fasterq-dump --split-files --gzip SRR1800047.sra
+fasterq-dump --split-files --gzip SRR1800048.sra
+fasterq-dump --split-files --gzip SRR1798142.sra
+fasterq-dump --split-files --gzip SRR1592621.sra
+fasterq-dump --split-files --gzip SRR16217369.sra
+fasterq-dump --split-files --gzip SRR16217370.sra
+fasterq-dump --split-files --gzip SRR16217371.sra
+fasterq-dump --split-files --gzip SRR16217372.sra
+fasterq-dump --split-files --gzip SRR16217373.sra
+fasterq-dump --split-files --gzip SRR16217376.sra
+fasterq-dump --split-files --gzip SRR16217374.sra
+fasterq-dump --split-files --gzip SRR16217375.sra
+fasterq-dump --split-files --gzip SRR16217377.sra
+fasterq-dump --split-files --gzip SRR16217378.sra
+fasterq-dump --split-files --gzip SRR16217379.sra
+fasterq-dump --split-files --gzip SRR16217380.sra
+fasterq-dump --split-files --gzip SRR16217381.sra
+fasterq-dump --split-files --gzip SRR16217382.sra
+fasterq-dump --split-files --gzip SRR16217383.sra
+fasterq-dump --split-files --gzip SRR16217384.sra
+fasterq-dump --split-files --gzip SRR16217385.sra
+fasterq-dump --split-files --gzip SRR16217388.sra
+fasterq-dump --split-files --gzip SRR16217386.sra
+fasterq-dump --split-files --gzip SRR16217387.sra
+fasterq-dump --split-files --gzip SRR16217389.sra
+fasterq-dump --split-files --gzip SRR16217390.sra
+fasterq-dump --split-files --gzip SRR16217391.sra
+fasterq-dump --split-files --gzip SRR16217392.sra
+fasterq-dump --split-files --gzip SRR16217393.sra
+fasterq-dump --split-files --gzip SRR16217394.sra
+fasterq-dump --split-files --gzip SRR16217395.sra
+fasterq-dump --split-files --gzip SRR16217396.sra
+fasterq-dump --split-files --gzip SRR16217397.sra
+fasterq-dump --split-files --gzip SRR16217400.sra
+fasterq-dump --split-files --gzip SRR16217398.sra
+fasterq-dump --split-files --gzip SRR16217399.sra
+fasterq-dump --split-files --gzip SRR16217401.sra
+fasterq-dump --split-files --gzip SRR16217402.sra
+fasterq-dump --split-files --gzip SRR16217403.sra
+fasterq-dump --split-files --gzip SRR16217404.sra
+fasterq-dump --split-files --gzip SRR16217408.sra
+fasterq-dump --split-files --gzip SRR16217409.sra
+fasterq-dump --split-files --gzip SRR16217412.sra
+fasterq-dump --split-files --gzip SRR16217410.sra
+fasterq-dump --split-files --gzip SRR16217411.sra
+fasterq-dump --split-files --gzip SRR16217413.sra
+fasterq-dump --split-files --gzip SRR16217414.sra
+fasterq-dump --split-files --gzip SRR16217415.sra
+fasterq-dump --split-files --gzip SRR16217416.sra
+fasterq-dump --split-files --gzip SRR16217417.sra
+fasterq-dump --split-files --gzip SRR16217418.sra
+fasterq-dump --split-files --gzip SRR16217419.sra
+fasterq-dump --split-files --gzip SRR16217420.sra
+fasterq-dump --split-files --gzip SRR16217421.sra
+fasterq-dump --split-files --gzip SRR16217424.sra
+fasterq-dump --split-files --gzip SRR16217422.sra
+fasterq-dump --split-files --gzip SRR16217423.sra
+fasterq-dump --split-files --gzip SRR16217425.sra
+fasterq-dump --split-files --gzip SRR16217426.sra
+fasterq-dump --split-files --gzip SRR16217427.sra
+fasterq-dump --split-files --gzip SRR16217428.sra
+fasterq-dump --split-files --gzip SRR16217429.sra
+fasterq-dump --split-files --gzip SRR16217430.sra
+fasterq-dump --split-files --gzip SRR16217431.sra
+fasterq-dump --split-files --gzip SRR16217432.sra
+fasterq-dump --split-files --gzip SRR16217433.sra
+fasterq-dump --split-files --gzip SRR16217436.sra
+fasterq-dump --split-files --gzip SRR16217434.sra
+fasterq-dump --split-files --gzip SRR16217435.sra
+fasterq-dump --split-files --gzip SRR16217437.sra
+fasterq-dump --split-files --gzip SRR16217438.sra
+fasterq-dump --split-files --gzip SRR16217439.sra
