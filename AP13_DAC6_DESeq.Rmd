@@ -5,6 +5,7 @@ date: "2025-10-07"
 output: html_document
 ---
 
+# set up 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
@@ -14,127 +15,164 @@ library(DESeq2)
 library(genefilter)
 library(tidyverse)
 library(WGCNA)
-library(gridExtra)
+library(clusterProfiler)
+library(GO.db)
+library(reshape2)
+library(fs)
 
-setwd("~/Dropbox/LowryLab/data/DE_analyses")
+setwd("~/Dropbox/LowryLab/data")
 ```
+
 
 # read in the data 
 ```{r read in data}
 # read in read counts from HTSeq; 
 # not including the F1's 
 
-# BUWCG <-  read.csv("/Users/coletteberg/Dropbox/LowryLab/data/BUWCG.counts.tsv")
-BUWCU <-  read.csv("~/Dropbox/LowryLab/data/DE_analyses/BUWCU.counts.tsv", sep="\t", header=FALSE, row.names = 1)
-BUWGW <-  read.csv("~/Dropbox/LowryLab/data/DE_analyses/BUWGW.counts.tsv", sep="\t", header=FALSE, row.names = 1)
-#BUWGX <-  read.csv("BUWGX.counts.tsv")
-BUWHN <-  read.csv("~/Dropbox/LowryLab/data/DE_analyses/BUWHN.counts.tsv", sep="\t", header=FALSE, row.names = 1)
-BUWBN <-  read.csv("~/Dropbox/LowryLab/data/DE_analyses/BUWBN.counts.tsv", sep="\t", header=FALSE, row.names = 1)
-BUWBY <-  read.csv("~/Dropbox/LowryLab/data/DE_analyses/BUWBY.counts.tsv", sep="\t", header=FALSE, row.names = 1)
-BUWNS <-  read.csv("~/Dropbox/LowryLab/data/DE_analyses/BUWNS.counts.tsv", sep="\t", header=FALSE, row.names = 1)
-BUWOC <-  read.csv("~/Dropbox/LowryLab/data/DE_analyses/BUWOC.counts.tsv", sep="\t", header=FALSE, row.names = 1)
-BUWOP <-  read.csv("~/Dropbox/LowryLab/data/DE_analyses/BUWOP.counts.tsv", sep="\t", header=FALSE, row.names = 1)
-BUWGG <-  read.csv("~/Dropbox/LowryLab/data/DE_analyses/BUWGG.counts.tsv", sep="\t", header=FALSE, row.names = 1)
-BUWNH <-  read.csv("~/Dropbox/LowryLab/data/DE_analyses/BUWNH.counts.tsv", sep="\t", header=FALSE, row.names = 1)
-BUWOO <-  read.csv("~/Dropbox/LowryLab/data/DE_analyses/BUWOO.counts.tsv", sep="\t", header=FALSE, row.names = 1)
-BUWBH <-  read.csv("~/Dropbox/LowryLab/data/DE_analyses/BUWBH.counts.tsv", sep="\t", header=FALSE, row.names = 1)
-BUWGY <-  read.csv("~/Dropbox/LowryLab/data/DE_analyses/BUWGY.counts.tsv", sep="\t", header=FALSE, row.names = 1)
-BUWHP <-  read.csv("~/Dropbox/LowryLab/data/DE_analyses/BUWHP.counts.tsv", sep="\t", header=FALSE, row.names = 1)
-#BUWBG <-  read.csv("BUWBG.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
-#BUWBU <-  read.csv("BUWBU.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
-#BUWBW <-  read.csv("BUWBW.counts.tsv")
-#BUWCY <-  read.csv("BUWCY.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
-#BUWGO <-  read.csv("BUWGO.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
-#BUWHS <-  read.csv("BUWHS.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
-#BUWHW <-  read.csv("BUWHW.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
-#BUWHY <-  read.csv("BUWHY.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
-#BUWHZ <-  read.csv("BUWHZ.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
-#BUWNA <-  read.csv("BUWNA.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
-#BUWNP <-  read.csv("BUWNP.counts.tsv", sep="\t", header=FALSE, , row.names = 1)
-# BUWNX <-  read.csv("BUWNX.counts.tsv")
+# get a list of all the gene counts files 
+tsv_files <- dir_ls(path = "~/Dropbox/LowryLab/data/HTSeq_Counts_pseudo/", regexp = "\\.tsv$")
 
-# put all of the files together
-all <- cbind(BUWCU,
-BUWGW,
-BUWHN,
-BUWBN,
-BUWBY,
-BUWNS,
-BUWOC,
-BUWOP,
-BUWGG,
-BUWNH,
-BUWOO,
-BUWBH,
-#BUWGY,
-BUWHP)
+# read all of them into one file
+all_data <- read_tsv(tsv_files, id = "file_source", col_names = FALSE) # The 'id' argument adds a column with the filename
 
+# clean up the individual ID column
+all_data$file_source <- gsub("/Users/coletteberg/Dropbox/LowryLab/data/HTSeq_Counts_pseudo/", "", all_data$file_source)
+all_data$file_source <- gsub(".geneID.counts.tsv", "", all_data$file_source)
 
-# set the colnames
-colnames(all) <- c("AP13_KBSM_1",
-"AP13_KBSM_2",
-"AP13_KBSM_3",
-"AP13_PKLE_1",
-"AP13_PKLE_2",
-"AP13_PKLE_3",
-"AP13_PKLE_4",
-"AP13_PKLE_5",
-"DAC6_KBSM_1",
-"DAC6_KBSM_2",
-"DAC6_KBSM_3",
-"DAC6_PKLE_1",
-#"DAC6_PKLE_2",
-"DAC6_PKLE_3")
+# clean up the gene ID column
+all_data$X1 <- gsub(".v6.1", "", all_data$X1)
 
+# now add a genome column by string-splitting
+allData_sep <- separate_wider_delim(all_data, X1, delim="_", names=c("Genome", "Gene"), too_many = "debug")
+allData_clean <- filter(allData_sep, X1_pieces == 2)
 
-# read sample data 
-colData <- read.csv("~/Dropbox/LowryLab/data/DE_analyses/sampleDat_noF1_1.csv",
-                    row.names = 1)
+# split by genome
+AP13_counts <- filter(dplyr::select(allData_clean, -X1_ok, -X1_pieces, -X1_remainder, -X1), Genome == "AP13")
+DAC6_counts <- filter(dplyr::select(allData_clean, -X1_ok, -X1_pieces, -X1_remainder, -X1), Genome == "DAC6")
+
+# clean up count column
+AP13_counts  <- rename(AP13_counts, AP13_count = X2)
+DAC6_counts  <- rename(DAC6_counts, DAC6_count = X2)
+
+# paste together
+both_counts <- cbind(AP13_counts, dplyr::select(DAC6_counts, DAC6_count))
+
+# sum up the counts
+both_counts <- mutate(both_counts, counts = AP13_count + DAC6_count)
+
+# keep the necessary columns
+counts_clean_long <- dplyr::select(both_counts, file_source, Gene, counts)
+
+# clean up name 
+counts_clean_long <- rename(counts_clean_long, indv = file_source)
+
+# pivot wider 
+counts_wide <- pivot_wider(counts_clean_long, names_from=indv, values_from=counts)
+
+# read in metadata 
+metaData <- read.csv("/Users/coletteberg/Dropbox/LowryLab/Pvirgatum.fourWay.RNAseq.libraryInfo.txt", sep="\t")
+
+# format wide dataframe for filtering
+counts_wide <- as.data.frame(counts_wide)
+rownames(counts_wide) <- counts_wide$Gene
+
+# transpose
+counts_t <- as.data.frame(t(dplyr::select(counts_wide, -Gene)))
+
+# paste together metadata and counts
+meta_counts <- cbind(metaData, counts_t)
+
+# only keep AP13, DAC, and F1's 
+A_D <- filter(meta_counts, genotype == "AP13" | genotype == "DAC6" | genotype == "AxD_F1")
+
+# change rownames to sample names 
+rownames(A_D) <- A_D$Sample
+
+# cleanup
+AD_clean <- dplyr::select(A_D, -Library, -habitat, -genotype, -SRA.run, -SRA.study, -Sample)
+
+# save colData for later
+colData <- dplyr::select(A_D, habitat, genotype)
+
+# transpose for next steps
+AD_t <- as.data.frame(t(AD_clean))
+
+# calc median
+AD_t$median = apply(AD_t, 1, median, na.rm=T)
+
+# only keep genes w/median expression > 3
+AD_filt <- dplyr::select(filter(AD_t, median > 3), -median)
+
+# write the data.
+write.csv(AD_filt, "~/Dropbox/LowryLab/data/filtered_AP13_DAC6_RNA.csv")
+write.csv(colData, "~/Dropbox/LowryLab/data/filtered_AP13_DAC6_RNA_metadata.csv")
+```
+
+# filter to just genotypes of interest 
+
+```{r AP13 and DAC6 only}
+
+# only keeping AP13 and DAC in MI and TX; removing DAC TX 3 bc it's a contaminant
+
+# reformatting counts
+AP_DAC <- dplyr::select(AD_filt, 
+              PKLE_DAC_1,
+              PKLE_AP13_1,
+              PKLE_AP13_2,
+              KBSM_AP13_1,
+              KBSM_AP13_2,
+              KBSM_DAC_1,
+              KBSM_AP13_3,
+              KBSM_AP13_4,
+              KBSM_AP13_5,
+              PKLE_DAC_4,
+              KBSM_DAC_2,
+              PKLE_AP13_3,
+              PKLE_AP13_4,
+              KBSM_DAC_3,
+              PKLE_AP13_5)
+
+# reformatting col Data
+colData_AP_DAC <- filter(colData, 
+       habitat == "KBSM" |
+      habitat == "PKLE", 
+      genotype == "DAC6" |
+      genotype == "AP13") %>% slice(-9)
 
 ```
+
 
 # run DESeq (make dds object)
 ```{r make a DESeq object}
 # format for DESeq 
-# the first model includes genotype, habitat, and their interaction 
-dds <- DESeqDataSetFromMatrix(countData = all,
-                              colData = colData,
+
+dds <- DESeqDataSetFromMatrix(countData = AP_DAC,
+                              colData = colData_AP_DAC,
                               design =  ~ habitat + genotype + habitat:genotype)
 
 ```
 
 # filter the DDS object
-```{r filter}
-
-
-
-# filter for each (all model, hab only, gen only)
-
-keep <- rowSums(counts(dds) >= 10) >= 2
+```{r filtering}
+smallestGroupSize <- 2
+keep <- rowSums(counts(dds) >= 10) >= smallestGroupSize
 dds <- dds[keep,]
+ 
 
 ```
 
-
-# normalize
-```{r normalize }
-
-# running deseq for habitat only
+# normalize & run DESeq
+```{r normalize & run}
+# running deseq 
 dds <- DESeq(dds)
+
+# running VSD
 vsd <- varianceStabilizingTransformation(dds)
 
-```
-
-```{r}
-res_genotype <- results(dds, contrast=c("genotype","AP13","DAC6"))
-
-res_habitat <- results(dds, contrast=c("habitat","KBSM","PKLE"))
 
 ```
-
 
 # PCA plot of gene expression to vet samples
-
 ```{r PCA of genotypes}
 
 pcaData <- plotPCA(vsd, intgroup=c("habitat", "genotype"), returnData=TRUE)
@@ -144,61 +182,142 @@ ggplot(pcaData, aes(PC1, PC2, color=habitat, shape=genotype)) +
   xlab(paste0("PC1: ",percentVar[1],"% variance")) +
   ylab(paste0("PC2: ",percentVar[2],"% variance")) + 
   coord_fixed() +
-  theme_bw()
-```
-# plotting differential gene expression 
+  theme_bw() 
 
-```{r volcano plots}
-
-
-# DE based on genotype
-gen_DE <- ggplot(res_genotype,
-       aes(x=log2FoldChange,
-           y=-log10(padj))) +
-  geom_point(size = 0.35) +
-  theme_bw() +
-  ggtitle("AP13 vs DAC6 DE")
-
-# DE based on habitat
-hab_DE <- ggplot(res_habitat,
-       aes(x=log2FoldChange,
-           y=-log10(padj))) +
-  geom_point(size = 0.35) +
-  theme_bw() +
-  theme(legend.position = "none") +
-  ggtitle("MI vs TX DE")
-
-
-# putting the two plots together
-grid.arrange(gen_DE,
-             hab_DE,
-             nrow=1)
 
 ```
 
+# export DE gene data 
+```{r export }
+# create and edit habitat contrast df
+results_habitat <- as.data.frame(results(dds, name="habitat_PKLE_vs_KBSM"))
+results_habitat$diffexpressed <- "NO"
+results_habitat$diffexpressed[results_habitat$log2FoldChange > 1 & results_habitat$padj < 0.05] <- "UP"
+results_habitat$diffexpressed[results_habitat$log2FoldChange < -1 & results_habitat$padj < 0.05] <- "DOWN"
 
-```{r prep for WGCNA}
-# just doing WGCNA on the whole model (genotype, habitat, their interaction)
+# create and edit genotype contrast df
+results_genotype <- as.data.frame(results(dds, name="genotype_DAC6_vs_AP13"))
+results_genotype$diffexpressed <- "NO"
+results_genotype$diffexpressed[results_genotype$log2FoldChange > 1 & results_genotype$padj < 0.05] <- "UP"
+results_genotype$diffexpressed[results_genotype$log2FoldChange < -1 & results_genotype$padj < 0.05] <- "DOWN"
 
-# extract the normalized data 
+# create and edit full model contrast df
+results_full <- as.data.frame(results(dds))
+results_full$diffexpressed <- "NO"
+results_full$diffexpressed[results_full$log2FoldChange > 1 & results_full$padj < 0.05] <- "UP"
+results_full$diffexpressed[results_full$log2FoldChange < -1 & results_full$padj < 0.05] <- "DOWN"
+
+
+write.csv(results_habitat, "~/Dropbox/LowryLab/data/DE_analyses/KBSM_PKLE_DE.csv")
+write.csv(results_genotype, "~/Dropbox/LowryLab/data/DE_analyses/AP13_DAC6_DE.csv")
+write.csv(results_full, "~/Dropbox/LowryLab/data/DE_analyses/full_DE.csv")
+
+# get number of DE genes 
+filter(results_full, padj < 0.05, diffexpressed == "DOWN" | diffexpressed == "UP")
+
+```
+
+# make volcano plot of DE genes
+```{r volcano plot}
+
+# this can be done multiple times, for each of the models 
+ggplot(results_full, aes(x = log2FoldChange, y = -log10(padj), col = diffexpressed)) +
+  geom_point() +
+  theme_minimal() +
+  scale_color_manual(values = c("NO" = "grey", "UP" = "red", "DOWN" = "blue")) +
+  labs(title = "Full Model DE", x = "Log2 Fold Change", y = "-Log10 Adjusted P-value") +
+  geom_vline(xintercept = c(-1, 1), col = "grey") + # Add vertical lines for LFC threshold
+  geom_hline(yintercept = -log10(0.05), col = "grey") # Add horizontal line for p-value threshold
+
+```
+
+
+# upload necessary data for GO analyses 
+```{r upload GO terms}
+# read in the genes with GO terms from the annotation 
+Pvirg_GOterms <- read.csv("~/Dropbox/LowryLab/Pavir_GOterms_multiple.csv")
+
+# melt to make longer
+longer_GOterms <- unique(melt(Pvirg_GOterms,
+     id.vars=c("locusName")))
+
+# convert to clusterProfiler format
+GOterms_mult  <- as.data.frame(cbind(longer_GOterms$value,
+                    longer_GOterms$locusName))
+
+# extract names of GO terms
+# Extract a named vector of all GO terms and their names
+goterms <- Term(GOTERM)
+
+# Convert to a data frame for easier use
+term2name <- data.frame("GOID" = names(goterms), "term" = goterms)
+
+```
+
+# format DE genes for GO term analyses
+```{r format for GO}
+
+results_full$gene <- gsub(".v6.1", "", rownames(results_full))
+results_genotype$gene <- gsub(".v6.1", "", rownames(results_genotype))
+results_habitat$gene <- gsub(".v6.1", "", rownames(results_habitat))
+
+```
+
+# go analysis of DE genes 
+```{r run GO analyses of DE genes}
+
+# full model DE
+fullMod <- enricher(as.vector(filter(results_full, diffexpressed!="NO")$gene), 
+         pvalueCutoff = 0.05, 
+         pAdjustMethod = "BH", 
+         minGSSize = 10, 
+         maxGSSize = 500, qvalueCutoff = 0.2,
+         TERM2GENE=GOterms_mult, TERM2NAME = term2name)
+
+# habitat DE
+habMod <- enricher(as.vector(filter(results_habitat, diffexpressed!="NO")$gene), 
+         pvalueCutoff = 0.05, 
+         pAdjustMethod = "BH", 
+         minGSSize = 10, 
+         maxGSSize = 500, qvalueCutoff = 0.2,
+         TERM2GENE=GOterms_mult, TERM2NAME = term2name)
+
+# genotype DE 
+genMod <- enricher(as.vector(filter(results_genotype, diffexpressed!="NO")$gene), 
+         pvalueCutoff = 0.05, 
+         pAdjustMethod = "BH", 
+         minGSSize = 10, 
+         maxGSSize = 500, qvalueCutoff = 0.2,
+         TERM2GENE=GOterms_mult, TERM2NAME = term2name)
+
+# write the results
+write.csv(as.data.frame(fullMod@result), "~/Dropbox/LowryLab/data/DE_analyses/GO_full_DE.csv")
+write.csv(as.data.frame(habMod@result), "~/Dropbox/LowryLab/data/DE_analyses/GO_habitat_DE.csv")
+write.csv(as.data.frame(genMod@result), "~/Dropbox/LowryLab/data/DE_analyses/GO_genotype_DE.csv")
+
+dotplot(fullMod)
+
+
+```
+
+
+# prep for WGCNA
+```{r WGCNA prep}
+
+# extract the normalized data for WGCNA and format 
 wpn_vsd <- getVarianceStabilizedData(dds)
 rv_wpn <- rowVars(wpn_vsd)
 
-# Extracting the 5% most differentiated genes
-# q95_wpn <- quantile( rowVars(wpn_vsd), .05) 
+# transpose
+input_mat_all = t(wpn_vsd)
 
-# set the row variables
-# expr_normalized <- wpn_vsd[ rv_wpn > q95_wpn, ]
-
-# format for WGCNA
-input_mat = t(wpn_vsd)
+write.csv(wpn_vsd, "~/Dropbox/LowryLab/data/AP13_DAC6_vsdNorm.csv")
 
 ```
 
 
-# pick the power level for WGCNA
-
-```{r WGCNA picking power}
+# pick the power level & run WGCNA for all genes; choose top hub genes  
+```{r WGCNA all genes pick power and run}
 
 allowWGCNAThreads()
 
@@ -208,8 +327,8 @@ powers = c(c(1:10), seq(from = 12, to = 20, by = 2))
 
 # Call the network topology analysis function
 sft = pickSoftThreshold(
-  input_mat,             # <= Input data
-  #blockSize = 30,
+  input_mat_all,             # <= Input data
+  blockSize = 3000,
   powerVector = powers,
   verbose = 5
   )
@@ -225,160 +344,104 @@ plot(sft$fitIndices[, 1],
      ylab = "Scale Free Topology Model Fit, signed R^2",
      main = paste("Scale independence")
 )
-     
-```
 
-# run the heavy WGCNA analysis
-```{r WGCNA analysis }
-picked_power = 12
+picked_power = 5
 temp_cor <- cor
 cor <- WGCNA::cor
 
+```
 
-netwk <- blockwiseModules(input_mat,                # <= input here
+```{r netwk call}
 
-                          # == Adjacency Function ==
-                          power = picked_power,                # <= power here
+# generate the network
+netwk_all <- blockwiseModules(input_mat_all,       
+                          power = picked_power,           
                           networkType = "signed",
-
-                          # == Tree and Block Options ==
                           deepSplit = 2,
                           pamRespectsDendro = F,
-                          # detectCutHeight = 0.75,
-                          minModuleSize = 50,
+                          minModuleSize = 100,
                           maxBlockSize = 4000,
-
-                          # == Module Adjustments ==
                           reassignThreshold = 0,
-                          mergeCutHeight = 0.25,
-
-                          # == TOM == Archive the run results in TOM file (saves time)
+                          mergeCutHeight = 0.3,
                           saveTOMs = T,
                           saveTOMFileBase = "ER",
-
-                          # == Output Options
-                          numericLabels = T,
+                          numericLabels = F,
                           verbose = 3)
 
 
+
+
+# print the network so you get the number of modules
+summary(as.factor(netwk_all$colors))
+
+# calc the number of genes in each module with the cut height of 0.3
+
+# format the data frame
+names_cols <- as.data.frame(netwk_all$colors)
+names_cols$gene <- rownames(names_cols)
+
+# plot
+ggplot(names_cols,
+       aes(x = `netwk_all$colors`)) + 
+  geom_bar()
+
+
+# choose top hub gene
+chooseTopHubInEachModule(
+   input_mat_all, 
+   netwk_all$colors, 
+   power = picked_power)
 ```
 
-# dynamic tree cutting
-```{r dynamic tree cutting}
 
-softPower = 12 #Chosen in the graphs before
-adjacency = adjacency(input_mat, power = softPower, type = "unsigned") #Calculating the adjacency matrix
-#help(adjacency )
-
-mem.maxVSize()
-```
-
-
-
-# plot the WGCNA dendrogram
-
-```{r WGCNA plotting dendrogram}
+# plot WGCNA for all genes
+```{r plot WGCNA all }
  # Convert labels to colors for plotting
-mergedColors = labels2colors(netwk$colors)
+
+
+mergedColors_all = labels2colors(netwk_all$colors)
+
+# using a higher cut height to merge into a more manageable number of modules
+# this is old so I'm commenting it out
+# mergeNet <- mergeCloseModules(input_mat_all, mergedColors_all, cutHeight=0.3)
+# mergeCols <- labels2colors(mergeNet$colors)
+
 # Plot the dendrogram and the module colors underneath
 plotDendroAndColors(
-  netwk$dendrograms[[1]],
-  mergedColors[netwk$blockGenes[[1]]],
+  netwk_all$dendrograms[[1]],
+  mergedColors_all[netwk_all$blockGenes[[1]]],
   "Module colors",
   dendroLabels = FALSE,
   hang = 0.03,
   addGuide = TRUE,
   guideHang = 0.05 )
 
-MEList <- moduleEigengenes(input_mat, colors = mergedColors)
-MEs <- MEList$eigengenes
-
-# Calculate dissimilarity of module eigengenes
-MEDiss <- 1 - cor(MEs)
-# Cluster module eigengenes
-METree <- hclust(as.dist(MEDiss), method = "average")
-
-MEDissThres <- 0.25
-
-# merging similar modules 
-merge <- mergeCloseModules(input_mat, mergedColors, cutHeight = MEDissThres, verbose = 3)
-
-
-# The merged module colors
-mergedColors <- merge$colors
-
-# Eigengenes of the new merged modules
-mergedMEs <- merge$newMEs
-
-MEs0 <- orderMEs(MEs0)
-module_order = names(mergedMEs) %>% gsub("ME","", .)
-
-# Add treatment names
-mergedMEs$treatment = row.names(mergedMEs)
-
-# tidy & plot data
-mME = mergedMEs %>%
-  pivot_longer(-treatment) %>%
-  mutate(
-    name = gsub("ME", "", name),
-    name = factor(name, levels = module_order)
-  )
-
-mME %>% ggplot(., aes(x=treatment, y=name, fill=value)) +
-  geom_tile() +
-  theme_bw() +
-  scale_fill_gradient2(
-    low = "blue",
-    high = "red",
-    mid = "white",
-    midpoint = 0,
-    limit = c(-1,1)) +
-  theme(axis.text.x = element_text(angle=90)) +
-  labs(title = "Module-trait Relationships", y = "Modules", fill="corr")
-
-
-mME = mergedMEs %>%
-  pivot_longer(-treatment) %>%
-  mutate(
-    name = gsub("ME", "", name),
-    name = factor(name, levels = module_order)
-  )
-
-# make 
-```
-
-# plot the WGCNA module heat map 
-
-```{r WGCNA plotting heat map of modules}
 module_df <- data.frame(
-  gene_id = names(netwk$colors),
-  colors = labels2colors(netwk$colors)
+  gene_id = names(netwk_all$colors),
+  colors = labels2colors(netwk_all$colors)
 )
 
-
-write_delim(module_df,
-            file = "gene_modules.txt",
-            delim = "\t")
-
+ 
 # Get Module Eigengenes per cluster
-MEs0 <- moduleEigengenes(input_mat, mergedColors)$eigengenes
+MEs0_all <- moduleEigengenes(input_mat_all, netwk_all$colors)$eigengenes
 
 # Reorder modules so similar modules are next to each other
-MEs0 <- orderMEs(MEs0)
-module_order = names(MEs0) %>% gsub("ME","", .)
+MEs0_all <- orderMEs(MEs0_all)
+module_order_all = names(MEs0_all) %>% gsub("ME","", .)
 
 # Add treatment names
-MEs0$treatment = row.names(MEs0)
+MEs0_all$treatment = row.names(MEs0_all)
 
-# tidy & plot data
-mME = MEs0 %>%
+# tidy data
+mME_all = MEs0_all %>%
   pivot_longer(-treatment) %>%
   mutate(
     name = gsub("ME", "", name),
-    name = factor(name, levels = module_order)
+    name = factor(name, levels = module_order_all)
   )
 
-mME %>% ggplot(., aes(x=treatment, y=name, fill=value)) +
+# plot data 
+mME_all %>% ggplot(., aes(x=treatment, y=name, fill=value)) +
   geom_tile() +
   theme_bw() +
   scale_fill_gradient2(
@@ -389,228 +452,99 @@ mME %>% ggplot(., aes(x=treatment, y=name, fill=value)) +
     limit = c(-1,1)) +
   theme(axis.text.x = element_text(angle=90)) +
   labs(title = "Module-trait Relationships", y = "Modules", fill="corr")
-```
-
-```{r get module expression value}
-# pick out a few modules of interest here
-modules_of_interest = c("turquoise", "yellow")
-
-# Pull out list of genes in that module
-submod = module_df %>%
-  subset(colors %in% modules_of_interest)
-
-row.names(module_df) = module_df$gene_id
-
-# Get normalized expression for those genes
-
-subexpr = wpn_vsd[submod$gene_id,]
-
-submod_df = data.frame(subexpr) %>%
-  mutate(
-    gene_id = row.names(.)
-  ) %>%
-  pivot_longer(-gene_id) %>%
-  mutate(
-    module = module_df[gene_id,]$colors
-  )
-
-submod_df
-
-ggplot(filter(submod_df),
-              aes(x=name, y=value)) +
-  geom_boxplot() +
-  theme_bw() +
-  theme(
-    axis.text.x = element_text(angle = 90)
-  ) +
-  facet_grid(rows = vars(module)) +
-  labs(x = "treatment",
-       y = "normalized expression") +
-  facet_wrap(~module) + ylim(3,12)
-
-write.csv(submod_df, "submod_geneExp.csv")
-
-dat <- read.csv("submod_geneExp.csv")
-
-ggplot(filter(dat, module == "turquoise" | module == "yellow"),
-       aes(x = name,
-           y = value,
-           col = hab)) + 
-  geom_boxplot() +
-  facet_wrap(~module) +
-  ylim(3.5,12) + 
-  theme_bw() +
-  scale_color_manual(values = c("darkorange",
-                                "darkgreen"))
 
 ```
 
+# formatting WGCNA output for GO analyses
+```{r formatting module output}
 
+modules_all <- as.data.frame(netwk_all$colors)
+modules_all$gene <- gsub(".v6.1", "", rownames(modules_all))
+modules_all$color <- modules_all$`netwk_all$colors`
 
-# identify the genes with the highest hub membership (from David's code)
-
-```{r hub gene identification}
-
-```
-
-# ASE time 
-```{r ASE time}
-# read in the outputs from GATK
-KBSM_AxD_1 <- read.csv("~/Dropbox/LowryLab/data/ASE/BUWBG.table", sep = "\t")
-KBSM_AxD_2 <- read.csv("~/Dropbox/LowryLab/data/ASE/BUWBU.table", sep = "\t")
-#KBSM_AxD_3 <- read.csv("~/Dropbox/LowryLab/data/ASE/BUWBW.table", sep = "\t")
-KBSM_AxD_4 <- read.csv("~/Dropbox/LowryLab/data/ASE/BUWHW.table", sep = "\t")
-KBSM_AxD_5 <- read.csv("~/Dropbox/LowryLab/data/ASE/BUWHY.table", sep = "\t")
-KBSM_AxD_6 <- read.csv("~/Dropbox/LowryLab/data/ASE/BUWNX.table", sep = "\t")
-PKLE_AxD_1 <- read.csv("~/Dropbox/LowryLab/data/ASE/BUWCY.table", sep = "\t")
-PKLE_AxD_2 <- read.csv("~/Dropbox/LowryLab/data/ASE/BUWGO.table", sep = "\t")
-PKLE_AxD_3 <- read.csv("~/Dropbox/LowryLab/data/ASE/BUWHS.table", sep = "\t")
-PKLE_AxD_4 <- read.csv("~/Dropbox/LowryLab/data/ASE/BUWHZ.table", sep = "\t")
-PKLE_AxD_5 <- read.csv("~/Dropbox/LowryLab/data/ASE/BUWNA.table", sep = "\t")
-PKLE_AxD_6 <- read.csv("~/Dropbox/LowryLab/data/ASE/BUWNP.table", sep = "\t")
-
-# filter to only include sites with sufficient depth to test for ASE 
-# KBSM
-KBSM_AxD_1_filt <- filter(KBSM_AxD_1, totalCount > 30, totalCount < 300)
-KBSM_AxD_2_filt <- filter(KBSM_AxD_2, totalCount > 30, totalCount < 300)
-KBSM_AxD_4_filt <- filter(KBSM_AxD_4, totalCount > 30, totalCount < 300)
-KBSM_AxD_5_filt <- filter(KBSM_AxD_5, totalCount > 30, totalCount < 300)
-KBSM_AxD_6_filt <- filter(KBSM_AxD_6, totalCount > 30, totalCount < 300)
-
-# PKLE
-PKLE_AxD_1_filt <- filter(PKLE_AxD_1, totalCount > 30, totalCount < 300)
-PKLE_AxD_2_filt <- filter(PKLE_AxD_2, totalCount > 30, totalCount < 300)
-PKLE_AxD_3_filt <- filter(PKLE_AxD_3, totalCount > 30, totalCount < 300)
-PKLE_AxD_4_filt <- filter(PKLE_AxD_4, totalCount> 30, totalCount < 300)
-PKLE_AxD_5_filt <- filter(PKLE_AxD_5, totalCount > 30, totalCount < 300)
-PKLE_AxD_6_filt <- filter(PKLE_AxD_6, totalCount > 30, totalCount < 300)
-
-
-```
-
-```{r binomial test }
-
-# MI sample 1
-KBSM_F1_1_tested <- KBSM_AxD_1_filt %>%
-  rowwise() %>%
-  mutate(p_value = binom.test(refCount, totalCount, p = 0.5)$p.value) %>%
-  ungroup() # 
-
-# MI sample 2
-KBSM_F1_2_tested <- KBSM_AxD_2_filt %>%
-  rowwise() %>%
-  mutate(p_value = binom.test(refCount, totalCount, p = 0.5)$p.value) %>%
-  ungroup() # 
-
-# MI sample 3
-KBSM_F1_4_tested <- KBSM_AxD_4_filt %>%
-  rowwise() %>%
-  mutate(p_value = binom.test(refCount, totalCount, p = 0.5)$p.value) %>%
-  ungroup() # 
-
-# MI sample 4 
-KBSM_F1_5_tested <- KBSM_AxD_5_filt %>%
-  rowwise() %>%
-  mutate(p_value = binom.test(refCount, totalCount, p = 0.5)$p.value) %>%
-  ungroup() # 
-
-# MI sample 5 
-KBSM_F1_6_tested <- KBSM_AxD_6_filt %>%
-  rowwise() %>%
-  mutate(p_value = binom.test(refCount, totalCount, p = 0.5)$p.value) %>%
-  ungroup() # 
-
-
-# TX sample 1 
-PKLE_F1_1_tested <- PKLE_AxD_1_filt %>%
-  rowwise() %>%
-  mutate(p_value = binom.test(refCount, totalCount, p = 0.5)$p.value) %>%
-  ungroup() # 
-
-# TX sample 2
-PKLE_F1_2_tested <- PKLE_AxD_2_filt %>%
-  rowwise() %>%
-  mutate(p_value = binom.test(refCount, totalCount, p = 0.5)$p.value) %>%
-  ungroup() # 
-
-# TX sample 3
-PKLE_F1_3_tested <- PKLE_AxD_3_filt %>%
-  rowwise() %>%
-  mutate(p_value = binom.test(refCount, totalCount, p = 0.5)$p.value) %>%
-  ungroup() # 
-
-# TX sample 4
-PKLE_F1_4_tested <- PKLE_AxD_4_filt %>%
-  rowwise() %>%
-  mutate(p_value = binom.test(refCount, totalCount, p = 0.5)$p.value) %>%
-  ungroup() # 
-
-# TX sample 5
-PKLE_F1_5_tested <- PKLE_AxD_5_filt %>%
-  rowwise() %>%
-  mutate(p_value = binom.test(refCount, totalCount, p = 0.5)$p.value) %>%
-  ungroup() # 
-
-# TX sample 6
-PKLE_F1_6_tested <- PKLE_AxD_6_filt %>%
-  rowwise() %>%
-  mutate(p_value = binom.test(refCount, totalCount, p = 0.5)$p.value) %>%
-  ungroup() # 
-
-class(KBSM_AxD_1_filt$totalCount)
-class(KBSM_AxD_1_filt$refCount)
-
-ggplot(KBSM_F1_2_tested,
-       aes(x = position,
-           y = -log10(p_value))) + 
-  facet_wrap(~contig) + 
-  geom_point()
-
-filter(PKLE_F1_6_tested, p_value < 0.0001)
-
-filter(PKLE_F1_5_tested, p_value < 0.0001)
-
-
-# find sites that demonstrate ASE in all 5 replicates 
-#Reduce(intersect(
-  
-intersect(list(dplyr::select(filter(PKLE_F1_6_tested, p_value < 0.0001), contig, position),
-          dplyr::select(filter(PKLE_F1_5_tested, p_value < 0.0001), contig, position),
-          dplyr::select(filter(PKLE_F1_4_tested, p_value < 0.0001), contig, position),
-          dplyr::select(filter(PKLE_F1_3_tested, p_value < 0.0001), contig, position),
-          dplyr::select(filter(PKLE_F1_2_tested, p_value < 0.0001), contig, position),
-          dplyr::select(filter(PKLE_F1_1_tested, p_value < 0.0001), contig, position)))
-         
 ```
 
 ```{r}
-KBSM_F1_1_refBias <- filter(KBSM_F1_1_tested, 
-       p_value < 0.0000000001,
-       refCount > altCount)
+mME_all %>% ggplot(., aes(x=treatment, y=name, fill=value)) +
+  geom_tile() +
+  theme_bw() +
+  scale_fill_gradient2(
+    low = "blue",
+    high = "red",
+    mid = "white",
+    midpoint = 0,
+    limit = c(-1,1)) +
+  theme(axis.text.x = element_text(angle=90)) +
+  labs(title = "Module-trait Relationships", y = "Modules", fill="corr")
 
-KBSM_F1_1_altBias <- filter(KBSM_F1_1_tested, 
-       p_value < 0.0000000001,
-       refCount < altCount)
 
-PKLE_F1_1_refBias 
+plotDendroAndColors(
+  netwk_all$dendrograms[[1]],
+  mergedColors[netwk_all$blockGenes[[1]]],
+  "Module colors",
+  dendroLabels = FALSE,
+  hang = 0.03,
+  addGuide = TRUE,
+  guideHang = 0.05 )
+```
 
-PKLE_F1_1_altBias
-KBSM_F1_1_altBias
-KBSM_F1_1_refBias
+# GO analyses for the modules (0.05% of genes)
+```{r run GO analyses of 5% modules}
+greenMod <- enricher(as.vector(filter(modules_0.05, color == "green")$gene), 
+         pvalueCutoff = 0.05, 
+         pAdjustMethod = "BH", 
+         minGSSize = 10, 
+         maxGSSize = 500, qvalueCutoff = 0.2,
+         TERM2GENE=GOterms_mult, TERM2NAME = term2name)
 
-KBS_alt <- ggplot(KBSM_F1_1_altBias,
-       aes(x = position, 
-           y = contig)) +
-  geom_point()  + 
-  ggtitle("ASE biased to alternate allele, KBSM AxD F1")
+brownMod <- enricher(as.vector(filter(modules_0.05, color == "brown")$gene), 
+         pvalueCutoff = 0.05, 
+         pAdjustMethod = "BH", 
+         minGSSize = 10, 
+         maxGSSize = 500, qvalueCutoff = 0.2,
+         TERM2GENE=GOterms_mult, TERM2NAME = term2name)
 
-KBS_ref <- ggplot(KBSM_F1_1_refBias,
-       aes(x = position, 
-           y = contig)) +
-  geom_point() + 
-  ggtitle("ASE biased to reference allele, KBSM AxD F1")
+turquoiseMod <- enricher(as.vector(filter(modules_0.05, color == "turquoise")$gene), 
+         pvalueCutoff = 0.05, 
+         pAdjustMethod = "BH", 
+         minGSSize = 10, 
+         maxGSSize = 500, qvalueCutoff = 0.2,
+         TERM2GENE=GOterms_mult, TERM2NAME = term2name)
 
-grid.arrange(KBS_alt, KBS_ref, nrow = 1)
+yellowMod <- enricher(as.vector(filter(modules_0.05, color == "yellow")$gene), 
+         pvalueCutoff = 0.05, 
+         pAdjustMethod = "BH", 
+         minGSSize = 10, 
+         maxGSSize = 500, qvalueCutoff = 0.2,
+         TERM2GENE=GOterms_mult, TERM2NAME = term2name)
+
+blueMod <- enricher(as.vector(filter(modules_0.05, color == "blue")$gene), 
+         pvalueCutoff = 0.05, 
+         pAdjustMethod = "BH", 
+         minGSSize = 10, 
+         maxGSSize = 500, qvalueCutoff = 0.2,
+         TERM2GENE=GOterms_mult, TERM2NAME = term2name)
+
+
+
+dotplot(turquoiseMod) + ggtitle("turquoise module")
+
+# habitat associated modules 
+dotplot(yellowMod) + ggtitle("yellow module")
+dotplot(greenMod) + ggtitle("green module")
+dotplot(blueMod) + ggtitle("blue module")
+```
+
+# GO analyses for modules (all genes)
+```{r}
+Mod_allGenes <- enricher(as.vector(filter(modules_all, color == "green")$gene), 
+         pvalueCutoff = 0.05, 
+         pAdjustMethod = "BH", 
+         minGSSize = 10, 
+         maxGSSize = 500, qvalueCutoff = 0.2,
+         TERM2GENE=test_mult, TERM2NAME = term2name)
+
+dotplot(Mod_allGenes)
 
 
 ```

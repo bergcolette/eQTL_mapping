@@ -37,26 +37,142 @@ base.dir = find.package("MatrixEQTL")
 # read in the raw data
 expressionData <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/expression/switchgrass_diversityPanel_rawCounts.txt", sep="\t")
 
+```
+
+
+# simplified transformation
+```{r norm transform}
+
+# trying this simple norm / transform from the Saunak Sen lab 
+
+expressionData$sum <- rowSums(dplyr::select(expressionData, -GeneID))
+expressionData$row_median <- as.numeric(apply(dplyr::select(expressionData, -GeneID), 1, median, na.rm=TRUE))
+
+exp_filt <- filter(expressionData, row_median > 3)
+rownames(exp_filt) <- exp_filt$GeneID
+exp_filt <- dplyr::select(exp_filt, -GeneID, -sum, -row_median)
+
+# dividing every value by the rowSum
+size_norm <- apply(exp_filt, 1, function(i) i/sum(i))
+
+norm_transform <- as.data.frame(sqrt(size_norm))
+
 
 ```
+
 
 ## transpose expression data, add SRR ID's & pop info
 ```{r transposing & adding SRR id's to the normalized data}
+# read in updated metadata sheet 
+metadat <- read.csv("~/Dropbox/LowryLab/data/RNA_IDs_SRR.csv")
+
+# put the expression and the metadata together
+exp_plus_SRR <- cbind(metadat, norm_transform)
+
+# filter out NAs 
+full_filt <- filter(exp_plus_SRR, SRR_ID != "NA")
+
+# split by habitat
+M <- filter(full_filt, Habitat == "M")
+P <- filter(full_filt, Habitat == "P")
+
+# filter to the indvs. present in both habitats
+M_filt <- filter(M, SRR_ID %in% intersect(M$SRR_ID, P$SRR_ID))
+P_filt <- filter(P, SRR_ID %in% intersect(M$SRR_ID, P$SRR_ID))
+
+# sort 
+M_sort <- arrange(M_filt, SRR_ID)
+P_sort <- arrange(P_filt, SRR_ID)
+
+# now they are in the same order so you can subtract the difference 
+diff_dat <- (dplyr::select(M_sort, -RNA_ID, -SRR_ID, -Habitat, -Population) -
+             dplyr::select(P_sort, -RNA_ID, -SRR_ID, -Habitat, -Population))
+
+# add back in the metadata columns
+GxE <- cbind(dplyr::select(M_sort, SRR_ID, Habitat, Population), diff_dat)
+
+# now filter by population
+GxE_Midwest_exp <- filter(GxE, Population == "Midwest")
+GxE_Atlantic_exp <- filter(GxE, Population == "Atlantic")
+GxE_Gulf_exp <- filter(GxE, Population == "Gulf")
+
+
+# older code
+# read in newer colData (with SRR ID's)
+#metadat <- read.csv("~/Dropbox/LowryLab/data/RNA_colData.csv")
 
 # editing to make it the raw counts data 
 # setting the row names as gene names
-rownames(expressionData) <- expressionData$GeneID
+#rownames(expressionData) <- expressionData$GeneID
 
 # transposing and removing the extra gene name column 
-rawExp_transposed <- as.data.frame(t(dplyr::select(expressionData, -GeneID)))
+#rawExp_transposed <- as.data.frame(t(dplyr::select(expressionData, -GeneID)))
               
-# read in newer colData (with SRR ID's)
-metadat <- read.csv("~/Dropbox/LowryLab/data/RNA_colData.csv")
 
 # merging the metadata with the normalized expression data
-exp_with_metadata <- cbind(metadat, rawExp_transposed)
+#exp_with_metadata <- cbind(metadat, rawExp_transposed)
 
 ```
+
+# read in and format genotypes 
+```{r format read counts to same order as genotypes}
+
+# loading in the ordered SRR ID's for Midwest, Gulf, and Atlantic
+Midwest_SRR <- read.csv("~/Dropbox/LowryLab/eQTL_mapping/Midwest.txt", 
+                        header = FALSE,
+                        row.names = NULL)
+Gulf_SRR <- read.csv("~/Dropbox/LowryLab/eQTL_mapping/Gulf.txt", header = FALSE)
+Atlantic_SRR <- read.csv("~/Dropbox/LowryLab/eQTL_mapping/Atlantic.txt", header = FALSE)
+
+# adding an SR column for ease of merging
+Midwest_SRR$SRR <- Midwest_SRR$V1
+Gulf_SRR$SRR <- Gulf_SRR$V1
+Atlantic_SRR$SRR <- Atlantic_SRR$V1
+
+# now get the expression files into the same order as the genotype files 
+custom_order_Midwest <- Midwest_SRR$V1
+GxE_Midwest_ordered <- GxE_Midwest_exp %>%
+  mutate(SRR_ID = factor(SRR_ID, levels = custom_order_Midwest)) %>%
+  arrange(GxE_Midwest_exp)
+
+custom_order_Gulf <- Gulf_SRR$V1
+GxE_Gulf_ordered <- GxE_Gulf_exp %>%
+  mutate(SRR_ID = factor(SRR_ID, levels = custom_order_Gulf)) %>%
+  arrange(GxE_Gulf_exp)
+
+custom_order_Atlantic <- Atlantic_SRR$V1
+GxE_Atlantic_ordered <- GxE_Atlantic_exp %>%
+  mutate(SRR_ID = factor(SRR_ID, levels = custom_order_Atlantic)) %>%
+  arrange(GxE_Atlantic_exp)
+
+
+# now format the ordered GxE files 
+
+rownames(GxE_Midwest_ordered) <- GxE_Midwest_ordered$SRR_ID
+GxE_Midwest_ordered_formatted <- dplyr::select(GxE_Midwest_ordered, -SRR_ID, -Habitat, -Population)
+
+t_GxE_Midwest <- as.data.frame(t(GxE_Midwest_ordered_formatted))
+t_GxE_Midwest$row_median <- apply(t_GxE_Midwest, 1, median, na.rm=TRUE)
+
+# filter by median
+GxE_Midwest_filt <- filter(t_GxE_Midwest, abs(row_median) > 0.001)
+
+# write the GxE file to test
+# write.csv(dplyr::select(GxE_Midwest_filt, -row_median), "~/Dropbox/LowryLab/data/expression/genes_GxE_Midwest_newNorm.csv")
+```
+
+
+# dds normalizing
+```{r dds processing}
+dds_rawExp <- DESeqDataSetFromMatrix(countData = dplyr::select(expressionData, -GeneID),
+                       colData = metadat,
+                       design = ~habitat)
+
+dds_size <- estimateSizeFactors(dds_rawExp)
+
+as.data.frame(counts(dds_size, normalized=TRUE))
+```
+
 
 ## filter by population and site 
 ```{r split by site / pop}
@@ -87,22 +203,6 @@ TX_Midwest <- filter(exp_with_metadata,
 
 ```
 
-# read in and format genotypes 
-```{r format read counts to same order as genotypes}
-
-# loading in the ordered SRR ID's for Midwest, Gulf, and Atlantic
-Midwest_SRR <- read.csv("~/Dropbox/LowryLab/eQTL_mapping/Midwest.txt", 
-                        header = FALSE,
-                        row.names = NULL)
-Gulf_SRR <- read.csv("~/Dropbox/LowryLab/eQTL_mapping/Gulf.txt", header = FALSE)
-Atlantic_SRR <- read.csv("~/Dropbox/LowryLab/eQTL_mapping/Atlantic.txt", header = FALSE)
-
-# adding an SR column for ease of merging
-Midwest_SRR$SRR <- Midwest_SRR$V1
-Gulf_SRR$SRR <- Gulf_SRR$V1
-Atlantic_SRR$SRR <- Atlantic_SRR$V1
-
-```
 
 # merging and ordering (very long block)
 ```{r merging SRR ID's and gene expression files to order}
@@ -280,7 +380,7 @@ errorCovariance = numeric();
 # MI_Midwest
 geneMI_Midwest = SlicedData$new()
 geneMI_Midwest$fileDelimiter = ",";    
-geneMI_Midwest$LoadFile("~/Dropbox/LowryLab/data/expression/genes_MI_Midwest.csv")
+geneMI_Midwest$LoadFile("~/Dropbox/LowryLab/data/expression/genes_MI_Midwest_newNorm.csv")
 
 # TX_Midwest 
 geneTX_Midwest = SlicedData$new()
@@ -290,7 +390,7 @@ geneTX_Midwest$LoadFile("~/Dropbox/LowryLab/data/expression/genes_TX_Midwest.csv
 # GxE_Midwest
 geneGxE_Midwest = SlicedData$new()
 geneGxE_Midwest$fileDelimiter = ",";    
-geneGxE_Midwest$LoadFile("~/Dropbox/LowryLab/data/expression/genes_GxE_Midwest_filt.csv")
+geneGxE_Midwest$LoadFile("~/Dropbox/LowryLab/data/expression/genes_GxE_Midwest_newNorm.csv")
 
 # MI_Gulf
 geneMI_Gulf = SlicedData$new()
@@ -369,6 +469,25 @@ write.csv(Atlantic_cov, "~/Dropbox/lowryLab/data/expression/cov_allChroms_Atlant
 
 ```
 
+
+```{r}
+cvrt_midwest_gxe <- read.csv("~/Dropbox/lowryLab/data/expression/cov_allChroms_Midwest.csv")
+
+cvrt_midwest_gxe
+
+colnames(t_GxE_Midwest)
+
+gxe_cvrt <- dplyr::select(cvrt_midwest_gxe, colnames(t_GxE_Midwest))
+
+gxe_cvrt1 <- cbind(dplyr::select(cvrt_midwest_gxe, X), gxe_cvrt)
+
+write.csv(gxe_cvrt, "~/Dropbox/lowryLab/data/expression/cov_allChroms_Midwest_GxE.csv")
+
+gxe_cvrt1
+
+```
+
+
 ## read in the covariates file
 ```{r covariates}
 
@@ -379,7 +498,7 @@ cvrt_Midwest$fileDelimiter = ",";      # the TAB character
 cvrt_Midwest$fileOmitCharacters = "NA"; # denote missing values;
 cvrt_Midwest$fileSkipRows = 1;          # one row of column labels
 cvrt_Midwest$fileSkipColumns = 1;       # one column of row labels
-cvrt_Midwest$LoadFile("~/Dropbox/lowryLab/data/expression/cov_allChroms_Midwest.csv");
+cvrt_Midwest$LoadFile("~/Dropbox/lowryLab/data/expression/cov_allChroms_Midwest_GxE.csv");
 
 ## Load covariates file, Gulf. in this case it's the first 5 PC's (plink)
 
@@ -403,18 +522,46 @@ cvrt_Atlantic$LoadFile("~/Dropbox/lowryLab/data/expression/cov_allChroms_Atlanti
 
 ```
 
+
+```{r}
+Midwest_chrom1K <- read.csv("~/Dropbox/lowryLab/data/genotypes/Midwest_1K_hetFilt.txt", sep = "\t", header = FALSE)
+
+# subgenome K 
+Chr01K_Midwest <- read.csv("~/Dropbox/lowryLab/data/genotypes/Chr01K_Midwest_matrix.txt", sep = "\t", header = FALSE)
+
+
+colnames(Chr01K_Midwest) <- Midwest_SRR$V1
+rownames(Chr01K_Midwest) <- Chr01K_Midwest$V1
+
+Chr01K_Midwest <- dplyr::select(Chr01K_Midwest, -V1)
+
+colnames(Chr01K_Midwest) <- Midwest_SRR$V1
+Chr01K_Midwest
+
+t_GxE_Midwest <- dplyr::select(t_GxE_Midwest, -row_median)
+
+t_GxE_Midwest
+
+write.table(dplyr::select(Chr01K_Midwest, colnames(t_GxE_Midwest)), "~/Dropbox/lowryLab/data/genotypes/Midwest_1K_GxE_70.txt", sep = "\t")
+Chr01K_Midwest
+
+dplyr::select(Chr01K_Midwest, colnames(t_GxE_Midwest))
+```
+
+
 ## read in Midwest genotypes 
 ```{r read in genotypes, Midwest}
 
 # reading in the data first 
 
 # 1K
-Midwest_chrom1K = "~/Dropbox/lowryLab/data/genotypes/Midwest_1K_hetFilt.txt"
+Midwest_chrom1K = "~/Dropbox/lowryLab/data/genotypes/Midwest_1K_GxE_70.txt"
 
 # loading genotype data 
 Midwest_allsnps_1K = SlicedData$new();
 Midwest_allsnps_1K$fileDelimiter = "\t";       # denote missing values;
-Midwest_allsnps_1K$fileSkipColumns = 1;          # one column of row labels
+Midwest_allsnps_1K$fileSkipColumns = 1;    
+Midwest_allsnps_1K$fileSkipRows = 1; # one column of row labels
 Midwest_allsnps_1K$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
 Midwest_allsnps_1K$LoadFile(Midwest_chrom1K)
 
@@ -1663,6 +1810,7 @@ me_TX_Midwest_9N = Matrix_eQTL_main(
   noFDRsaveMemory = FALSE)
 
 ```
+
 
 # map eQTLs, GxE Midwest
 
