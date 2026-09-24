@@ -4,7 +4,7 @@ library(dplyr)
 
 # read in the processed ASE counts
 
-ASE_dat <- read.csv("~/Dropbox/LowryLab/pvirgatums.processed_ASC.csv")
+ASE_dat <- read.csv("~/Dropbox/LowryLab/data/ASE/pvirgatums.processed_ASC.csv")
 
 # make dataframe long to process
 ASE_long <- melt(ASE_dat)
@@ -17,16 +17,20 @@ df_split <- ASE_long %>%
     names = c("ID", "allele") # Names for the new columns
   )
 
+ASE_dat 
+
 # now process to get the DAC / AP13 alleles next to each other for each gene / ID combo
 # split and rename
 
+AP13_alleles
+
 #AP13
 AP13_alleles <- filter(df_split, allele == "AP13")
-AP13_alleles <- rename(AP13_alleles, AP13_allele = value)
+AP13_alleles <- dplyr::rename(AP13_alleles, AP13_allele = value)
 
 # DAC6
 DAC6_alleles <- filter(df_split, allele == "DAC6")
-DAC6_alleles <- rename(DAC6_alleles, DAC6_allele = value)
+DAC6_alleles <- dplyr::rename(DAC6_alleles, DAC6_allele = value)
 
 # put 'em together
 formatted_indvs <- cbind(dplyr::select(as.data.frame(AP13_alleles), repID, ID, AP13_allele), dplyr::select(as.data.frame(DAC6_alleles), DAC6_allele))
@@ -54,7 +58,7 @@ F1_ASE <- (filter(formatted_indvs, ID=="BUWAP" |
 # next step is to only look at genes that contain FIXED SNPs between AP13 and DAC6 
 # that was done on the cluster -- now time to read in that file 
 
-snp_overlap <- read.csv("~/Dropbox/LowryLab/SNP_overlap.txt", sep="\t", header=FALSE)
+snp_overlap <- read.csv("~/Dropbox/LowryLab/data/ASE/SNP_overlap.txt", sep="\t", header=FALSE)
 
 # do a little cleanup of the gene names before we use them
 snp_overlap$V14 <- gsub(".v6.1", "", snp_overlap$V14)
@@ -73,7 +77,7 @@ filtered_genes <- filter(F1_ASE_filt, repID %in% genes_with_SNPs$`unique(snp_ove
 
 # filter to only genes that are 1:1 orthologs between AP13 & DAC6 
 # read in the list of orthologs 
-orthos <- read.csv("~/Dropbox/LowryLab/AP13H1_DAC6H1_singleCopy.Orthologs.txt", sep = " ", header = FALSE)
+orthos <- read.csv("~/Dropbox/LowryLab/data/ASE/AP13H1_DAC6H1_singleCopy.Orthologs.txt", sep = " ", header = FALSE)
 
 # clean up the orthos gene name 
 orthos$V1 <- gsub(".v6.1", "", orthos$V1)
@@ -85,33 +89,37 @@ genes_1_1 <- filter(filtered_genes, repID %in% orthos$V1)
 depth_filt <- filter(genes_1_1, total < 2500)
 
 # conduct a binomial test 
-test_all <- depth_filt  %>%
-  rowwise() %>%
-  mutate(p_value = binom.test(AP13_allele, total, p = 0.5)$p.value) %>%
-  ungroup()
+#test_all <- depth_filt  %>%
+ # rowwise() %>%
+#  mutate(p_value = binom.test(AP13_allele, total, p = 0.5)$p.value) %>%
+#  ungroup()
+
+#test_all$cohens_h <- (test_all$AP13_allele / test_all$total) - 0.5
+
+#test_all
 
 # read in the bed file to get the gene location
-AP13_bed <- read.csv("~/Dropbox/LowryLab/AP13.bed", sep = "\t", header = FALSE)
+AP13_bed <- read.csv("~/Dropbox/LowryLab/data/AP13/AP13.bed", sep = "\t", header = FALSE)
 
 # clean up the gene names 
 AP13_bed$V4 <- gsub(".v6.1", "", AP13_bed$V4)
 
 # join the bed file to the ASE file to get the start / end position of each gene 
 # clean up the column names
-AP13_bed <- rename(AP13_bed, repID = V4)
+AP13_bed <- dplyr::rename(AP13_bed, repID = V4)
 
 # join them based on gene name
 ASE_genePos <- inner_join(test_all, AP13_bed, by = "repID")
 
 # clean up file names 
-ASE_genePos  <- rename(ASE_genePos, Chrom = V1)
-ASE_genePos  <- rename(ASE_genePos, start_bp = V2)
-ASE_genePos  <- rename(ASE_genePos, end_bp = V3)
+ASE_genePos  <- dplyr::rename(ASE_genePos, Chrom = V1)
+ASE_genePos  <- dplyr::rename(ASE_genePos, start_bp = V2)
+ASE_genePos  <- dplyr::rename(ASE_genePos, end_bp = V3)
 
-ggplot(filter(ASE_genePos, ID == "BUWAP",
-              -log10(p_value) > 7),
-       aes(y = start_bp, x = Chrom)) + 
-  geom_point()
+#ggplot(filter(ASE_genePos, ID == "BUWAP",
+ #             -log10(p_value) > 7),
+#       aes(y = start_bp, x = Chrom)) + 
+#  geom_point()
 
 # filter to just the F1's 
 ASE_F1s <- filter(ASE_genePos, ID=="BUWAP" |
@@ -158,6 +166,8 @@ bias_dat_wider$trueCount <- rowSums(bias_dat_wider == "TRUE", na.rm = TRUE)
 
 AP13_bias <- filter(bias_dat_wider, trueCount == 6)
 DAC6_bias <- filter(bias_dat_wider, falseCount == 6)
+
+KBSM_F1s
 
 # now filter by significance
 sig_dat <- dplyr::select(KBSM_F1s, repID, ID, p_value, Chrom, start_bp)
@@ -285,8 +295,6 @@ KBSM_simple <- dplyr::select(KBSM_ASE_processed, Chrom, start_bp, repID, bias)
 
 nrow(KBSM_simple)
 nrow(PKLE_simple)
-\
-KBSM_simple
 
 nrow(intersect(PKLE_simple, KBSM_simple))
 nrow(filter(intersect(PKLE_simple, KBSM_simple), bias=="AP13"))
