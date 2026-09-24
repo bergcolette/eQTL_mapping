@@ -23,20 +23,30 @@ library(fs)
 setwd("~/Dropbox/LowryLab/data")
 ```
 
+# read in the gff3
+```{r}
+# get number of genes in genome 
+AP13_gff <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/AP13/Pvirgatum_AP13_noHeader.gff3", sep = "\t")
 
-# read in the data 
+# getting list of genes only
+AP13_geneList <- filter(AP13_gff, gene == "gene")
+
+```
+
+# process the raw data from HTSeq
 ```{r read in data}
 # read in read counts from HTSeq; 
 # not including the F1's 
 
 # get a list of all the gene counts files 
-tsv_files <- dir_ls(path = "~/Dropbox/LowryLab/data/HTSeq_Counts_pseudo/", regexp = "\\.tsv$")
+tsv_files <- dir_ls(path = "~/Dropbox/LowryLab/data/expression/HTSeq_Counts_pseudo/", regexp = "\\.tsv$")
 
 # read all of them into one file
 all_data <- read_tsv(tsv_files, id = "file_source", col_names = FALSE) # The 'id' argument adds a column with the filename
 
 # clean up the individual ID column
-all_data$file_source <- gsub("/Users/coletteberg/Dropbox/LowryLab/data/HTSeq_Counts_pseudo/", "", all_data$file_source)
+all_data$file_source <- gsub("/Users/coletteberg/Dropbox/LowryLab/expression/data/HTSeq_Counts_pseudo/", "", all_data$file_source)
+
 all_data$file_source <- gsub(".geneID.counts.tsv", "", all_data$file_source)
 
 # clean up the gene ID column
@@ -70,7 +80,7 @@ counts_clean_long <- rename(counts_clean_long, indv = file_source)
 counts_wide <- pivot_wider(counts_clean_long, names_from=indv, values_from=counts)
 
 # read in metadata 
-metaData <- read.csv("/Users/coletteberg/Dropbox/LowryLab/Pvirgatum.fourWay.RNAseq.libraryInfo.txt", sep="\t")
+metaData <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/expression/Pvirgatum.fourWay.RNAseq.libraryInfo.txt", sep="\t")
 
 # format wide dataframe for filtering
 counts_wide <- as.data.frame(counts_wide)
@@ -106,13 +116,19 @@ AD_filt <- dplyr::select(filter(AD_t, median > 3), -median)
 # write the data.
 write.csv(AD_filt, "~/Dropbox/LowryLab/data/filtered_AP13_DAC6_RNA.csv")
 write.csv(colData, "~/Dropbox/LowryLab/data/filtered_AP13_DAC6_RNA_metadata.csv")
+
+
 ```
 
-# filter to just genotypes of interest 
-
+# read in the processed data and filter
 ```{r AP13 and DAC6 only}
 
 # only keeping AP13 and DAC in MI and TX; removing DAC TX 3 bc it's a contaminant
+
+AD_filt <- read.csv("~/Dropbox/LowryLab/data/expression/filtered_AP13_DAC6_RNA.csv")
+colData <- read.csv("~/Dropbox/LowryLab/data/expression/filtered_AP13_DAC6_RNA_metadata.csv")
+
+rownames(AD_filt) <- AD_filt$X
 
 # reformatting counts
 AP_DAC <- dplyr::select(AD_filt, 
@@ -139,8 +155,8 @@ colData_AP_DAC <- filter(colData,
       genotype == "DAC6" |
       genotype == "AP13") %>% slice(-9)
 
+#write.csv(modules_all, "~/Dropbox/LowryLab/data/geneNames_modules.csv")
 ```
-
 
 # run DESeq (make dds object)
 ```{r make a DESeq object}
@@ -148,7 +164,7 @@ colData_AP_DAC <- filter(colData,
 
 dds <- DESeqDataSetFromMatrix(countData = AP_DAC,
                               colData = colData_AP_DAC,
-                              design =  ~ habitat + genotype + habitat:genotype)
+                              design =  ~ genotype + habitat + genotype:habitat)
 
 ```
 
@@ -157,7 +173,6 @@ dds <- DESeqDataSetFromMatrix(countData = AP_DAC,
 smallestGroupSize <- 2
 keep <- rowSums(counts(dds) >= 10) >= smallestGroupSize
 dds <- dds[keep,]
- 
 
 ```
 
@@ -169,7 +184,74 @@ dds <- DESeq(dds)
 # running VSD
 vsd <- varianceStabilizingTransformation(dds)
 
+```
 
+# explore DESeq results to identify genes with habitat and genotype effects but no GxE
+```{r explore DE results}
+
+normCounts$gene <- rownames(normCounts)
+
+expression_sig <- filter(normCounts, gene %in% rownames(GxEgenes))
+
+# get the mean expression 
+# PKLE
+expression_sig <- expression_sig %>% 
+  mutate(PKLE_DAC_mean = rowMeans(pick(PKLE_DAC_1, PKLE_DAC_4), na.rm = TRUE))
+
+expression_sig <- expression_sig %>% 
+  mutate(PKLE_AP13_mean = rowMeans(pick(PKLE_AP13_5, PKLE_AP13_4, PKLE_AP13_3), na.rm = TRUE))
+
+# KBSM
+expression_sig <- expression_sig %>% 
+  mutate(KBSM_DAC_mean = rowMeans(pick(KBSM_DAC_1, KBSM_DAC_2, KBSM_DAC_3), na.rm = TRUE))
+
+expression_sig <- expression_sig %>% 
+  mutate(KBSM_AP13_mean = rowMeans(pick(KBSM_AP13_1, KBSM_AP13_2, KBSM_AP13_3, KBSM_AP13_4, KBSM_AP13_5), na.rm = TRUE))
+
+# join the results stat to the expression means file
+expMeans <- dplyr::select(expression_sig, gene, PKLE_DAC_mean, PKLE_AP13_mean, KBSM_DAC_mean, KBSM_AP13_mean)
+
+expMeans$lFC <- filter(results_full, padj < 0.05)$log2FoldChange
+expMeans$stat <- filter(results_full, padj < 0.05)$stat
+
+
+# now scan for rank changing vs. variance changing
+expMeans <- mutate(expMeans, PKLE_habDiff = PKLE_DAC_mean - KBSM_DAC_mean)
+expMeans <- mutate(expMeans, PKLE_habDiff = PKLE_AP13_mean - KBSM_AP13_mean)
+
+expMeans$sign <- expMeans$DAC_habDiff == expMeans$AP13_habDiff
+
+ggplot(expMeans,
+       aes(x = DAC_habDiff,
+           y = AP13_habDiff))
+
+ggplot(expMeans,
+       aes(x = PKLE_DAC_mean,
+           y = KBSM_DAC_mean))
+
+write.csv(expMeans,
+          "~/Dropbox/mean_expression.csv")
+
+hab_geno <- (intersect(rownames(filter(results_genotype, padj < 0.05)), rownames(filter(results_habitat, padj < 0.05))))
+
+
+site_geno_noGxE <- setdiff(hab_geno, rownames(filter(results_full, padj < 0.05)))
+
+# now make a table to illustrate the 5000 genes with G and E, but no GxE 
+site_gene_table <- filter(results_habitat,
+       rownames(results_habitat) %in% site_geno_noGxE)
+site_gene_table$model <- "expression ~ site"
+
+geno_gene_table <- filter(results_genotype,
+       rownames(results_genotype) %in% site_geno_noGxE)
+geno_gene_table$model <- "expression ~ genotype"
+
+site_geno_noGxE <- rbind(site_gene_table,
+      geno_gene_table)
+
+
+# write to save for supplement
+write.csv(site_gene_table, "~/Dropbox/LowryLab/TableS2.csv")
 ```
 
 # PCA plot of gene expression to vet samples
@@ -207,21 +289,78 @@ results_full$diffexpressed <- "NO"
 results_full$diffexpressed[results_full$log2FoldChange > 1 & results_full$padj < 0.05] <- "UP"
 results_full$diffexpressed[results_full$log2FoldChange < -1 & results_full$padj < 0.05] <- "DOWN"
 
-
-write.csv(results_habitat, "~/Dropbox/LowryLab/data/DE_analyses/KBSM_PKLE_DE.csv")
-write.csv(results_genotype, "~/Dropbox/LowryLab/data/DE_analyses/AP13_DAC6_DE.csv")
-write.csv(results_full, "~/Dropbox/LowryLab/data/DE_analyses/full_DE.csv")
+write.csv(results_habitat, "~/Dropbox/LowryLab/data/expression/KBSM_PKLE_DE.csv")
+write.csv(results_genotype, "~/Dropbox/LowryLab/data/expression/AP13_DAC6_DE.csv")
+write.csv(results_full, "~/Dropbox/LowryLab/data/expression/full_DE.csv")
 
 # get number of DE genes 
 filter(results_full, padj < 0.05, diffexpressed == "DOWN" | diffexpressed == "UP")
 
+# add gene name 
+results_full$geneName <- rownames(results_full)
+
+# separate gene name intu gene & chrom
+results_labeled <- results_full %>%
+  separate_wider_delim(
+    geneName,
+    delim = "G",
+    names = c("chrom", "gene"),
+    too_few = "debug"
+  )
+
+
+# K_subgenome
+K_results <- filter(results_labeled,
+                    chrom == "Pavir.1K" |
+                    chrom == "Pavir.2K" |
+                    chrom == "Pavir.3K" |
+                      chrom == "Pavir.4K" |
+                      chrom == "Pavir.5K" |
+                      chrom == "Pavir.6K" |
+                      chrom == "Pavir.7K" |
+                      chrom == "Pavir.8K" |
+                      chrom == "Pavir.9K")
+
+# N_subgenome
+N_results <- filter(results_labeled,
+                    chrom == "Pavir.1N" |
+                    chrom == "Pavir.2N" |
+                    chrom == "Pavir.3N" |
+                      chrom == "Pavir.4N" |
+                      chrom == "Pavir.5N" |
+                      chrom == "Pavir.6N" |
+                      chrom == "Pavir.7N" |
+                      chrom == "Pavir.8N" |
+                      chrom == "Pavir.9N")
+
+# add subgenome column
+N_results$subgenome <- "N"
+K_results$subgenome <- "K"
+
+subGen_labeled <- rbind(N_results,
+      K_results)
+
+filter(subGen_labeled, padj < 0.05, abs(log2FoldChange) > 1, subgenome == "N")
+filter(subGen_labeled, padj < 0.05, abs(log2FoldChange) > 1, subgenome == "K")
+
+filter(subGen_labeled, padj < 0.05, abs(log2FoldChange) > 1, diffexpressed == "DOWN")
+
+
+1593 + 1569
+
+1569 / 3162
+1593 / 3162
+
+results_habitat
 ```
 
 # make volcano plot of DE genes
 ```{r volcano plot}
 
 # this can be done multiple times, for each of the models 
-ggplot(results_full, aes(x = log2FoldChange, y = -log10(padj), col = diffexpressed)) +
+ggplot(annotDE, aes(x = log2FoldChange, y = -log10(padj), 
+                    col = diffexpressed,
+                    alpha = acid.phosphatases)) +
   geom_point() +
   theme_minimal() +
   scale_color_manual(values = c("NO" = "grey", "UP" = "red", "DOWN" = "blue")) +
@@ -231,14 +370,13 @@ ggplot(results_full, aes(x = log2FoldChange, y = -log10(padj), col = diffexpress
 
 ```
 
-
 # upload necessary data for GO analyses 
 ```{r upload GO terms}
 # read in the genes with GO terms from the annotation 
-Pvirg_GOterms <- read.csv("~/Dropbox/LowryLab/Pavir_GOterms_multiple.csv")
+Pvirg_GOterms <- read.csv("~/Dropbox/LowryLab/data/expression/Pavir_GOterms_multiple.csv")
 
 # melt to make longer
-longer_GOterms <- unique(melt(Pvirg_GOterms,
+longer_GOterms <- unique(reshape2::melt(Pvirg_GOterms,
      id.vars=c("locusName")))
 
 # convert to clusterProfiler format
@@ -254,6 +392,41 @@ term2name <- data.frame("GOID" = names(goterms), "term" = goterms)
 
 ```
 
+```{r enrichment of other GO terms}
+# enrichment of genotype + habitat genes (not GxE)
+DE_site_geno <- enricher(rownames(site_geno_noGxE), 
+         pvalueCutoff = 0.05, 
+         pAdjustMethod = "BH", 
+         minGSSize = 10, 
+         maxGSSize = 500, qvalueCutoff = 0.2,
+         TERM2GENE=GOterms_mult, TERM2NAME = term2name)
+
+
+
+MidwestGxEGO <- enricher(as.vector(filter(Midwest_GxE_eQTL_maf, folded > 0.05)$gene), 
+         pvalueCutoff = 0.05, 
+         pAdjustMethod = "BH", 
+         minGSSize = 10, 
+         maxGSSize = 500, qvalueCutoff = 0.2,
+         TERM2GENE=GOterms_mult, TERM2NAME = term2name)
+
+GulfGxEGO <- enricher(as.vector(filter(Gulf_GxE_eQTL_maf, folded > 0.05)$gene), 
+         pvalueCutoff = 0.05, 
+         pAdjustMethod = "BH", 
+         minGSSize = 10, 
+         maxGSSize = 500, qvalueCutoff = 0.2,
+         TERM2GENE=GOterms_mult, TERM2NAME = term2name)
+
+AtlanticGxEGO <- enricher(as.vector(filter(Atlantic_GxE_eQTL_maf, folded > 0.05)$gene), 
+         pvalueCutoff = 0.05, 
+         pAdjustMethod = "BH", 
+         minGSSize = 10, 
+         maxGSSize = 500, qvalueCutoff = 0.2,
+         TERM2GENE=GOterms_mult, TERM2NAME = term2name)
+
+dotplot(DE_site_geno) + ggtitle("GO enrichment, site + genotype DE genes")
+```
+
 # format DE genes for GO term analyses
 ```{r format for GO}
 
@@ -261,13 +434,16 @@ results_full$gene <- gsub(".v6.1", "", rownames(results_full))
 results_genotype$gene <- gsub(".v6.1", "", rownames(results_genotype))
 results_habitat$gene <- gsub(".v6.1", "", rownames(results_habitat))
 
+
 ```
 
 # go analysis of DE genes 
 ```{r run GO analyses of DE genes}
 
+results_full <- read.csv("~/Dropbox/LowryLab/data/expression/full_DE.csv")
+
 # full model DE
-fullMod <- enricher(as.vector(filter(results_full, diffexpressed!="NO")$gene), 
+fullMod <- enricher(as.vector(filter(results_full, diffexpressed!="NO")$X), 
          pvalueCutoff = 0.05, 
          pAdjustMethod = "BH", 
          minGSSize = 10, 
@@ -276,6 +452,7 @@ fullMod <- enricher(as.vector(filter(results_full, diffexpressed!="NO")$gene),
 
 # habitat DE
 habMod <- enricher(as.vector(filter(results_habitat, diffexpressed!="NO")$gene), 
+                   universe = Pvirg_GOterms,
          pvalueCutoff = 0.05, 
          pAdjustMethod = "BH", 
          minGSSize = 10, 
@@ -291,15 +468,11 @@ genMod <- enricher(as.vector(filter(results_genotype, diffexpressed!="NO")$gene)
          TERM2GENE=GOterms_mult, TERM2NAME = term2name)
 
 # write the results
-write.csv(as.data.frame(fullMod@result), "~/Dropbox/LowryLab/data/DE_analyses/GO_full_DE.csv")
-write.csv(as.data.frame(habMod@result), "~/Dropbox/LowryLab/data/DE_analyses/GO_habitat_DE.csv")
-write.csv(as.data.frame(genMod@result), "~/Dropbox/LowryLab/data/DE_analyses/GO_genotype_DE.csv")
-
-dotplot(fullMod)
-
+write.csv(as.data.frame(fullMod@result), "~/Dropbox/LowryLab/data/expression/GO_full_DE.csv")
+write.csv(as.data.frame(habMod@result), "~/Dropbox/LowryLab/data/expression/GO_habitat_DE.csv")
+write.csv(as.data.frame(genMod@result), "~/Dropbox/LowryLab/data/expression/GO_genotype_DE.csv")
 
 ```
-
 
 # prep for WGCNA
 ```{r WGCNA prep}
@@ -308,27 +481,34 @@ dotplot(fullMod)
 wpn_vsd <- getVarianceStabilizedData(dds)
 rv_wpn <- rowVars(wpn_vsd)
 
+#q75_wpn <- quantile( rowVars(wpn_vsd), .60) 
+##expr_normalized <- wpn_vsd[ rv_wpn > q75_wpn, ]
+#dim(expr_normalized)
+
 # transpose
 input_mat_all = t(wpn_vsd)
 
-write.csv(wpn_vsd, "~/Dropbox/LowryLab/data/AP13_DAC6_vsdNorm.csv")
+#write.csv(wpn_vsd, "~/Dropbox/LowryLab/data/expression/AP13_DAC6_vsdNorm.csv")
+
 
 ```
 
-
 # pick the power level & run WGCNA for all genes; choose top hub genes  
 ```{r WGCNA all genes pick power and run}
+# skipping straight to reading in 
+wpn_vsd <- read.csv("~/Dropbox/LowryLab/data/expression/AP13_DAC6_vsdNorm.csv")
+rownames(wpn_vsd) <- wpn_vsd$X
+input_mat_all = t(dplyr::select(wpn_vsd, -X))
 
-allowWGCNAThreads()
 
 #> Allowing multi-threading with up to 4 threads
 # Choose a set of soft-thresholding powers
 powers = c(c(1:10), seq(from = 12, to = 20, by = 2))
 
-# Call the network topology analysis function
+# Call the network topology analysis function -- now calling with the ~10000 genes with the most variance
 sft = pickSoftThreshold(
   input_mat_all,             # <= Input data
-  blockSize = 3000,
+  blockSize = 1000,
   powerVector = powers,
   verbose = 5
   )
@@ -345,17 +525,18 @@ plot(sft$fitIndices[, 1],
      main = paste("Scale independence")
 )
 
-picked_power = 5
+#picked_power = 5
 temp_cor <- cor
 cor <- WGCNA::cor
 
 ```
 
+# now run the network calls for WGCNA
 ```{r netwk call}
 
 # generate the network
 netwk_all <- blockwiseModules(input_mat_all,       
-                          power = picked_power,           
+                          power = 7,           
                           networkType = "signed",
                           deepSplit = 2,
                           pamRespectsDendro = F,
@@ -372,27 +553,30 @@ netwk_all <- blockwiseModules(input_mat_all,
 
 
 # print the network so you get the number of modules
-summary(as.factor(netwk_all$colors))
+#summary(as.factor(netwk_all$colors))
 
 # calc the number of genes in each module with the cut height of 0.3
 
 # format the data frame
-names_cols <- as.data.frame(netwk_all$colors)
-names_cols$gene <- rownames(names_cols)
+#names_cols <- as.data.frame(netwk_all$colors)
+#names_cols$gene <- rownames(names_cols)
 
 # plot
-ggplot(names_cols,
-       aes(x = `netwk_all$colors`)) + 
-  geom_bar()
+#ggplot(names_cols,
+#       aes(x = `netwk_all$colors`)) + 
+#  geom_bar()
 
 
 # choose top hub gene
-chooseTopHubInEachModule(
-   input_mat_all, 
-   netwk_all$colors, 
-   power = picked_power)
-```
+#chooseTopHubInEachModule(
+#   input_mat_all, 
+#   netwk_all$colors, 
+#   power = picked_power)
 
+write.csv(as.data.frame(netwk_all$colors), "~/Desktop/bergetal_2026/WGCNA_moduleList.csv")
+
+write.csv(netwk_all$MEs, "~/Desktop/bergetal_2026/module_eigengenes.csv")
+```
 
 # plot WGCNA for all genes
 ```{r plot WGCNA all }
@@ -453,6 +637,22 @@ mME_all %>% ggplot(., aes(x=treatment, y=name, fill=value)) +
   theme(axis.text.x = element_text(angle=90)) +
   labs(title = "Module-trait Relationships", y = "Modules", fill="corr")
 
+dim(input_mat_all)
+netwk_all
+
+```
+
+# get kME of all the modules (this is how you get the hub genes)
+```{r kME hub genes}
+hubDat <- signedKME(input_mat_all, 
+  moduleEigengenes(input_mat_all, netwk_all$colors)$eigengenes, 
+  exprWeights = NULL,
+  MEWeights = NULL,
+  outputColumnName = "kME", 
+  corFnc = "cor", 
+  corOptions = "use = 'p'")
+
+write.csv(hubDat, "~/Dropbox/LowryLab/data/hubGenes.csv")
 ```
 
 # formatting WGCNA output for GO analyses
@@ -462,10 +662,189 @@ modules_all <- as.data.frame(netwk_all$colors)
 modules_all$gene <- gsub(".v6.1", "", rownames(modules_all))
 modules_all$color <- modules_all$`netwk_all$colors`
 
+#write.csv(modules_all, "~/Dropbox/LowryLab/data/genes_modules.csv")
+
 ```
 
+# GO analyses for the modules 
+```{r run GO analyses of the modules}
+modules_all <- read.csv("~/Dropbox/LowryLab/data/genes_modules.csv")
+
+tanMod <- enricher(as.vector(filter(modules_all, color == "tan")$gene), 
+         pvalueCutoff = 0.05, 
+         pAdjustMethod = "BH", 
+         minGSSize = 10, 
+         maxGSSize = 500, qvalueCutoff = 0.2,
+         TERM2GENE=GOterms_mult, TERM2NAME = term2name)
+
+magentaMod <- enricher(as.vector(filter(modules_all, color == "magenta")$gene), 
+         pvalueCutoff = 0.05, 
+         pAdjustMethod = "BH", 
+         minGSSize = 10, 
+         maxGSSize = 500, qvalueCutoff = 0.2,
+         TERM2GENE=GOterms_mult, TERM2NAME = term2name)
+
+
+turquoiseMod <- enricher(as.vector(filter(modules_all, color == "turquoise")$gene), 
+         pvalueCutoff = 0.05, 
+         pAdjustMethod = "BH", 
+         minGSSize = 10, 
+         maxGSSize = 500, qvalueCutoff = 0.2,
+         TERM2GENE=GOterms_mult, TERM2NAME = term2name)
+
+
+salmonMod <- enricher(as.vector(filter(modules_all, color == "salmon")$gene), 
+         pvalueCutoff = 0.05, 
+         pAdjustMethod = "BH", 
+         minGSSize = 10, 
+         maxGSSize = 500, qvalueCutoff = 0.2,
+         TERM2GENE=GOterms_mult, TERM2NAME = term2name)
+
+
+purpleMod <- enricher(as.vector(filter(modules_all, color == "purple")$gene), 
+         pvalueCutoff = 0.05, 
+         pAdjustMethod = "BH", 
+         minGSSize = 10, 
+         maxGSSize = 500, qvalueCutoff = 0.2,
+         TERM2GENE=GOterms_mult, TERM2NAME = term2name)
+
+
+grey60Mod <- enricher(as.vector(filter(modules_all, color == "grey60")$gene), 
+         pvalueCutoff = 0.05, 
+         pAdjustMethod = "BH", 
+         minGSSize = 10, 
+         maxGSSize = 500, qvalueCutoff = 0.2,
+         TERM2GENE=GOterms_mult, TERM2NAME = term2name)
+
+
+greenMod <- enricher(as.vector(filter(modules_all, color == "green")$gene), 
+                     GOterms_mult$V2,
+         pvalueCutoff = 0.05, 
+         pAdjustMethod = "BH", 
+         #minGSSize = 10, 
+         #maxGSSize = 500, 
+         qvalueCutoff = 0.2,
+         TERM2GENE=GOterms_mult, TERM2NAME = term2name)
+
+yellowMod <- enricher(as.vector(filter(modules_all, color == "yellow")$gene), 
+         pvalueCutoff = 0.05, 
+         pAdjustMethod = "BH", 
+         minGSSize = 10, 
+         maxGSSize = 500, qvalueCutoff = 0.2,
+         TERM2GENE=GOterms_mult, TERM2NAME = term2name)
+
+lightcyanMod <- enricher(as.vector(filter(modules_all, color == "lightcyan")$gene), 
+         pvalueCutoff = 0.05, 
+         pAdjustMethod = "BH", 
+         minGSSize = 10, 
+         maxGSSize = 500, qvalueCutoff = 0.2,
+         TERM2GENE=GOterms_mult, TERM2NAME = term2name)
+
+pinkMod <- enricher(as.vector(filter(modules_all, color == "pink")$gene), 
+         pvalueCutoff = 0.05, 
+         pAdjustMethod = "BH", 
+         minGSSize = 10, 
+         maxGSSize = 500, qvalueCutoff = 0.2,
+         TERM2GENE=GOterms_mult, TERM2NAME = term2name)
+
+greenyellowMod <- enricher(as.vector(filter(modules_all, color == "greenyellow")$gene), 
+         pvalueCutoff = 0.05, 
+         pAdjustMethod = "BH", 
+         minGSSize = 10, 
+         maxGSSize = 500, qvalueCutoff = 0.2,
+         TERM2GENE=GOterms_mult, TERM2NAME = term2name)
+
+brownMod <- enricher(as.vector(filter(modules_all, color == "brown")$gene), 
+         pvalueCutoff = 0.05, 
+         pAdjustMethod = "BH", 
+         minGSSize = 10, 
+         maxGSSize = 500, qvalueCutoff = 0.2,
+         TERM2GENE=GOterms_mult, TERM2NAME = term2name)
+
+blackMod <- enricher(as.vector(filter(modules_all, color == "black")$gene), 
+         pvalueCutoff = 0.05, 
+         pAdjustMethod = "BH", 
+         minGSSize = 10, 
+         maxGSSize = 500, qvalueCutoff = 0.2,
+         TERM2GENE=GOterms_mult, TERM2NAME = term2name)
+
+redMod <- enricher(as.vector(filter(modules_all, color == "red")$gene), 
+         pvalueCutoff = 0.05, 
+         pAdjustMethod = "BH", 
+         minGSSize = 10, 
+         maxGSSize = 500, qvalueCutoff = 0.2,
+         TERM2GENE=GOterms_mult, TERM2NAME = term2name)
+
+
+midnightblueMod <- enricher(as.vector(filter(modules_all, color == "midnightblue")$gene), 
+         pvalueCutoff = 0.05, 
+         pAdjustMethod = "BH", 
+         minGSSize = 10, 
+         maxGSSize = 500, qvalueCutoff = 0.2,
+         TERM2GENE=GOterms_mult, TERM2NAME = term2name)
+
+cyanMod <- enricher(as.vector(filter(modules_all, color == "cyan")$gene), 
+         pvalueCutoff = 0.05, 
+         pAdjustMethod = "BH", 
+         minGSSize = 10, 
+         maxGSSize = 500, qvalueCutoff = 0.2,
+         TERM2GENE=GOterms_mult, TERM2NAME = term2name)
+
+
+blueMod <- enricher(as.vector(filter(modules_all, color == "blue")$gene), 
+         pvalueCutoff = 0.05, 
+         pAdjustMethod = "BH", 
+         minGSSize = 10, 
+         maxGSSize = 500, qvalueCutoff = 0.2,
+         TERM2GENE=GOterms_mult, TERM2NAME = term2name)
+
+lightyellowMod <- enricher(as.vector(filter(modules_all, color == "lightyellow")$gene), 
+         pvalueCutoff = 0.05, 
+         pAdjustMethod = "BH", 
+         minGSSize = 10, 
+         maxGSSize = 500, qvalueCutoff = 0.2,
+         TERM2GENE=GOterms_mult, TERM2NAME = term2name)
+
+
+dotplot(tanMod) + ggtitle("Tan Module GO Term Enrichment")
+dotplot(magentaMod) + ggtitle("Magenta Module GO Term Enrichment")
+dotplot(turquoiseMod) + ggtitle("Turquoise Module GO Term Enrichment")
+dotplot(salmonMod) + ggtitle("Salmon Module GO Term Enrichment")
+dotplot(purpleMod) + ggtitle("Purple Module GO Term Enrichment")
+dotplot(grey60Mod) + ggtitle("Grey60 Module GO Term Enrichment")
+dotplot(greenMod) + ggtitle("Green Module GO Term Enrichment")
+dotplot(yellowMod) + ggtitle("Yellow Module GO Term Enrichment")
+#dotplot(lightcyanMod) + ggtitle("Light Cyan Module GO Term Enrichment")
+#dotplot(pinkMod) + ggtitle("Pink Module GO Term Enrichment")
+#dotplot(greenyellowMod) + ggtitle("GreenYellow Module GO Term Enrichment")
+dotplot(brownMod) + ggtitle("Brown Module GO Term Enrichment")
+dotplot(blackMod) + ggtitle("Black Module GO Term Enrichment")
+dotplot(redMod) + ggtitle("Red Module GO Term Enrichment")
+dotplot(midnightblueMod) + ggtitle("Midnight Blue Module GO Term Enrichment")
+dotplot(cyanMod) + ggtitle("Cyan Blue Module GO Term Enrichment")
+dotplot(blueMod) + ggtitle("Blue Module GO Term Enrichment")
+
+dotplot(lightyellowMod) + ggtitle("Light Module GO Term Enrichment")
+```
+
+# GO analyses for modules (all genes)
 ```{r}
-mME_all %>% ggplot(., aes(x=treatment, y=name, fill=value)) +
+Mod_allGenes <- enricher(as.vector(filter(modules_all, color == "green")$gene), 
+         pvalueCutoff = 0.05, 
+         pAdjustMethod = "BH", 
+         minGSSize = 10, 
+         maxGSSize = 500, qvalueCutoff = 0.2,
+         TERM2GENE = test_mult, TERM2NAME = term2name)
+
+write.csv(ME_labeled, "~/Dropbox/LowryLab/ME_labeled.csv")
+```
+
+
+```{r}
+mME_all <- read.csv("~/Dropbox/LowryLab/ME_labeled.csv")
+mME_all
+
+mME_all %>% ggplot(., aes(x=treatment, y=X, fill=value)) +
   geom_tile() +
   theme_bw() +
   scale_fill_gradient2(
@@ -477,75 +856,218 @@ mME_all %>% ggplot(., aes(x=treatment, y=name, fill=value)) +
   theme(axis.text.x = element_text(angle=90)) +
   labs(title = "Module-trait Relationships", y = "Modules", fill="corr")
 
-
-plotDendroAndColors(
-  netwk_all$dendrograms[[1]],
-  mergedColors[netwk_all$blockGenes[[1]]],
-  "Module colors",
-  dendroLabels = FALSE,
-  hang = 0.03,
-  addGuide = TRUE,
-  guideHang = 0.05 )
 ```
 
-# GO analyses for the modules (0.05% of genes)
-```{r run GO analyses of 5% modules}
-greenMod <- enricher(as.vector(filter(modules_0.05, color == "green")$gene), 
-         pvalueCutoff = 0.05, 
-         pAdjustMethod = "BH", 
-         minGSSize = 10, 
-         maxGSSize = 500, qvalueCutoff = 0.2,
-         TERM2GENE=GOterms_mult, TERM2NAME = term2name)
-
-brownMod <- enricher(as.vector(filter(modules_0.05, color == "brown")$gene), 
-         pvalueCutoff = 0.05, 
-         pAdjustMethod = "BH", 
-         minGSSize = 10, 
-         maxGSSize = 500, qvalueCutoff = 0.2,
-         TERM2GENE=GOterms_mult, TERM2NAME = term2name)
-
-turquoiseMod <- enricher(as.vector(filter(modules_0.05, color == "turquoise")$gene), 
-         pvalueCutoff = 0.05, 
-         pAdjustMethod = "BH", 
-         minGSSize = 10, 
-         maxGSSize = 500, qvalueCutoff = 0.2,
-         TERM2GENE=GOterms_mult, TERM2NAME = term2name)
-
-yellowMod <- enricher(as.vector(filter(modules_0.05, color == "yellow")$gene), 
-         pvalueCutoff = 0.05, 
-         pAdjustMethod = "BH", 
-         minGSSize = 10, 
-         maxGSSize = 500, qvalueCutoff = 0.2,
-         TERM2GENE=GOterms_mult, TERM2NAME = term2name)
-
-blueMod <- enricher(as.vector(filter(modules_0.05, color == "blue")$gene), 
-         pvalueCutoff = 0.05, 
-         pAdjustMethod = "BH", 
-         minGSSize = 10, 
-         maxGSSize = 500, qvalueCutoff = 0.2,
-         TERM2GENE=GOterms_mult, TERM2NAME = term2name)
 
 
+```{r module-trait correlations}
+# formatting the Mes0 datasheet to examine module - trait correlations 
+MEs0_all$sample <- rownames(MEs0_all)
 
-dotplot(turquoiseMod) + ggtitle("turquoise module")
+PKLEs <- filter(MEs0_all, sample == "PKLE_DAC_1" |
+                  sample == "PKLE_AP13_1" | 
+                  sample == "PKLE_AP13_2" | 
+                  sample == "PKLE_DAC_4" |
+                  sample ==  "PKLE_AP13_5")
 
-# habitat associated modules 
-dotplot(yellowMod) + ggtitle("yellow module")
-dotplot(greenMod) + ggtitle("green module")
-dotplot(blueMod) + ggtitle("blue module")
+KBSMs <- filter(MEs0_all, sample == "KBSM_AP13_1"|
+                   sample ==  "KBSM_AP13_2" |
+                   sample == "KBSM_DAC_1" |
+                   sample ==  "KBSM_AP13_3" |
+                   sample == "KBSM_AP13_4"|
+                   sample == "KBSM_AP13_5"|
+                   sample ==  "KBSM_DAC_2" |
+                  sample ==   "KBSM_DAC_3" )
+
+PKLEs$habitat <- "PKLE"
+KBSMs$habitat <- "KBSM"
+
+habLab <- rbind(PKLEs,
+      KBSMs)
+
+APs <- filter(habLab, sample == "KBSM_AP13_1"|
+                   sample ==  "KBSM_AP13_2" |
+                   sample ==  "KBSM_AP13_3" |
+                   sample == "KBSM_AP13_4"|
+                   sample == "KBSM_AP13_5"| 
+                  sample == "PKLE_AP13_1" | 
+                  sample == "PKLE_AP13_2" | 
+                  sample ==  "PKLE_AP13_5")
+
+DACs <- filter(habLab, sample == "KBSM_DAC_1" |
+                   sample ==  "KBSM_DAC_2" |
+                  sample ==  "KBSM_DAC_3" |
+                  sample == "PKLE_DAC_4" |
+                 sample == "PKLE_DAC_1")
+
+APs$genotype <- "AP13"
+DACs$genotype <- "DAC6"
+
+ME_labeled <- rbind(APs,
+                    DACs)
+
+
+summary(aov(MEtan ~ habitat * genotype, ME_labeled))
+summary(aov(MEmagenta ~ habitat * genotype, ME_labeled))
+summary(aov(MEturquoise ~ habitat * genotype, ME_labeled))
+summary(aov(MEsalmon ~ habitat * genotype, ME_labeled))
+summary(aov(MEpurple ~ habitat * genotype, ME_labeled))
+summary(aov(MEgrey60 ~ habitat * genotype, ME_labeled))
+summary(aov(MEgreen ~ habitat * genotype, ME_labeled))
+summary(aov(MEyellow ~ habitat * genotype, ME_labeled))
+summary(aov(MElightcyan ~ habitat * genotype, ME_labeled))
+summary(aov(MEpink ~ habitat * genotype, ME_labeled))
+summary(aov(MEgreenyellow ~ habitat * genotype, ME_labeled))
+summary(aov(MEbrown~ habitat * genotype, ME_labeled))
+summary(aov(MEblack~ habitat * genotype, ME_labeled))
+summary(aov(MEred~ habitat * genotype, ME_labeled))
+summary(aov(MEmidnightblue~ habitat * genotype, ME_labeled))
+summary(aov(MEcyan~ habitat * genotype, ME_labeled))
+summary(aov(MEblue~ habitat * genotype, ME_labeled))
+
+summary(aov(MEtan ~ genotype, ME_labeled))
+summary(aov(MEtan ~ habitat, ME_labeled))
+summary(aov(MEtan ~ habitat * genotype, ME_labeled))
+
+summary(aov(MEmagenta ~ genotype, ME_labeled))
+summary(aov(MEmagenta ~ habitat, ME_labeled))
+
+summary(aov(MEturquoise ~ genotype, ME_labeled))
+summary(aov(MEturquoise ~ habitat, ME_labeled))
+
+summary(aov(MElightgreen ~ genotype, ME_labeled))
+summary(aov(MElightgreen ~ habitat, ME_labeled))
+
+summary(aov(MEsalmon ~ genotype, ME_labeled))
+summary(aov(MEsalmon ~ habitat, ME_labeled))
+
+summary(aov(MEpurple ~ genotype, ME_labeled))
+summary(aov(MEpurple ~ habitat, ME_labeled))
+
+summary(aov(MEgrey60 ~ genotype, ME_labeled))
+summary(aov(MEgrey60 ~ habitat, ME_labeled))
+
+summary(aov(MEgreen ~ genotype, ME_labeled))
+summary(aov(MEgreen ~ habitat, ME_labeled))
+
+summary(aov(MEyellow ~ genotype, ME_labeled))
+summary(aov(MEyellow ~ habitat * genotype, ME_labeled))
+
+summary(aov(MElightcyan ~ genotype, ME_labeled))
+summary(aov(MElightcyan~ habitat, ME_labeled))
+
+summary(aov(MEpink ~ genotype, ME_labeled))
+summary(aov(MEpink ~ habitat, ME_labeled))
+
+summary(aov(MElightyellow ~ genotype, ME_labeled))
+summary(aov(MElightyellow ~ habitat, ME_labeled))
+
+summary(aov(MEgreenyellow ~ genotype, ME_labeled))
+summary(aov(MEgreenyellow ~ habitat, ME_labeled))
+
+summary(aov(MEbrown ~ genotype, ME_labeled))
+summary(aov(MEbrown ~ habitat, ME_labeled))
+summary(aov(MEbrown ~ habitat * genotype, ME_labeled))
+
+summary(aov(MEblack ~ genotype, ME_labeled))
+summary(aov(MEblack ~ habitat, ME_labeled))
+
+summary(aov(MEred ~ genotype, ME_labeled))
+summary(aov(MEred ~ habitat, ME_labeled))
+
+summary(aov(MEmidnightblue ~ genotype, ME_labeled))
+summary(aov(MEmidnightblue ~ habitat, ME_labeled))
+
+summary(aov(MEcyan ~ genotype, ME_labeled))
+summary(aov(MEcyan ~ habitat, ME_labeled))
+
 ```
 
-# GO analyses for modules (all genes)
+
+# Differential network analysis between genotypes -----------------------
+
 ```{r}
-Mod_allGenes <- enricher(as.vector(filter(modules_all, color == "green")$gene), 
-         pvalueCutoff = 0.05, 
-         pAdjustMethod = "BH", 
-         minGSSize = 10, 
-         maxGSSize = 500, qvalueCutoff = 0.2,
-         TERM2GENE=test_mult, TERM2NAME = term2name)
 
-dotplot(Mod_allGenes)
+# Optional: Perform differential network analysis between genotypes
+# Split the data by genotype
 
+AP13 <- dplyr::select(as.data.frame(expr_normalized), PKLE_AP13_1, PKLE_AP13_2, PKLE_AP13_3, KBSM_AP13_1, KBSM_AP13_2, KBSM_AP13_3, KBSM_AP13_4, KBSM_AP13_5)
+DAC <- dplyr::select(as.data.frame(expr_normalized), KBSM_DAC_1, KBSM_DAC_2, KBSM_DAC_3, PKLE_DAC_1, PKLE_DAC_4)
+
+
+#[1] "PKLE_DAC_1" "KBSM_AP13_1" "KBSM_AP13_2" "KBSM_DAC_1"  "KBSM_AP13_3" "KBSM_AP13_4" "KBSM_AP13_5" "PKLE_DAC_4"  "KBSM_DAC_2" 
+#[13] "PKLE_AP13_4" "KBSM_DAC_3"  "PKLE_AP13_5"
+
+# Run module preservation analysis
+# This checks if modules identified in one genotype are preserved in the other
+
+#multiExpr <- list(Coast = list(data = datExpr_coast), Inland = list(data = datExpr_inland))
+
+gsg_AP13 = goodSamplesGenes(t(AP13), verbose = 3)
+gsg_DAC6 = goodSamplesGenes(t(DAC), verbose = 3)
+
+AP13_filt = t(AP13)[gsg_AP13$goodSamples, gsg_AP13$goodGenes]
+DAC6_filt = t(DAC)[gsg_DAC6$goodSamples, gsg_DAC6$goodGenes]
+
+multiExpr <- list(AP13 = list(data = AP13_filt), DAC6 = list(data = DAC6_filt))
+multiColot <- list(AP13 = list(data = netwk_all$colors), DAC6 = list(data = netwk_all$colors))
+multiColot
+# Calculate module preservation statistics
+mp <- modulePreservation(multiExpr, 
+                         networkType = "signed", 
+                         referenceNetworks = c(1), 
+                         nPermutations = 100, # Increase for publication-quality analysis
+                         randomSeed = 12345, 
+                         verbose = 3,
+                         mergedColors_all,
+                         netwk_all$colors,
+                         multiWeights = NULL,
+                         dataIsExpr = TRUE)
+
+multiExpr_AP13
+
+# Create a table with the preservation statistics
+ref <- 1 # Reference network (Coast)
+test <- 2 # Test network (Inland)
+
+# Extract preservation statistics
+# Z-summary is a measure of preservation
+preservation_stats <- data.frame(
+  Module = modNames,
+  moduleSize = mp$quality$moduleSize[[ref]],
+  Zsummary = mp$preservation$Z$ref.vs.test[[ref]][[test]]$Zsummary$observed,
+  medianRank = mp$preservation$rankPres$ref.vs.test[[ref]][[test]]$medianRank$observed
+)
+
+# Sort the modules by Z-summary
+preservation_stats <- preservation_stats[order(preservation_stats$Zsummary, decreasing = TRUE), ]
+
+# Write the preservation statistics to a file
+write.csv(preservation_stats, file = "module_preservation_statistics.csv", row.names = FALSE)
+
+# Plot the preservation statistics
+pdf("module_preservation_plot.pdf", width = 10, height = 8)
+par(mfrow = c(1, 2))
+# Z-summary plot
+x <- mp$preservation$Z$ref.vs.test[[ref]][[test]]$Zsummary$observed
+y <- mp$preservation$Z$ref.vs.test[[ref]][[test]]$moduleSize
+plot(y, x, col = moduleColors, 
+     main = "Module preservation - Zsummary",
+     xlab = "Module size", ylab = "Zsummary",
+     pch = 19, cex = 1.5)
+abline(h = 2, col = "blue", lty = 2)
+abline(h = 10, col = "red", lty = 2)
+text(y, x, labels = modNames, pos = 1, cex = 0.7)
+# Median rank plot
+y <- mp$preservation$rankPres$ref.vs.test[[ref]][[test]]$medianRank$observed
+plot(mp$preservation$rankPres$ref.vs.test[[ref]][[test]]$moduleSize, y,
+     col = moduleColors, 
+     main = "Module preservation - Median rank",
+     xlab = "Module size", ylab = "Median rank",
+     pch = 19, cex = 1.5)
+text(mp$preservation$rankPres$ref.vs.test[[ref]][[test]]$moduleSize, y,
+     labels = modNames, pos = 1, cex = 0.7)
+dev.off()
 
 ```
 

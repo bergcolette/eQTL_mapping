@@ -1,0 +1,2280 @@
+---
+title: "eQTL_setup"
+author: "Colette Berg"
+date: "2025-07-23"
+output: html_document
+---
+
+## set up script and load required packages, set up matrix eQTL settings
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+library(MatrixEQTL)
+library(dplyr)
+library(ggplot2)
+library(VariantAnnotation)
+library(vcfR)
+library(adegenet)
+library(eQTLpipeline)
+library(DESeq2)
+library(viridis)
+library(reshape2)
+library(tidyr)
+library(preprocessCore)
+library(fs)
+library(readr)
+library(clusterProfiler)
+library(GO.db)
+
+
+# setting up matrix eQTL settings
+useModel = modelLINEAR; # modelANOVA or modelLINEAR or modelLINEAR_CROSS
+output_file_name = tempfile();
+errorCovariance = numeric();
+```
+
+## read in gene expression, gene and snp location, covariates files, and genotypes
+```{r load expr and geno data, message = FALSE}
+
+# reading in gene expression data for Midwest, Gulf, and Atlantic 
+
+# MI_Midwest
+geneMI_Midwest = SlicedData$new()
+geneMI_Midwest$fileDelimiter = ",";    
+geneMI_Midwest$LoadFile("~/Dropbox/LowryLab/data/expression/genes_MI_Midwest_normCorrected.csv")
+
+# TX_Midwest 
+geneTX_Midwest = SlicedData$new()
+geneTX_Midwest$fileDelimiter = ",";    
+geneTX_Midwest$LoadFile("~/Dropbox/LowryLab/data/expression/genes_TX_Midwest_normCorrected.csv")
+
+# GxE_Midwest
+geneGxE_Midwest = SlicedData$new()
+geneGxE_Midwest$fileDelimiter = ",";    
+geneGxE_Midwest$LoadFile("~/Dropbox/LowryLab/data/expression/genes_GxE_Midwest_normCorrected.csv")
+
+# MI_Gulf
+geneMI_Gulf = SlicedData$new()
+geneMI_Gulf$fileDelimiter = ",";    
+geneMI_Gulf$LoadFile("~/Dropbox/LowryLab/data/expression/genes_MI_Gulf_normCorrected.csv")
+
+# TX_Gulf 
+geneTX_Gulf = SlicedData$new()
+geneTX_Gulf$fileDelimiter = ",";    
+geneTX_Gulf$LoadFile("~/Dropbox/LowryLab/data/expression/genes_TX_Gulf_normCorrected.csv")
+
+# GxE_Gulf
+geneGxE_Gulf = SlicedData$new()
+geneGxE_Gulf$fileDelimiter = ",";    
+geneGxE_Gulf$LoadFile("~/Dropbox/LowryLab/data/expression/genes_GxE_Gulf_normCorrected.csv")
+
+# MI_Atlantic
+geneMI_Atlantic = SlicedData$new()
+geneMI_Atlantic$fileDelimiter = ",";    
+geneMI_Atlantic$LoadFile("~/Dropbox/LowryLab/data/expression/genes_MI_Atlantic_normCorrected.csv")
+
+# TX_Atlantic 
+geneTX_Atlantic = SlicedData$new()
+geneTX_Atlantic$fileDelimiter = ",";    
+geneTX_Atlantic$LoadFile("~/Dropbox/LowryLab/data/expression/genes_TX_Atlantic_normCorrected.csv")
+
+# GxE_Atlantic
+geneGxE_Atlantic = SlicedData$new()
+geneGxE_Atlantic$fileDelimiter = ",";    
+geneGxE_Atlantic$LoadFile("~/Dropbox/LowryLab/data/expression/genes_GxE_Atlantic_normCorrected.csv")
+
+
+# gene name, chromosome, start, stop
+gene_location_file_name = "~/Dropbox/LowryLab/data/AP13/AP13_gene_position.txt"
+
+# snp name, chromosome, position (bp)
+snps_location_file_name = "~/Dropbox/LowryLab/data/AP13/positions.txt"
+
+# process smps
+snpspos = read.table(snps_location_file_name, 
+                     header = FALSE, 
+                     stringsAsFactors = FALSE,
+                     sep="\t")
+
+# process gene names 
+genepos = read.table(gene_location_file_name, 
+                     header = TRUE, 
+                     stringsAsFactors = FALSE,
+                     sep="\t")
+
+
+## Load covariates file, Midwest. in this case it's the first 5 PC's (plink)
+
+cvrt_Midwest_GxE = SlicedData$new();
+cvrt_Midwest_GxE$fileDelimiter = ",";      # the TAB character
+cvrt_Midwest_GxE$fileOmitCharacters = "NA"; # denote missing values;
+cvrt_Midwest_GxE$fileSkipRows = 1;          # one row of column labels
+cvrt_Midwest_GxE$fileSkipColumns = 2;       # one column of row labels
+cvrt_Midwest_GxE$LoadFile("~/Dropbox/lowryLab/data/expression/cov_allChroms_Midwest_GxE.csv");
+
+## Load covariates file, Gulf. in this case it's the first 5 PC's (plink)
+
+cvrt_Gulf_GxE = SlicedData$new();
+cvrt_Gulf_GxE$fileDelimiter = ",";      # the TAB character
+cvrt_Gulf_GxE$fileOmitCharacters = "NA"; # denote missing values;
+cvrt_Gulf_GxE$fileSkipRows = 1;          # one row of column labels
+cvrt_Gulf_GxE$fileSkipColumns = 2;       # one column of row labels
+cvrt_Gulf_GxE$LoadFile("~/Dropbox/lowryLab/data/expression/cov_allChroms_Gulf_GxE.csv");
+
+
+## Load covariates file, Atlantic. in this case it's the first 5 PC's (plink)
+
+cvrt_Atlantic_GxE = SlicedData$new();
+cvrt_Atlantic_GxE$fileDelimiter = ",";      # the TAB character
+cvrt_Atlantic_GxE$fileOmitCharacters = "NA"; # denote missing values;
+cvrt_Atlantic_GxE$fileSkipRows = 1;          # one row of column labels
+cvrt_Atlantic_GxE$fileSkipColumns = 2;       # one column of row labels
+cvrt_Atlantic_GxE$LoadFile("~/Dropbox/lowryLab/data/expression/cov_allChroms_Atlantic_GxE.csv");
+
+
+
+## Load covariates file, Midwest. in this case it's the first 5 PC's (plink)
+
+cvrt_Midwest_MI = SlicedData$new();
+cvrt_Midwest_MI$fileDelimiter = ",";      # the TAB character
+cvrt_Midwest_MI$fileOmitCharacters = "NA"; # denote missing values;
+cvrt_Midwest_MI$fileSkipRows = 1;          # one row of column labels
+cvrt_Midwest_MI$fileSkipColumns = 2;       # one column of row labels
+cvrt_Midwest_MI$LoadFile("~/Dropbox/lowryLab/data/expression/cov_allChroms_Midwest_MI.csv");
+
+## Load covariates file, Gulf. in this case it's the first 5 PC's (plink)
+
+cvrt_Gulf_MI = SlicedData$new();
+cvrt_Gulf_MI$fileDelimiter = ",";      # the TAB character
+cvrt_Gulf_MI$fileOmitCharacters = "NA"; # denote missing values;
+cvrt_Gulf_MI$fileSkipRows = 1;          # one row of column labels
+cvrt_Gulf_MI$fileSkipColumns = 2;       # one column of row labels
+cvrt_Gulf_MI$LoadFile("~/Dropbox/lowryLab/data/expression/cov_allChroms_Gulf_MI.csv");
+
+
+## Load covariates file, Atlantic. in this case it's the first 5 PC's (plink)
+
+cvrt_Atlantic_MI = SlicedData$new();
+cvrt_Atlantic_MI$fileDelimiter = ",";      # the TAB character
+cvrt_Atlantic_MI$fileOmitCharacters = "NA"; # denote missing values;
+cvrt_Atlantic_MI$fileSkipRows = 1;          # one row of column labels
+cvrt_Atlantic_MI$fileSkipColumns = 2;       # one column of row labels
+cvrt_Atlantic_MI$LoadFile("~/Dropbox/lowryLab/data/expression/cov_allChroms_Atlantic_MI.csv");
+
+
+## Load covariates file, Midwest. in this case it's the first 5 PC's (plink)
+
+cvrt_Midwest_TX = SlicedData$new();
+cvrt_Midwest_TX$fileDelimiter = ",";      # the TAB character
+cvrt_Midwest_TX$fileOmitCharacters = "NA"; # denote missing values;
+cvrt_Midwest_TX$fileSkipRows = 1;          # one row of column labels
+cvrt_Midwest_TX$fileSkipColumns = 2;       # one column of row labels
+cvrt_Midwest_TX$LoadFile("~/Dropbox/lowryLab/data/expression/cov_allChroms_Midwest_TX.csv");
+
+## Load covariates file, Gulf. in this case it's the first 5 PC's (plink)
+
+cvrt_Gulf_TX = SlicedData$new();
+cvrt_Gulf_TX$fileDelimiter = ",";      # the TAB character
+cvrt_Gulf_TX$fileOmitCharacters = "NA"; # denote missing values;
+cvrt_Gulf_TX$fileSkipRows = 1;          # one row of column labels
+cvrt_Gulf_TX$fileSkipColumns = 2;       # one column of row labels
+cvrt_Gulf_TX$LoadFile("~/Dropbox/lowryLab/data/expression/cov_allChroms_Gulf_TX.csv");
+
+
+## Load covariates file, Atlantic. in this case it's the first 5 PC's (plink)
+
+cvrt_Atlantic_TX = SlicedData$new();
+cvrt_Atlantic_TX$fileDelimiter = ",";      # the TAB character
+cvrt_Atlantic_TX$fileOmitCharacters = "NA"; # denote missing values;
+cvrt_Atlantic_TX$fileSkipRows = 1;          # one row of column labels
+cvrt_Atlantic_TX$fileSkipColumns = 2;       # one column of row labels
+cvrt_Atlantic_TX$LoadFile("~/Dropbox/lowryLab/data/expression/cov_allChroms_Atlantic_TX.csv");
+
+
+# Midwest MI
+Midwest_MI = "~/Dropbox/lowryLab/data/genotypes/Midwest/Midwest_MI_allChroms.txt"
+Midwest_MI_geno = SlicedData$new();
+Midwest_MI_geno$fileDelimiter = "\t";       # denote missing values;
+Midwest_MI_geno$fileSkipColumns = 1;    
+Midwest_MI_geno$fileSkipRows = 1; # one column of row labels
+Midwest_MI_geno$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Midwest_MI_geno$LoadFile(Midwest_MI)
+
+# Midwest GxE
+Midwest_GxE = "~/Dropbox/lowryLab/data/genotypes/Midwest/Midwest_GxE_allChroms.txt"
+Midwest_GxE_geno = SlicedData$new();
+Midwest_GxE_geno$fileDelimiter = "\t";       # denote missing values;
+Midwest_GxE_geno$fileSkipColumns = 1;    
+Midwest_GxE_geno$fileSkipRows = 1; # one column of row labels
+Midwest_GxE_geno$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Midwest_GxE_geno$LoadFile(Midwest_GxE)
+
+# Midwest TX
+Midwest_TX = "~/Dropbox/lowryLab/data/genotypes/Midwest/Midwest_TX_allChroms.txt"
+Midwest_TX_geno = SlicedData$new();
+Midwest_TX_geno$fileDelimiter = "\t";       # denote missing values;
+Midwest_TX_geno$fileSkipColumns = 1;    
+Midwest_TX_geno$fileSkipRows = 1; # one column of row labels
+Midwest_TX_geno$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Midwest_TX_geno$LoadFile(Midwest_TX)
+
+
+# Atlantic MI
+Atlantic_MI = "~/Dropbox/lowryLab/data/genotypes/Atlantic/Atlantic_MI_allChroms.txt"
+Atlantic_MI_geno = SlicedData$new();
+Atlantic_MI_geno$fileDelimiter = "\t";       # denote missing values;
+Atlantic_MI_geno$fileSkipColumns = 1;    
+Atlantic_MI_geno$fileSkipRows = 1; # one column of row labels
+Atlantic_MI_geno$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Atlantic_MI_geno$LoadFile(Atlantic_MI)
+
+# Atlantic GxE
+Atlantic_GxE = "~/Dropbox/lowryLab/data/genotypes/Atlantic/Atlantic_GxE_allChroms.txt"
+Atlantic_GxE_geno = SlicedData$new();
+Atlantic_GxE_geno$fileDelimiter = "\t";       # denote missing values;
+Atlantic_GxE_geno$fileSkipColumns = 1;    
+Atlantic_GxE_geno$fileSkipRows = 1; # one column of row labels
+Atlantic_GxE_geno$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Atlantic_GxE_geno$LoadFile(Atlantic_GxE)
+
+# Atlantic TX
+Atlantic_TX = "~/Dropbox/lowryLab/data/genotypes/Atlantic/Atlantic_TX_allChroms.txt"
+Atlantic_TX_geno = SlicedData$new();
+Atlantic_TX_geno$fileDelimiter = "\t";       # denote missing values;
+Atlantic_TX_geno$fileSkipColumns = 1;    
+Atlantic_TX_geno$fileSkipRows = 1; # one column of row labels
+Atlantic_TX_geno$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Atlantic_TX_geno$LoadFile(Atlantic_TX)
+
+
+# Gulf MI
+Gulf_MI = "~/Dropbox/lowryLab/data/genotypes/Gulf/Gulf_MI_allChroms.txt"
+Gulf_MI_geno = SlicedData$new();
+Gulf_MI_geno$fileDelimiter = "\t";       # denote missing values;
+Gulf_MI_geno$fileSkipColumns = 1;    
+Gulf_MI_geno$fileSkipRows = 1; # one column of row labels
+Gulf_MI_geno$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Gulf_MI_geno$LoadFile(Gulf_MI)
+
+# Gulf GxE
+Gulf_GxE = "~/Dropbox/lowryLab/data/genotypes/Gulf/Gulf_GxE_allChroms.txt"
+Gulf_GxE_geno = SlicedData$new();
+Gulf_GxE_geno$fileDelimiter = "\t";       # denote missing values;
+Gulf_GxE_geno$fileSkipColumns = 1;    
+Gulf_GxE_geno$fileSkipRows = 1; # one column of row labels
+Gulf_GxE_geno$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Gulf_GxE_geno$LoadFile(Gulf_GxE)
+
+# Gulf TX
+Gulf_TX = "~/Dropbox/lowryLab/data/genotypes/Gulf/Gulf_TX_allChroms.txt"
+Gulf_TX_geno = SlicedData$new();
+Gulf_TX_geno$fileDelimiter = "\t";       # denote missing values;
+Gulf_TX_geno$fileSkipColumns = 1;    
+Gulf_TX_geno$fileSkipRows = 1; # one column of row labels
+Gulf_TX_geno$fileSliceSize = 10000;      # read file in pieces of 2,000 rows
+Gulf_TX_geno$LoadFile(Gulf_TX)
+```
+
+## map all eQTLs
+```{r  run matrix eQTL for all populations and sites}
+
+# eQTL_mapping GxE
+me_GxE_Midwest = Matrix_eQTL_main(
+  snps = Midwest_GxE_geno,
+  gene = geneGxE_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  cvrt = cvrt_Midwest_GxE,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_allChroms_normCorrected.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_allChroms_cis_normCorrected.txt",
+  pvOutputThreshold = 1e-6,
+  pvOutputThreshold.cis = 1e-3, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL mapping MI
+me_MI_Midwest = Matrix_eQTL_main(
+  snps = Midwest_MI_geno,
+  gene = geneMI_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  cvrt = cvrt_Midwest_MI,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_allChroms_normCorrected.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_allChroms_cis_normCorrected.txt",
+  pvOutputThreshold = 1e-7,
+  pvOutputThreshold.cis = 1e-5,
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+# eQTL mapping TX 
+me_TX_Midwest = Matrix_eQTL_main(
+  snps = Midwest_TX_geno,
+  gene = geneTX_Midwest,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  cvrt = cvrt_Midwest_TX,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_allChroms_normCorrected.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_allChroms_cis_normCorrected.txt",
+  pvOutputThreshold = 1e-7,
+  pvOutputThreshold.cis = 1e-5, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+
+# eQTL_mapping
+me_GxE_Atlantic = Matrix_eQTL_main(
+  snps = Atlantic_GxE_geno,
+  gene = geneGxE_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  cvrt = cvrt_Atlantic_GxE,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_allChroms_normCorrected.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_allChroms_cis_normCorrected.txt",
+  pvOutputThreshold = 1e-7,
+  pvOutputThreshold.cis = 1e-5, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+
+me_MI_Atlantic = Matrix_eQTL_main(
+  snps = Atlantic_MI_geno,
+  gene = geneMI_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  cvrt = cvrt_Atlantic_MI,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_allChroms_normCorrected.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_allChroms_cis_normCorrected.txt",
+  pvOutputThreshold = 1e-7,
+  pvOutputThreshold.cis = 1e-5, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+me_TX_Atlantic = Matrix_eQTL_main(
+  snps = Atlantic_TX_geno,
+  gene = geneTX_Atlantic,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  cvrt = cvrt_Atlantic_TX,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_allChroms_normCorrected.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_allChroms_cis_normCorrected.txt",
+  pvOutputThreshold = 1e-7,
+  pvOutputThreshold.cis = 1e-5, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+
+# eQTL_mapping
+me_GxE_Gulf = Matrix_eQTL_main(
+  snps = Gulf_GxE_geno,
+  gene = geneGxE_Gulf,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  cvrt = cvrt_Gulf_GxE,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_allChroms_normCorrected.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_allChroms_cis_normCorrected.txt",
+  pvOutputThreshold = 1e-5,
+  pvOutputThreshold.cis = 1e-3, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+me_MI_Gulf = Matrix_eQTL_main(
+  snps = Gulf_MI_geno,
+  gene = geneMI_Gulf,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  cvrt = cvrt_Gulf_MI,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_allChroms_normCorrected.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_allChroms_cis_normCorrected.txt",
+  pvOutputThreshold = 1e-5,
+  pvOutputThreshold.cis = 1e-3, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+
+me_TX_Gulf = Matrix_eQTL_main(
+  snps = Gulf_TX_geno,
+  gene = geneTX_Gulf,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = 1e6,
+  cvrt = cvrt_Gulf_TX,
+  output_file_name = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_allChroms_normCorrected.txt",
+  output_file_name.cis = "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_allChroms_cis_normCorrected.txt",
+  pvOutputThreshold = 1e-5,
+  pvOutputThreshold.cis = 1e-3, 
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = TRUE,
+  noFDRsaveMemory = FALSE)
+```
+
+# read back in the eQTLs for post-processing and rewrite
+```{r eQTL post processing}
+
+# read in and process gene position file
+genePos <- read.csv("~/Dropbox/LowryLab/data/AP13/AP13_gene_position.txt",
+                    sep="\t")
+
+# format (add gene column) for later
+genePos$gene <- genePos$geneid
+
+# read in the trans eQTL output files -- GxE
+trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_allChroms_normCorrected.txt", sep = "\t")
+cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_allChroms_cis_normCorrected.txt", sep = "\t")
+
+# add cis label to column and merge with gene positions 
+cis$type <- "cis"
+cis_labeled <- merge(cis, genePos, by="gene")
+trans$type <- "trans"
+trans_labeled <- merge(trans, genePos, by="gene")
+
+# put the cis and trans together! 
+all_eQTLs <- rbind(cis_labeled, trans_labeled)
+
+# now separate the SNP label for plotting
+Midwest_GxE_eQTLs <- all_eQTLs %>%
+  separate(SNP, into = c("genome_Chrom", "genome_bp"), sep = "_")
+
+# read in the trans eQTL output files  -- MI
+trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_allChroms_normCorrected.txt", sep = "\t")
+cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_allChroms_cis_normCorrected.txt", sep = "\t")
+ 
+# add cis label to column and merge with gene positions 
+cis$type <- "cis"
+cis_labeled <- merge(cis, genePos, by="gene")
+trans$type <- "trans"
+trans_labeled <- merge(trans, genePos, by="gene")
+
+# put the cis and trans together! 
+all_eQTLs <- rbind(cis_labeled, trans_labeled)
+
+# now separate the SNP label for plotting
+Midwest_MI_eQTLs <- all_eQTLs %>%
+  separate(SNP, into = c("genome_Chrom", "genome_bp"), sep = "_")
+
+# read in the trans eQTL output files -- TX
+trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_allChroms_normCorrected.txt", sep = "\t")
+cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_allChroms_cis_normCorrected.txt", sep = "\t")
+
+# add cis label to column and merge with gene positions 
+cis$type <- "cis"
+cis_labeled <- merge(cis, genePos, by="gene")
+trans$type <- "trans"
+trans_labeled <- merge(trans, genePos, by="gene")
+
+# put the cis and trans together! 
+all_eQTLs <- rbind(cis_labeled, trans_labeled)
+
+# now separate the SNP label for plotting
+Midwest_TX_eQTLs <- all_eQTLs %>%
+  separate(SNP, into = c("genome_Chrom", "genome_bp"), sep = "_")
+
+
+
+
+
+# read in the trans eQTL output files 
+trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_allChroms_normCorrected.txt", sep = "\t")
+cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_allChroms_cis_normCorrected.txt", sep = "\t")
+
+# add cis label to column and merge with gene positions 
+cis$type <- "cis"
+cis_labeled <- merge(cis, genePos, by="gene")
+trans$type <- "trans"
+trans_labeled <- merge(trans, genePos, by="gene")
+
+# put the cis and trans together! 
+all_eQTLs <- rbind(cis_labeled, trans_labeled)
+
+# now separate the SNP label for plotting
+Atlantic_GxE_eQTLs <- all_eQTLs %>%
+  separate(SNP, into = c("genome_Chrom", "genome_bp"), sep = "_")
+
+
+# read in the trans eQTL output files 
+trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_allChroms_normCorrected.txt", sep = "\t")
+cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_allChroms_cis_normCorrected.txt", sep = "\t")
+
+# add cis label to column and merge with gene positions 
+cis$type <- "cis"
+cis_labeled <- merge(cis, genePos, by="gene")
+trans$type <- "trans"
+trans_labeled <- merge(trans, genePos, by="gene")
+
+# put the cis and trans together! 
+all_eQTLs <- rbind(cis_labeled, trans_labeled)
+
+# now separate the SNP label for plotting
+Atlantic_MI_eQTLs <- all_eQTLs %>%
+  separate(SNP, into = c("genome_Chrom", "genome_bp"), sep = "_")
+
+
+
+# read in the trans eQTL output files 
+trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_allChroms_normCorrected.txt", sep = "\t")
+cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_allChroms_cis_normCorrected.txt", sep = "\t")
+
+# add cis label to column and merge with gene positions 
+cis$type <- "cis"
+cis_labeled <- merge(cis, genePos, by="gene")
+trans$type <- "trans"
+trans_labeled <- merge(trans, genePos, by="gene")
+
+# put the cis and trans together! 
+all_eQTLs <- rbind(cis_labeled, trans_labeled)
+
+# now separate the SNP label for plotting
+Atlantic_TX_eQTLs <- all_eQTLs %>%
+  separate(SNP, into = c("genome_Chrom", "genome_bp"), sep = "_")
+
+
+
+# read in the trans eQTL output files 
+trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_allChroms_normCorrected.txt", sep = "\t")
+cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_allChroms_cis_normCorrected.txt", sep = "\t")
+
+# add cis label to column and merge with gene positions 
+cis$type <- "cis"
+cis_labeled <- merge(cis, genePos, by="gene")
+trans$type <- "trans"
+trans_labeled <- merge(trans, genePos, by="gene")
+
+# put the cis and trans together! 
+all_eQTLs <- rbind(cis_labeled, trans_labeled)
+
+# now separate the SNP label for plotting
+Gulf_GxE_eQTLs <- all_eQTLs %>%
+  separate(SNP, into = c("genome_Chrom", "genome_bp"), sep = "_")
+
+
+# read in the trans eQTL output files 
+trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_allChroms_normCorrected.txt", sep = "\t")
+cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_allChroms_cis_normCorrected.txt", sep = "\t")
+
+# add cis label to column and merge with gene positions 
+cis$type <- "cis"
+cis_labeled <- merge(cis, genePos, by="gene")
+trans$type <- "trans"
+trans_labeled <- merge(trans, genePos, by="gene")
+
+# put the cis and trans together! 
+all_eQTLs <- rbind(cis_labeled, trans_labeled)
+
+# now separate the SNP label for plotting
+Gulf_MI_eQTLs <- all_eQTLs %>%
+  separate(SNP, into = c("genome_Chrom", "genome_bp"), sep = "_")
+
+
+# read in the trans eQTL output files 
+trans <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_allChroms_normCorrected.txt", sep = "\t")
+cis <- read.csv("/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_allChroms_cis_normCorrected.txt", sep = "\t")
+
+# add cis label to column and merge with gene positions 
+cis$type <- "cis"
+cis_labeled <- merge(cis, genePos, by="gene")
+trans$type <- "trans"
+trans_labeled <- merge(trans, genePos, by="gene")
+
+# put the cis and trans together! 
+all_eQTLs <- rbind(cis_labeled, trans_labeled)
+
+# now separate the SNP label for plotting
+Gulf_TX_eQTLs <- all_eQTLs %>%
+  separate(SNP, into = c("genome_Chrom", "genome_bp"), sep = "_")
+
+# filter by FDR and rewrite
+# filter Gulf
+Gulf_TX_eQTLs_filt <- filter(Gulf_TX_eQTLs, FDR < 0.05)
+Gulf_MI_eQTLs_filt <- filter(Gulf_MI_eQTLs, FDR < 0.05)
+Gulf_GxE_eQTLs_filt <- filter(Gulf_GxE_eQTLs, FDR < 0.05)
+
+# filter Atlantic
+Atlantic_TX_eQTLs_filt <- filter(Atlantic_TX_eQTLs, FDR < 0.05)
+Atlantic_MI_eQTLs_filt <- filter(Atlantic_MI_eQTLs, FDR < 0.05)
+Atlantic_GxE_eQTLs_filt <- filter(Atlantic_GxE_eQTLs, FDR < 0.05)
+
+# filter Atlantic
+Midwest_TX_eQTLs_filt <- filter(Midwest_TX_eQTLs, FDR < 0.05)
+Midwest_MI_eQTLs_filt <- filter(Midwest_MI_eQTLs, FDR < 0.05)
+Midwest_GxE_eQTLs_filt <- filter(Midwest_GxE_eQTLs, FDR < 0.05)
+
+
+# write filtered eQTls to save them
+#write.csv(Gulf_TX_eQTLs_filt, "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Gulf_all_eQTLs.csv")
+#write.csv(Gulf_MI_eQTLs_filt, "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Gulf_all_eQTLs.csv")
+#write.csv(Gulf_GxE_eQTLs_filt, "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Gulf_all_eQTLs.csv")
+
+# write all eQTls to save them
+#write.csv(Midwest_MI_eQTLs_filt, "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Midwest_all_eQTLs.csv")
+#write.csv(Midwest_GxE_eQTLs_filt, "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Midwest_all_eQTLs.csv")
+#write.csv(Midwest_TX_eQTLs_filt, "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Midwest_all_eQTLs.csv")
+
+# write all eQTls to save them
+#write.csv(Atlantic_MI_eQTLs_filt, "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/MI_Atlantic_all_eQTLs.csv")
+#write.csv(Atlantic_TX_eQTLs_filt, "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/TX_Atlantic_all_eQTLs.csv")
+#write.csv(Atlantic_GxE_eQTLs_filt, "/Users/coletteberg/Dropbox/LowryLab/data/eQTL_output/GxE_Atlantic_all_eQTLs.csv")
+
+
+#ggplot(filter(Gulf_TX_eQTLs, FDR < 0.2, type == "trans"),
+ #      aes(x = p.value,
+  #         y = FDR)) +
+  #geom_point()
+
+#nrow(filter(Atlantic_MI_eQTLs, FDR < 0.1, type =="cis"))
+
+#hist(Gulf_TX_eQTLs$FDR)\
+```
+
+# read in genotypes and expression as csvs for subsequent processing
+```{r reupload_genotypes}
+# read in the genotypes for SFS
+# Midwest
+Midwest_MI_genotypes <- read.csv("~/Dropbox/lowryLab/data/genotypes/Midwest/Midwest_MI_allChroms.txt", sep = "\t")
+Midwest_TX_genotypes <- read.csv("~/Dropbox/lowryLab/data/genotypes/Midwest/Midwest_TX_allChroms.txt", sep = "\t")
+Midwest_GxE_genotypes <- read.csv("~/Dropbox/lowryLab/data/genotypes/Midwest/Midwest_GxE_allChroms.txt", sep = "\t")
+
+#Atlantic
+Atlantic_MI_genotypes <- read.csv("~/Dropbox/lowryLab/data/genotypes/Atlantic/Atlantic_MI_allChroms.txt", sep = "\t")
+Atlantic_TX_genotypes <- read.csv("~/Dropbox/lowryLab/data/genotypes/Atlantic/Atlantic_TX_allChroms.txt", sep = "\t")
+Atlantic_GxE_genotypes <- read.csv("~/Dropbox/lowryLab/data/genotypes/Atlantic/Atlantic_GxE_allChroms.txt", sep = "\t")
+
+#Gulf
+Gulf_MI_genotypes <- read.csv("~/Dropbox/lowryLab/data/genotypes/Gulf/Gulf_MI_allChroms.txt", sep = "\t")
+Gulf_TX_genotypes <- read.csv("~/Dropbox/lowryLab/data/genotypes/Gulf/Gulf_TX_allChroms.txt", sep = "\t")
+Gulf_GxE_genotypes <- read.csv("~/Dropbox/lowryLab/data/genotypes/Gulf/Gulf_GxE_allChroms.txt", sep = "\t")
+
+# to explore why some genes have excessive eQTLs, re-reading in gene expression files as .csvs 
+# Gulf
+geneMI_Gulf <- read.csv("~/Dropbox/LowryLab/data/expression/genes_MI_Gulf_normCorrected.csv")
+geneTX_Gulf <- read.csv("~/Dropbox/LowryLab/data/expression/genes_TX_Gulf_normCorrected.csv")
+geneGxE_Gulf <- read.csv("~/Dropbox/LowryLab/data/expression/genes_GxE_Gulf_normCorrected.csv")
+# Atlantic
+geneMI_Atlantic <- read.csv("~/Dropbox/LowryLab/data/expression/genes_MI_Atlantic_normCorrected.csv")
+geneTX_Atlantic <- read.csv("~/Dropbox/LowryLab/data/expression/genes_TX_Atlantic_normCorrected.csv")
+geneGxE_Atlantic <- read.csv("~/Dropbox/LowryLab/data/expression/genes_GxE_Atlantic_normCorrected.csv")
+# Midwest
+geneMI_Midwest <- read.csv("~/Dropbox/LowryLab/data/expression/genes_MI_Midwest_normCorrected.csv")
+geneTX_Midwest <- read.csv("~/Dropbox/LowryLab/data/expression/genes_TX_Midwest_normCorrected.csv")
+geneGxE_Midwest <- read.csv("~/Dropbox/LowryLab/data/expression/genes_GxE_Midwest_normCorrected.csv")
+
+```
+
+# getting the top 10% of GxE genes to test for enrichment
+```{r top GxE gene enrichment}
+# first calculate the median diff in gene expression across genes 
+
+geneGxE_Atlantic$median <- apply(dplyr::select(geneGxE_Atlantic, -X), 1, median, na.rm = TRUE)
+geneGxE_Gulf$median <- apply(dplyr::select(geneGxE_Gulf, -X), 1, median, na.rm = TRUE)
+geneGxE_Midwest$median <- apply(dplyr::select(geneGxE_Midwest, -X), 1, median, na.rm = TRUE)
+
+# now get the top 10% GxE genes 
+Atlantic_filtered <- geneGxE_Atlantic %>%  slice_max(median, prop = 0.1)
+Gulf_filtered <- geneGxE_Gulf %>%  slice_max(median, prop = 0.1)
+Midwest_filtered <- geneGxE_Midwest %>%  slice_max(median, prop = 0.1)
+
+# now running GO terms
+# the gene ontology setup is in AP13_DAC6_DESeq 
+Atlantic <- enricher(Atlantic_filtered$X, 
+         pvalueCutoff = 0.05, 
+         pAdjustMethod = "BH", 
+         minGSSize = 10, 
+         maxGSSize = 500, qvalueCutoff = 0.2,
+         TERM2GENE=GOterms_mult, TERM2NAME = term2name)
+
+Gulf <- enricher(Gulf_filtered$X, 
+         pvalueCutoff = 0.05, 
+         pAdjustMethod = "BH", 
+         minGSSize = 10, 
+         maxGSSize = 500, qvalueCutoff = 0.2,
+         TERM2GENE=GOterms_mult, TERM2NAME = term2name)
+
+Midwest <- enricher(Midwest_filtered$X, 
+         pvalueCutoff = 0.05, 
+         pAdjustMethod = "BH", 
+         minGSSize = 10, 
+         maxGSSize = 500, qvalueCutoff = 0.2,
+         TERM2GENE=GOterms_mult, TERM2NAME = term2name)
+
+dotplot(Atlantic) + ggtitle("GO term enrichment, top Atlantic GxE genes")
+dotplot(Midwest) + ggtitle("GO term enrichment, top Midwest GxE genes")
+dotplot(Gulf) + ggtitle("GO term enrichment, top Gulf GxE genes")
+```
+
+# scan for hotspots 
+
+# exploring the genes that have implausibly many eQTLs 
+# testing relationship between eQTL number and deviations from normal-ness 
+```{r gene summary}
+
+Gulf_MI_summary <- filter(Gulf_MI_eQTLs_filt, type == "trans") %>% 
+  group_by(chr,
+           gene) %>% 
+  summarise(n = n())
+
+Gulf_TX_summary <- filter(Gulf_TX_eQTLs, type == "trans") %>% 
+  group_by(chr,
+           gene) %>% 
+  summarise(n = n())
+
+Gulf_GxE_summary <- filter(Gulf_GxE_eQTLs_filt, type == "trans") %>% 
+  group_by(chr,
+           gene) %>% 
+  summarise(n = n())
+
+Atlantic_MI_summary <- filter(Atlantic_TX_eQTLs_filt, type == "trans") %>% 
+  group_by(chr,
+           gene) %>% 
+  summarise(n = n())
+
+Atlantic_TX_summary <- filter(Atlantic_TX_eQTLs_filt, type == "trans") %>% 
+  group_by(chr,
+           gene) %>% 
+  summarise(n = n())
+
+Atlantic_MI_summary <- filter(Atlantic_MI_eQTLs_filt, type == "trans") %>% 
+  group_by(chr,
+           gene) %>% 
+  summarise(n = n())
+
+Atlantic_GxE_summary <- filter(Atlantic_GxE_eQTLs_filt, type == "trans") %>% 
+  group_by(chr,
+           gene) %>% 
+  summarise(n = n())
+
+Midwest_GxE_summary <- filter(Midwest_GxE_eQTLs_filt, type == "trans") %>% 
+  group_by(chr,
+           gene) %>% 
+  summarise(n = n())
+
+Midwest_MI_summary <- filter(Midwest_MI_eQTLs_filt, type == "trans") %>% 
+  group_by(chr,
+           gene) %>% 
+  summarise(n = n())
+
+Midwest_TX_summary <- filter(Midwest_TX_eQTLs_filt, type == "trans") %>% 
+  group_by(chr,
+           gene) %>% 
+  summarise(n = n())
+
+
+
+# shapiro-wilk tests for normality 
+# Gulf
+shap_MI_Gulf <- as.data.frame(t(apply(dplyr::select(geneMI_Gulf, -X), 1, function(x) {
+  res <- shapiro.test(x)
+  c(W_statistic = res$statistic, p_value = res$p.value)
+})))
+
+shap_TX_Gulf <- as.data.frame(t(apply(dplyr::select(geneTX_Gulf, -X), 1, function(x) {
+  res <- shapiro.test(x)
+  c(W_statistic = res$statistic, p_value = res$p.value)
+})))
+
+shap_GxE_Gulf <- as.data.frame(t(apply(dplyr::select(geneGxE_Gulf, -X), 1, function(x) {
+  res <- shapiro.test(x)
+  c(W_statistic = res$statistic, p_value = res$p.value)
+})))
+
+# Atlantic
+shap_MI_Atlantic <- as.data.frame(t(apply(dplyr::select(geneMI_Atlantic, -X), 1, function(x) {
+  res <- shapiro.test(x)
+  c(W_statistic = res$statistic, p_value = res$p.value)
+})))
+
+shap_TX_Atlantic <- as.data.frame(t(apply(dplyr::select(geneTX_Atlantic, -X), 1, function(x) {
+  res <- shapiro.test(x)
+  c(W_statistic = res$statistic, p_value = res$p.value)
+})))
+
+shap_GxE_Atlantic <- as.data.frame(t(apply(dplyr::select(geneGxE_Atlantic, -X), 1, function(x) {
+  res <- shapiro.test(x)
+  c(W_statistic = res$statistic, p_value = res$p.value)
+})))
+
+
+geneMI_Midwest$var <- apply(dplyr::select(geneMI_Midwest, -X), 1, var)
+geneTX_Midwest$var <- apply(dplyr::select(geneTX_Midwest, -X), 1, var)
+geneGxE_Midwest$var <- apply(dplyr::select(geneGxE_Midwest, -X), 1, var)
+
+geneGxE_Midwest <- filter(geneGxE_Midwest, var > 0)
+geneMI_Midwest <- filter(geneMI_Midwest, var > 0)
+geneTX_Midwest <- filter(geneTX_Midwest, var > 0)
+
+
+# Midwest
+shap_MI_Midwest <- as.data.frame(t(apply(dplyr::select(geneMI_Midwest, -X, var), 1, function(x) {
+  res <- shapiro.test(x)
+  c(W_statistic = res$statistic, p_value = res$p.value)
+})))
+
+shap_TX_Midwest <- as.data.frame(t(apply(dplyr::select(geneTX_Midwest, -X, var), 1, function(x) {
+  res <- shapiro.test(x)
+  c(W_statistic = res$statistic, p_value = res$p.value)
+})))
+
+shap_GxE_Midwest <- as.data.frame(t(apply(dplyr::select(geneGxE_Midwest, -X, var), 1, function(x) {
+  res <- shapiro.test(x)
+  c(W_statistic = res$statistic, p_value = res$p.value)
+})))
+
+# now some formatting and merging for exploration
+shap_MI_Gulf$gene <- geneMI_Gulf$X
+Gulf_MImerge <- merge(Gulf_MI_summary, shap_MI_Gulf)
+
+shap_TX_Gulf$gene <- geneTX_Gulf$X
+Gulf_TXmerge <- merge(Gulf_TX_summary, shap_TX_Gulf)
+
+shap_GxE_Gulf$gene <- geneGxE_Gulf$X
+Gulf_GxEmerge <- merge(Gulf_GxE_summary, shap_GxE_Gulf)
+
+# now some formatting and merging for exploration
+shap_MI_Midwest$gene <- geneMI_Midwest$X
+Midwest_MImerge <- merge(Midwest_MI_summary, shap_MI_Midwest)
+
+shap_TX_Midwest$gene <- geneTX_Midwest$X
+Midwest_TXmerge <- merge(Midwest_TX_summary, shap_TX_Midwest)
+
+shap_GxE_Midwest$gene <- geneGxE_Midwest$X
+Midwest_GxEmerge <- merge(Midwest_GxE_summary, shap_GxE_Midwest)
+
+# now some formatting and merging for exploration
+shap_MI_Atlantic$gene <- geneMI_Atlantic$X
+Atlantic_MImerge <- merge(Atlantic_MI_summary, shap_MI_Atlantic)
+
+shap_TX_Atlantic$gene <- geneTX_Atlantic$X
+Atlantic_TXmerge <- merge(Atlantic_TX_summary, shap_TX_Atlantic)
+
+shap_GxE_Atlantic$gene <- geneGxE_Atlantic$X
+Atlantic_GxEmerge <- merge(Atlantic_GxE_summary, shap_GxE_Atlantic)
+
+```
+
+##  meta-analyses of the filtered eQTLs 
+
+# first just counting up the types of each eQTL
+```{r making table of # of cis / trans eQTLs }
+
+# Atlantic
+nrow(filter(Atlantic_MI_eQTLs_filt, type == "cis"))
+length(unique(filter(Atlantic_MI_eQTLs_filt, type == "cis")$gene))
+
+nrow(filter(Atlantic_MI_eQTLs_filt, type == "trans"))
+length(unique(filter(Atlantic_MI_eQTLs_filt, type == "trans")$gene))
+
+nrow(filter(Atlantic_TX_eQTLs_filt, type == "cis"))
+length(unique(filter(Atlantic_TX_eQTLs_filt, type == "cis")$gene))
+
+nrow(filter(Atlantic_TX_eQTLs_filt, type == "trans"))
+length(unique(filter(Atlantic_TX_eQTLs_filt, type == "trans")$gene))
+
+nrow(filter(Atlantic_GxE_eQTLs_filt, type == "cis"))
+length(unique(filter(Atlantic_GxE_eQTLs_filt, type == "cis")$gene))
+
+nrow(filter(Atlantic_GxE_eQTLs_filt, type == "trans"))
+length(unique(filter(Atlantic_GxE_eQTLs_filt, type == "trans")$gene))
+
+# Gulf
+nrow(filter(Gulf_MI_eQTLs_filt, type == "cis"))
+length(unique(filter(Gulf_MI_eQTLs_filt, type == "cis")$gene))
+
+nrow(filter(Gulf_MI_eQTLs_filt, type == "trans"))
+length(unique(filter(Gulf_MI_eQTLs_filt, type == "trans")$gene))
+
+nrow(filter(Gulf_TX_eQTLs_filt, type == "cis"))
+length(unique(filter(Gulf_TX_eQTLs_filt, type == "cis")$gene))
+
+nrow(filter(Gulf_TX_eQTLs_filt, type == "trans"))
+length(unique(filter(Gulf_TX_eQTLs_filt, type == "trans")$gene))
+
+nrow(filter(Gulf_GxE_eQTLs_filt, type == "cis"))
+length(unique(filter(Gulf_GxE_eQTLs_filt, type == "cis")$gene))
+
+nrow(filter(Gulf_GxE_eQTLs_filt, type == "trans"))
+length(unique(filter(Gulf_GxE_eQTLs_filt, type == "trans")$gene))
+
+# Midwest
+nrow(filter(Midwest_MI_eQTLs_filt, type == "cis"))
+length(unique(filter(Midwest_MI_eQTLs_filt, type == "cis")$gene))
+
+nrow(filter(Midwest_MI_eQTLs_filt, type == "trans"))
+length(unique(filter(Midwest_MI_eQTLs_filt, type == "trans")$gene))
+
+nrow(filter(Midwest_TX_eQTLs_filt, type == "cis"))
+length(unique(filter(Midwest_TX_eQTLs_filt, type == "cis")$gene))
+
+nrow(filter(Midwest_TX_eQTLs_filt, type == "trans"))
+length(unique(filter(Midwest_TX_eQTLs_filt, type == "trans")$gene))
+
+nrow(filter(Midwest_GxE_eQTLs_filt, type == "cis"))
+length(unique(filter(Midwest_GxE_eQTLs_filt, type == "cis")$gene))
+
+nrow(filter(Midwest_GxE_eQTLs_filt, type == "trans"))
+length(unique(filter(Midwest_GxE_eQTLs_filt, type == "trans")$gene))
+
+
+
+nrow(filter(Midwest_MI_eQTLs_filt, type == "trans"))
+nrow(filter(Midwest_TX_eQTLs_filt, type == "trans"))
+nrow(Midwest_intersection_trans)
+3821 / 44918
+
+nrow(filter(Midwest_TX_eQTLs_filt, type == "cis"))
+nrow(filter(Midwest_MI_eQTLs_filt, type == "cis"))
+nrow(Midwest_intersection_cis)
+
+7416 / 12049
+
+```
+
+# calculate MAFs -- all populations, all sites
+```{r maf calc}
+
+# calculating MAF
+# counting instances of ref / het / alt genotypes
+num_ref <- rowSums(Midwest_MI_genotypes == "0")
+num_het <- rowSums(Midwest_MI_genotypes == "1")
+num_alt <- rowSums(Midwest_MI_genotypes == "2")
+
+# counting total alleles of alt and ref 
+total_alt <- num_het + 2*num_alt
+total_ref <- 2*num_ref + num_het
+
+# adding 
+total <- total_alt + total_ref
+
+# calculating maf 
+maf <- as.data.frame(total_alt / total)
+
+# labeling for folded maf 
+maf_greater <- filter(maf, `total_alt/total` >= 0.5)
+maf_greater$folded <- 1 - maf_greater$`total_alt/total` 
+
+maf_less <- filter(maf, `total_alt/total` < 0.5)
+maf_less$folded <- maf_less$`total_alt/total`
+
+Midwest_MI_maf <- rbind(maf_greater, maf_less)
+
+# calculating MAF
+# counting instances of ref / het / alt genotypes
+num_ref <- rowSums(Midwest_TX_genotypes == "0")
+num_het <- rowSums(Midwest_TX_genotypes == "1")
+num_alt <- rowSums(Midwest_TX_genotypes == "2")
+
+# counting total alleles of alt and ref 
+total_alt <- num_het + 2*num_alt
+total_ref <- 2*num_ref + num_het
+
+# adding 
+total <- total_alt + total_ref
+
+# calculating maf 
+maf <- as.data.frame(total_alt / total)
+
+# labeling for folded maf 
+maf_greater <- filter(maf, `total_alt/total` >= 0.5)
+maf_greater$folded <- 1 - maf_greater$`total_alt/total` 
+
+maf_less <- filter(maf, `total_alt/total` < 0.5)
+maf_less$folded <- maf_less$`total_alt/total`
+
+Midwest_TX_maf <- rbind(maf_greater, maf_less)
+
+# calculating MAF
+# counting instances of ref / het / alt genotypes
+num_ref <- rowSums(Midwest_GxE_genotypes == "0")
+num_het <- rowSums(Midwest_GxE_genotypes == "1")
+num_alt <- rowSums(Midwest_GxE_genotypes == "2")
+
+# counting total alleles of alt and ref 
+total_alt <- num_het + 2*num_alt
+total_ref <- 2*num_ref + num_het
+
+# adding 
+total <- total_alt + total_ref
+
+# calculating maf 
+maf <- as.data.frame(total_alt / total)
+
+# labeling for folded maf 
+maf_greater <- filter(maf, `total_alt/total` >= 0.5)
+maf_greater$folded <- 1 - maf_greater$`total_alt/total` 
+
+maf_less <- filter(maf, `total_alt/total` < 0.5)
+maf_less$folded <- maf_less$`total_alt/total`
+
+Midwest_GxE_maf <- rbind(maf_greater, maf_less)
+
+
+# calculating MAF
+# counting instances of ref / het / alt genotypes
+num_ref <- rowSums(Atlantic_MI_genotypes == "0")
+num_het <- rowSums(Atlantic_MI_genotypes == "1")
+num_alt <- rowSums(Atlantic_MI_genotypes == "2")
+
+# counting total alleles of alt and ref 
+total_alt <- num_het + 2*num_alt
+total_ref <- 2*num_ref + num_het
+
+# adding 
+total <- total_alt + total_ref
+
+# calculating maf 
+maf <- as.data.frame(total_alt / total)
+
+# labeling for folded maf 
+maf_greater <- filter(maf, `total_alt/total` >= 0.5)
+maf_greater$folded <- 1 - maf_greater$`total_alt/total` 
+
+maf_less <- filter(maf, `total_alt/total` < 0.5)
+maf_less$folded <- maf_less$`total_alt/total`
+
+Atlantic_MI_maf <- rbind(maf_greater, maf_less)
+
+# calculating MAF
+# counting instances of ref / het / alt genotypes
+num_ref <- rowSums(Atlantic_TX_genotypes == "0")
+num_het <- rowSums(Atlantic_TX_genotypes == "1")
+num_alt <- rowSums(Atlantic_TX_genotypes == "2")
+
+# counting total alleles of alt and ref 
+total_alt <- num_het + 2*num_alt
+total_ref <- 2*num_ref + num_het
+
+# adding 
+total <- total_alt + total_ref
+
+# calculating maf 
+maf <- as.data.frame(total_alt / total)
+
+# labeling for folded maf 
+maf_greater <- filter(maf, `total_alt/total` >= 0.5)
+maf_greater$folded <- 1 - maf_greater$`total_alt/total` 
+
+maf_less <- filter(maf, `total_alt/total` < 0.5)
+maf_less$folded <- maf_less$`total_alt/total`
+
+Atlantic_TX_maf <- rbind(maf_greater, maf_less)
+
+
+# calculating MAF
+# counting instances of ref / het / alt genotypes
+num_ref <- rowSums(Atlantic_GxE_genotypes == "0")
+num_het <- rowSums(Atlantic_GxE_genotypes == "1")
+num_alt <- rowSums(Atlantic_GxE_genotypes == "2")
+
+# counting total alleles of alt and ref 
+total_alt <- num_het + 2*num_alt
+total_ref <- 2*num_ref + num_het
+
+# adding 
+total <- total_alt + total_ref
+
+# calculating maf 
+maf <- as.data.frame(total_alt / total)
+
+# labeling for folded maf 
+maf_greater <- filter(maf, `total_alt/total` >= 0.5)
+maf_greater$folded <- 1 - maf_greater$`total_alt/total` 
+
+maf_less <- filter(maf, `total_alt/total` < 0.5)
+maf_less$folded <- maf_less$`total_alt/total`
+
+Atlantic_GxE_maf <- rbind(maf_greater, maf_less)
+
+
+# calculating MAF
+# counting instances of ref / het / alt genotypes
+num_ref <- rowSums(Gulf_MI_genotypes == "0")
+num_het <- rowSums(Gulf_MI_genotypes == "1")
+num_alt <- rowSums(Gulf_MI_genotypes == "2")
+
+# counting total alleles of alt and ref 
+total_alt <- num_het + 2*num_alt
+total_ref <- 2*num_ref + num_het
+
+# adding 
+total <- total_alt + total_ref
+
+# calculating maf 
+maf <- as.data.frame(total_alt / total)
+
+# labeling for folded maf 
+maf_greater <- filter(maf, `total_alt/total` >= 0.5)
+maf_greater$folded <- 1 - maf_greater$`total_alt/total` 
+
+maf_less <- filter(maf, `total_alt/total` < 0.5)
+maf_less$folded <- maf_less$`total_alt/total`
+
+Gulf_MI_maf <- rbind(maf_greater, maf_less)
+
+# calculating MAF
+# counting instances of ref / het / alt genotypes
+num_ref <- rowSums(Gulf_TX_genotypes == "0")
+num_het <- rowSums(Gulf_TX_genotypes == "1")
+num_alt <- rowSums(Gulf_TX_genotypes == "2")
+
+# counting total alleles of alt and ref 
+total_alt <- num_het + 2*num_alt
+total_ref <- 2*num_ref + num_het
+
+# adding 
+total <- total_alt + total_ref
+
+# calculating maf 
+maf <- as.data.frame(total_alt / total)
+
+# labeling for folded maf 
+maf_greater <- filter(maf, `total_alt/total` >= 0.5)
+maf_greater$folded <- 1 - maf_greater$`total_alt/total` 
+
+maf_less <- filter(maf, `total_alt/total` < 0.5)
+maf_less$folded <- maf_less$`total_alt/total`
+
+Gulf_TX_maf <- rbind(maf_greater, maf_less)
+
+# calculating MAF
+# counting instances of ref / het / alt genotypes
+num_ref <- rowSums(Gulf_GxE_genotypes == "0")
+num_het <- rowSums(Gulf_GxE_genotypes == "1")
+num_alt <- rowSums(Gulf_GxE_genotypes == "2")
+
+# counting total alleles of alt and ref 
+total_alt <- num_het + 2*num_alt
+total_ref <- 2*num_ref + num_het
+
+# adding 
+total <- total_alt + total_ref
+
+# calculating maf 
+maf <- as.data.frame(total_alt / total)
+
+# labeling for folded maf 
+maf_greater <- filter(maf, `total_alt/total` >= 0.5)
+maf_greater$folded <- 1 - maf_greater$`total_alt/total` 
+
+maf_less <- filter(maf, `total_alt/total` < 0.5)
+maf_less$folded <- maf_less$`total_alt/total`
+
+Gulf_GxE_maf <- rbind(maf_greater, maf_less)
+
+```
+
+# now looking at intersection of eQTLs btwn habitats 
+```{r intersections of eQTLs }
+
+# intersection by habitat, cis Atlantic
+Atlantic_intersection_cis <- intersect(filter(dplyr::select(Atlantic_MI_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "cis"),
+          filter(dplyr::select(Atlantic_TX_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "cis"))
+
+# intersection by habitat, trans Atlantic
+Atlantic_intersection_trans <- intersect(filter(dplyr::select(Atlantic_MI_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "trans"),
+          filter(dplyr::select(Atlantic_TX_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "trans"))
+
+# intersection by habitat, cis Midwest
+Midwest_intersection_cis <- intersect(filter(dplyr::select(Midwest_MI_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "cis"),
+          filter(dplyr::select(Midwest_TX_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "cis"))
+
+
+# intersection by habitat, trans Midwest
+Midwest_intersection_trans <- intersect(filter(dplyr::select(Midwest_MI_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "trans"),
+          filter(dplyr::select(Midwest_TX_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "trans"))
+
+
+# intersection by habitat, cis Gulf
+Gulf_intersection_cis <- intersect(filter(dplyr::select(Gulf_MI_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "cis"),
+          filter(dplyr::select(Gulf_TX_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "cis"))
+
+
+
+# intersection by habitat, trans Gulf
+Gulf_intersection_trans <- intersect(filter(dplyr::select(Gulf_MI_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "trans"),
+          filter(dplyr::select(Gulf_TX_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "trans"))
+
+
+
+```
+
+# make lists of those intersected eQTL and make merged eQTL files
+```{r intersection docs}
+# compiling and writing the list of intersection genes 
+Atlantic_universal_genes <- rbind(Atlantic_intersection_cis, Atlantic_intersection_trans)
+Atlantic_universal_genes$presence <- "TX_and_MI"
+
+Gulf_universal_genes <- rbind(Gulf_intersection_cis, Gulf_intersection_trans)
+Gulf_universal_genes$presence <- "TX_and_MI"
+
+Midwest_universal_genes <- rbind(Midwest_intersection_cis, Midwest_intersection_trans)
+Midwest_universal_genes$presence <- "TX_and_MI"
+
+
+# now getting the set diff for each (Present ONLY in one habitat but not the others)
+
+# doing a little setup to make this less cumbersome 
+
+# Gulf
+Gulf_MI_trans <- filter(dplyr::select(Gulf_MI_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "trans")
+Gulf_MI_cis <- filter(dplyr::select(Gulf_MI_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "cis")
+Gulf_TX_trans <- filter(dplyr::select(Gulf_TX_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "trans")
+Gulf_TX_cis <- filter(dplyr::select(Gulf_TX_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "cis")
+
+# Atlantic
+Atlantic_MI_trans <- filter(dplyr::select(Atlantic_MI_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "trans")
+Atlantic_MI_cis <- filter(dplyr::select(Atlantic_MI_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "cis")
+Atlantic_TX_trans <- filter(dplyr::select(Atlantic_TX_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "trans")
+Atlantic_TX_cis <- filter(dplyr::select(Atlantic_TX_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "cis")
+
+# Midwest
+Midwest_MI_trans <- filter(dplyr::select(Midwest_MI_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "trans")
+Midwest_MI_cis <- filter(dplyr::select(Midwest_MI_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "cis")
+Midwest_TX_trans <- filter(dplyr::select(Midwest_TX_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "trans")
+Midwest_TX_cis <- filter(dplyr::select(Midwest_TX_eQTLs_filt, -beta, -t.stat, -p.value, -FDR), type == "cis")
+
+# Gulf
+
+# MI only
+# now making the unique lists
+MIonly_Gulf_trans <- setdiff(Gulf_MI_trans, Gulf_TX_trans)
+MIonly_Gulf_cis <- setdiff(Gulf_MI_cis, Gulf_TX_cis)
+
+# adding a label column 
+MIonly_Gulf_trans$presence <- "MI_only"
+MIonly_Gulf_cis$presence <- "MI_only"
+
+# TX only
+# now making the unique lists
+TXonly_Gulf_trans <- setdiff(Gulf_TX_trans, Gulf_MI_trans)
+TXonly_Gulf_cis <- setdiff(Gulf_TX_cis, Gulf_MI_cis)
+
+# adding a label column 
+TXonly_Gulf_trans$presence <- "TX_only"
+TXonly_Gulf_cis$presence <- "TX_only"
+
+# bind 'em
+Gulf_presence_labeled <- rbind(MIonly_Gulf_trans,
+      MIonly_Gulf_cis,
+      TXonly_Gulf_trans,
+      TXonly_Gulf_cis,
+      Gulf_universal_genes)
+
+
+# Atlantic
+
+# MI only
+# now making the unique lists
+MIonly_Atlantic_trans <- setdiff(Atlantic_MI_trans, Atlantic_TX_trans)
+MIonly_Atlantic_cis <- setdiff(Atlantic_MI_cis, Atlantic_TX_cis)
+
+# adding a label column 
+MIonly_Atlantic_trans$presence <- "MI_only"
+MIonly_Atlantic_cis$presence <- "MI_only"
+
+# TX only
+# now making the unique lists
+TXonly_Atlantic_trans <- setdiff(Atlantic_TX_trans, Atlantic_MI_trans)
+TXonly_Atlantic_cis <- setdiff(Atlantic_TX_cis, Atlantic_MI_cis)
+
+# adding a label column 
+TXonly_Atlantic_trans$presence <- "TX_only"
+TXonly_Atlantic_cis$presence <- "TX_only"
+
+# bind 'em
+Atlantic_presence_labeled <- rbind(MIonly_Atlantic_trans,
+      MIonly_Atlantic_cis,
+      TXonly_Atlantic_trans,
+      TXonly_Atlantic_cis,
+      Atlantic_universal_genes)
+
+# Midwest
+
+# MI only
+# now making the unique lists
+MIonly_Midwest_trans <- setdiff(Midwest_MI_trans, Midwest_TX_trans)
+MIonly_Midwest_cis <- setdiff(Midwest_MI_cis, Midwest_TX_cis)
+
+# adding a label column 
+MIonly_Midwest_trans$presence <- "MI_only"
+MIonly_Midwest_cis$presence <- "MI_only"
+
+# TX only
+# now making the unique lists
+TXonly_Midwest_trans <- setdiff(Midwest_TX_trans, Midwest_MI_trans)
+TXonly_Midwest_cis <- setdiff(Midwest_TX_cis, Midwest_MI_cis)
+
+# adding a label column 
+TXonly_Midwest_trans$presence <- "TX_only"
+TXonly_Midwest_cis$presence <- "TX_only"
+
+# bind 'em
+Midwest_presence_labeled <- rbind(MIonly_Midwest_trans,
+      MIonly_Midwest_cis,
+      TXonly_Midwest_trans,
+      TXonly_Midwest_cis,
+      Midwest_universal_genes)
+
+```
+
+# merge static + dynamic eQTLs with MAFs
+```{r maf merging}
+
+# formatting to make merging easier 
+Midwest_presence_labeled$posName <- paste(Midwest_presence_labeled$genome_Chrom, Midwest_presence_labeled$genome_bp, sep = "_")
+Gulf_presence_labeled$posName <- paste(Gulf_presence_labeled$genome_Chrom, Gulf_presence_labeled$genome_bp, sep = "_")
+Atlantic_presence_labeled$posName <- paste(Atlantic_presence_labeled$genome_Chrom, Atlantic_presence_labeled$genome_bp, sep = "_")
+
+# formatting maf file so posName column matches 
+#Gulf
+Gulf_MI_maf$posName <- rownames(Gulf_MI_maf)
+Gulf_TX_maf$posName <- rownames(Gulf_TX_maf)
+Gulf_GxE_maf$posName <- rownames(Gulf_GxE_maf)
+
+#Midwest
+Midwest_MI_maf$posName <- rownames(Midwest_MI_maf)
+Midwest_TX_maf$posName <- rownames(Midwest_TX_maf)
+Midwest_GxE_maf$posName <- rownames(Midwest_GxE_maf)
+
+#Atlantic
+Atlantic_MI_maf$posName <- rownames(Atlantic_MI_maf)
+Atlantic_TX_maf$posName <- rownames(Atlantic_TX_maf)
+Atlantic_GxE_maf$posName <- rownames(Atlantic_GxE_maf)
+
+# merge filtered eQTLs with mafs 
+Gulf_maf <- inner_join(Gulf_presence_labeled, Gulf_MI_maf)
+Midwest_maf <- inner_join(Midwest_presence_labeled, Midwest_MI_maf)
+Atlantic_maf <- inner_join(Atlantic_presence_labeled, Atlantic_MI_maf)
+
+```
+
+# merge GxE eQTLs with MAFs
+```{r merge GxE mafs}
+
+Gulf_GxE_eQTLs_filt$posName <- paste(Gulf_GxE_eQTLs_filt$genome_Chrom, Gulf_GxE_eQTLs_filt$genome_bp, sep = "_")
+Midwest_GxE_eQTLs_filt$posName <- paste(Midwest_GxE_eQTLs_filt$genome_Chrom, Midwest_GxE_eQTLs_filt$genome_bp, sep = "_")
+Atlantic_GxE_eQTLs_filt$posName <- paste(Atlantic_GxE_eQTLs_filt$genome_Chrom, Atlantic_GxE_eQTLs_filt$genome_bp, sep = "_")
+
+Gulf_GxE_maf$posName <- rownames(Gulf_GxE_maf)
+Midwest_GxE_maf$posName <- rownames(Midwest_GxE_maf)
+Atlantic_GxE_maf$posName <- rownames(Atlantic_GxE_maf)
+
+# merge filtered eQTLs with mafs 
+Gulf_GxE_maf_ <- inner_join(Gulf_GxE_eQTLs_filt, Gulf_GxE_maf)
+Midwest_GxE_maf_ <- inner_join(Midwest_GxE_eQTLs_filt, Midwest_GxE_maf)
+Atlantic_GxE_maf_ <- inner_join(Atlantic_GxE_eQTLs_filt, Atlantic_GxE_maf)
+
+write.csv(Gulf_GxE_maf_, "~/Dropbox/LowryLab/Gulf_GxE_maf.csv")
+write.csv(Atlantic_GxE_maf_, "~/Dropbox/LowryLab/Atlantic_GxE_maf.csv")
+write.csv(Midwest_GxE_maf_, "~/Dropbox/LowryLab/Midwest_GxE_maf.csv")
+```
+
+# merge static + dynamic eQTLs with betas (effect size)
+```{r beta merging}
+
+# Gulf
+# merge Gulf with beta stats
+MI_beta <- merge(filter(Gulf_maf, presence == "MI_only"), Gulf_MI_eQTLs_filt) # merge
+MI_beta$betaMI <- MI_beta$beta # relabel 
+MI_beta$betaTX <- "NA" # relabel 
+
+TX_beta <- merge(filter(Gulf_maf, presence == "TX_only"), Gulf_TX_eQTLs_filt)
+TX_beta$betaMI <- "NA" # relabel 
+TX_beta$betaTX <- TX_beta$beta # relabel 
+
+betaMI_static <- merge(filter(Gulf_maf, presence == "TX_and_MI"), Gulf_MI_eQTLs_filt)
+betaMI_static$betaMI <- betaMI_static$beta # relabel 
+
+betaTX_static <- merge(filter(Gulf_maf, presence == "TX_and_MI"), Gulf_TX_eQTLs_filt)
+
+betaMI_static$betaTX <- betaTX_static$beta
+
+MI_TX <- dplyr::select(rbind(TX_beta,
+                             MI_beta), -beta, -t.stat, -p.value, -FDR)
+
+Gulf_presence_maf_beta <- rbind(MI_TX, dplyr::select(betaMI_static, -beta, -t.stat, -p.value, -FDR))
+
+# Atlantic
+# merge Atlantic with beta stats
+MI_beta <- merge(filter(Atlantic_maf, presence == "MI_only"), Atlantic_MI_eQTLs_filt) # merge
+MI_beta$betaMI <- MI_beta$beta # relabel 
+MI_beta$betaTX <- "NA" # relabel 
+
+TX_beta <- merge(filter(Atlantic_maf, presence == "TX_only"), Atlantic_TX_eQTLs_filt)
+TX_beta$betaMI <- "NA" # relabel 
+TX_beta$betaTX <- TX_beta$beta # relabel 
+
+betaMI_static <- merge(filter(Atlantic_maf, presence == "TX_and_MI"), Atlantic_MI_eQTLs_filt)
+betaMI_static$betaMI <- betaMI_static$beta # relabel 
+
+betaTX_static <- merge(filter(Atlantic_maf, presence == "TX_and_MI"), Atlantic_TX_eQTLs_filt)
+
+betaMI_static$betaTX <- betaTX_static$beta
+
+MI_TX <- dplyr::select(rbind(TX_beta,
+                             MI_beta), -beta, -t.stat, -p.value, -FDR)
+
+Atlantic_presence_maf_beta <- rbind(MI_TX, dplyr::select(betaMI_static, -beta, -t.stat, -p.value, -FDR))
+
+# Midwest
+# merge Midwest with beta stats
+MI_beta <- merge(filter(Midwest_maf, presence == "MI_only"), Midwest_MI_eQTLs_filt) # merge
+MI_beta$betaMI <- MI_beta$beta # relabel 
+MI_beta$betaTX <- "NA" # relabel 
+
+TX_beta <- merge(filter(Midwest_maf, presence == "TX_only"), Midwest_TX_eQTLs_filt)
+TX_beta$betaMI <- "NA" # relabel 
+TX_beta$betaTX <- TX_beta$beta # relabel 
+
+betaMI_static <- merge(filter(Midwest_maf, presence == "TX_and_MI"), Midwest_MI_eQTLs_filt)
+betaMI_static$betaMI <- betaMI_static$beta # relabel 
+
+betaTX_static <- merge(filter(Midwest_maf, presence == "TX_and_MI"), Midwest_TX_eQTLs_filt)
+
+betaMI_static$betaTX <- betaTX_static$beta
+
+MI_TX <- dplyr::select(rbind(TX_beta,
+                             MI_beta), -beta, -t.stat, -p.value, -FDR)
+
+Midwest_presence_maf_beta <- rbind(MI_TX, dplyr::select(betaMI_static, -beta, -t.stat, -p.value, -FDR))
+
+# now make the betas numeric
+Atlantic_presence_maf_beta$betaMI <- as.numeric(Atlantic_presence_maf_beta$betaMI)
+Atlantic_presence_maf_beta$betaTX <- as.numeric(Atlantic_presence_maf_beta$betaTX)
+
+Gulf_presence_maf_beta$betaMI <- as.numeric(Gulf_presence_maf_beta$betaMI)
+Gulf_presence_maf_beta$betaTX <- as.numeric(Gulf_presence_maf_beta$betaTX)
+
+Midwest_presence_maf_beta$betaMI <- as.numeric(Midwest_presence_maf_beta$betaMI)
+Midwest_presence_maf_beta$betaTX <- as.numeric(Midwest_presence_maf_beta$betaTX)
+
+
+# write for later!! 
+#write.csv(Atlantic_presence_maf_beta, "~/Dropbox/LowryLab/Atlantic_presence_maf_beta.csv")
+#write.csv(Gulf_presence_maf_beta, "~/Dropbox/LowryLab/Gulf_presence_maf_beta.csv")
+#write.csv(Midwest_presence_maf_beta, "~/Dropbox/LowryLab/Midwest_presence_maf_beta.csv")
+
+# writing down the eQTL
+write.csv(Atlantic_presence_maf_beta, "~/Desktop/bergetal_2026/Atlantic_eQTL.csv")
+write.csv(Gulf_presence_maf_beta, "~/Desktop/bergetal_2026/Gulf_eQTL.csv")
+write.csv(Midwest_presence_maf_beta, "~/Desktop/bergetal_2026/Midwest_eQTL.csv")
+
+
+```
+
+# explore effect sizes, mafs
+```{r plotting of MAFs and effect sizes }
+
+mean(filter(Atlantic_GxE_maf_,
+       FDR < 0.1,
+       type == "trans",
+       folded > 0.05)$beta)
+
+mean(filter(Atlantic_GxE_eQTL_maf,
+       FDR < 0.1,
+       type == "cis",
+       folded > 0.05)$beta)
+
+mean(filter(Atlantic_GxE_eQTL_maf,
+       FDR < 0.1,
+       folded > 0.05)$beta)
+
+ggplot(Atlantic_TX_eQTL_maf,
+       aes(x = type,
+           y = abs(beta))) +
+  geom_boxplot()
+
+ggplot(filter(Midwest_GxE_eQTL_maf),
+        aes(x = folded)) +
+         geom_histogram() +
+  facet_wrap(~type,
+             scales = "free")
+
+ggplot(Midwest_GxE_eQTL_maf,
+       aes(x = folded,
+           y = abs(beta))) +
+  geom_point() +
+  facet_wrap(~type)
+
+ggplot(filter(Atlantic_TX_eQTL_maf,
+              folded > 0.05),
+       aes(x = folded,
+           y = abs(beta),
+           col = type)) +
+  geom_smooth(method = "lm")
+
+ggplot(filter(Atlantic_GxE_eQTL_maf,
+              folded > 0.05),
+       aes(x = folded)) +
+  geom_histogram() +
+  facet_wrap(~type,
+             scales = "free")
+
+
+```
+
+# count up static & dynamic
+```{r count up static & dynamic eQTLs}
+filter(Midwest_maf, folded > 0.05) %>% 
+  group_by(type,
+           presence) %>% 
+  summarise(n = n())
+
+filter(Gulf_maf, folded > 0.05) %>% 
+  group_by(type,
+           presence) %>% 
+  summarise(n = n_distinct(geneid))
+
+Midwest_presence_labeled %>% 
+  group_by(type,
+           presence) %>% 
+  summarise(n = n_distinct(geneid))
+
+Gulf_presence_labeled %>% 
+  group_by(type,
+           presence) %>% 
+  summarise(n = n_distinct(geneid))
+
+Atlantic_presence_labeled %>% 
+  group_by(type,
+           presence) %>% 
+  summarise(n = n_distinct(geneid))
+
+
+Atlantic_GxE_eQTLs_filt  %>% 
+  group_by(type) %>% 
+  summarise(n = n_distinct(geneid))
+
+
+```
+
+# compare numbers in N and K subgenomes
+```{r compare N and K subgenomes}
+Midwest_presence_labeled$population <- "Midwest"
+Atlantic_presence_labeled$population <- "Atlantic"
+Gulf_presence_labeled$population <- "Gulf"
+
+allPops_labeled <- rbind(Midwest_presence_labeled,
+                        Atlantic_presence_labeled,
+                         Gulf_presence_labeled)
+
+K <- filter(allPops_labeled, genome_Chrom == "Chr01K" |
+              genome_Chrom == "Chr02K" |
+                genome_Chrom == "Chr03K" |
+                genome_Chrom == "Chr04K" |
+                genome_Chrom == "Chr05K" |
+                genome_Chrom == "Chr06K" |
+                genome_Chrom == "Chr07K" |
+                genome_Chrom == "Chr08K" |
+                genome_Chrom == "Chr09K")
+
+N <- filter(allPops_labeled, genome_Chrom == "Chr01N" |
+              genome_Chrom == "Chr02N" |
+                genome_Chrom == "Chr03N" |
+                genome_Chrom == "Chr04N" |
+                genome_Chrom == "Chr05N" |
+                genome_Chrom == "Chr06N" |
+                genome_Chrom == "Chr07N" |
+                genome_Chrom == "Chr08N" |
+                genome_Chrom == "Chr09N")
+
+K$subgenome <- "K"
+N$subgenome <- "N"            
+
+KN_labeled <- rbind(K, N)
+
+KN_labeled
+
+ggplot(KN_labeled, aes(x = type,
+                       fill = presence)) +
+  facet_grid(~ population) +
+  geom_bar(position = "fill") +
+  scale_fill_manual(values = c("dodgerblue",
+                                "black",
+                                "red2"))
+
+ggplot(KN_labeled, aes(x = genome_Chrom,
+           fill = presence)) +
+  geom_bar() +
+  facet_wrap(~population)
+
+```
+
+# get & compare means of mafs
+```{r mean mafs}
+
+# compare cis and trans eQTLs 
+t.test(Midwest_MI_cisMAF$folded, Midwest_MI_transMAF$folded)
+t.test(Atlantic_MI_cisMAF$folded, Atlantic_MI_transMAF$folded)
+t.test(Gulf_MI_cisMAF$folded, Gulf_MI_transMAF$folded)
+
+t.test(Midwest_TX_cisMAF$folded, Midwest_TX_transMAF$folded)
+t.test(Atlantic_TX_cisMAF$folded, Atlantic_TX_transMAF$folded)
+t.test(Gulf_TX_cisMAF$folded, Gulf_TX_transMAF$folded)
+
+t.test(Midwest_MI_cisMAF$folded, Midwest_MI_transMAF$folded)
+t.test(Atlantic_MI_cisMAF$folded, Atlantic_MI_transMAF$folded)
+t.test(Gulf_MI_cisMAF$folded, Gulf_MI_transMAF$folded)
+
+# compare cis eQTLs to all SNPs 
+
+t.test(Midwest_TX_cisMAF$folded, Midwest_TX_maf$folded)
+t.test(Atlantic_TX_cisMAF$folded, Atlantic_TX_maf$folded)
+t.test(Gulf_TX_cisMAF$folded, Gulf_TX_maf$folded)
+
+t.test(Midwest_MI_cisMAF$folded, Midwest_MI_maf$folded)
+t.test(Atlantic_TX_cisMAF$folded, Atlantic_TX_maf$folded)
+t.test(Gulf_TX_cisMAF$folded, Gulf_TX_maf$folded)
+
+#Midwest_MI
+mean(filter(Midwest_MI_maf, folded > 0.05)$folded)
+mean(Midwest_MI_cisMAF$folded)
+mean(Midwest_MI_transMAF$folded)
+
+
+# Midwest_TX
+mean(filter(Midwest_TX_maf, folded > 0.05)$folded)
+mean(Midwest_TX_transMAF$folded)
+mean(Midwest_TX_cisMAF$folded)
+
+# Midwest_GxE
+mean(filter(Midwest_GxE_maf, folded > 0.05)$folded)
+mean(Midwest_GxE_transMAF$folded)
+mean(Midwest_GxE_cisMAF$folded)
+
+#Atlantic_MI
+mean(filter(Atlantic_MI_maf, folded > 0.05)$folded)
+mean(Atlantic_MI_cisMAF$folded)
+mean(Atlantic_MI_transMAF$folded)
+
+# Atlantic_TX
+mean(filter(Atlantic_TX_maf, folded > 0.05)$folded)
+mean(Atlantic_TX_transMAF$folded)
+mean(Atlantic_TX_cisMAF$folded)
+
+# Atlantic_GxE
+mean(filter(Atlantic_GxE_maf, folded > 0.05)$folded)
+mean(Atlantic_GxE_transMAF$folded)
+mean(Atlantic_GxE_cisMAF$folded)
+
+#Gulf_MI
+mean(filter(Gulf_MI_maf, folded > 0.05)$folded)
+mean(Gulf_MI_cisMAF$folded)
+mean(Gulf_MI_transMAF$folded)
+
+# Gulf_TX
+mean(filter(Gulf_TX_maf, folded > 0.05)$folded)
+mean(Gulf_TX_transMAF$folded)
+mean(Gulf_TX_cisMAF$folded)
+
+# Gulf_GxE
+mean(filter(Gulf_GxE_maf, folded > 0.05)$folded)
+mean(Gulf_GxE_transMAF$folded)
+mean(Gulf_GxE_cisMAF$folded)
+
+
+
+```
+
+# summarize number of eQTLs on each chromosome
+```{r summ chrom nums}
+
+# summarize by chromosome 
+chrom_summ_Gulf_MI <- filter(Gulf_MI_eQTLs_filt,FDR < 0.05) %>% 
+  group_by(genome_Chrom,
+           type) %>% 
+  summarise(n = n())
+
+chrom_summ_Gulf_TX <- filter(Gulf_TX_eQTLs_filt,FDR < 0.05) %>% 
+  group_by(genome_Chrom,
+           type) %>% 
+  summarise(n = n())
+
+chrom_summ_Midwest_TX <- filter(Midwest_TX_eQTLs_filt,FDR < 0.05) %>% 
+  group_by(genome_Chrom,
+           type) %>% 
+  summarise(n = n())
+
+chrom_summ_Midwest_MI <- filter(Midwest_MI_eQTLs_filt,FDR < 0.05) %>% 
+  group_by(genome_Chrom,
+           type) %>% 
+  summarise(n = n())
+
+chrom_summ_Atlantic_MI <- filter(Atlantic_MI_eQTLs_filt,FDR < 0.05) %>% 
+  group_by(genome_Chrom,
+           type) %>% 
+  summarise(n = n())
+
+chrom_summ_Atlantic_TX <- filter(Atlantic_TX_eQTLs_filt,FDR < 0.05) %>% 
+  group_by(genome_Chrom,
+           type) %>% 
+  summarise(n = n())
+
+# label the summarize files by genome (n or k)
+
+# Gulf MI 
+K_GulfMI <- filter(chrom_summ_Gulf_MI,
+       genome_Chrom == "Chr01K" |
+       genome_Chrom == "Chr02K" |
+      genome_Chrom == "Chr03K" |
+        genome_Chrom == "Chr04K" |
+        genome_Chrom == "Chr05K" |
+        genome_Chrom == "Chr06K" |
+        genome_Chrom == "Chr07K" |
+        genome_Chrom == "Chr08K" |
+        genome_Chrom == "Chr09K")
+
+K_GulfMI$subgenome <- "K"
+
+N_GulfMI <- filter(chrom_summ_Gulf_MI,
+       genome_Chrom == "Chr01N" |
+       genome_Chrom == "Chr02N" |
+       genome_Chrom == "Chr03N" |
+        genome_Chrom == "Chr04N" |
+        genome_Chrom == "Chr05N" |
+        genome_Chrom == "Chr06N" |
+        genome_Chrom == "Chr07N" |
+        genome_Chrom == "Chr08N" |
+        genome_Chrom == "Chr09N")
+
+N_GulfMI$subgenome <- "N"
+
+NK_GulfMI <- rbind(K_GulfMI, N_GulfMI)
+
+K_GulfTX <- filter(chrom_summ_Gulf_TX,
+       genome_Chrom == "Chr01K" |
+       genome_Chrom == "Chr02K" |
+      genome_Chrom == "Chr03K" |
+        genome_Chrom == "Chr04K" |
+        genome_Chrom == "Chr05K" |
+        genome_Chrom == "Chr06K" |
+        genome_Chrom == "Chr07K" |
+        genome_Chrom == "Chr08K" |
+        genome_Chrom == "Chr09K")
+
+K_GulfTX$subgenome <- "K"
+
+N_GulfTX <- filter(chrom_summ_Gulf_TX,
+       genome_Chrom == "Chr01N" |
+       genome_Chrom == "Chr02N" |
+       genome_Chrom == "Chr03N" |
+        genome_Chrom == "Chr04N" |
+        genome_Chrom == "Chr05N" |
+        genome_Chrom == "Chr06N" |
+        genome_Chrom == "Chr07N" |
+        genome_Chrom == "Chr08N" |
+        genome_Chrom == "Chr09N")
+
+N_GulfTX$subgenome <- "N"
+
+NK_GulfTX <- rbind(K_GulfTX, N_GulfTX)
+
+
+
+
+# Atlantic MI 
+K_AtlanticMI <- filter(chrom_summ_Atlantic_MI,
+       genome_Chrom == "Chr01K" |
+       genome_Chrom == "Chr02K" |
+      genome_Chrom == "Chr03K" |
+        genome_Chrom == "Chr04K" |
+        genome_Chrom == "Chr05K" |
+        genome_Chrom == "Chr06K" |
+        genome_Chrom == "Chr07K" |
+        genome_Chrom == "Chr08K" |
+        genome_Chrom == "Chr09K")
+
+K_AtlanticMI$subgenome <- "K"
+
+N_AtlanticMI <- filter(chrom_summ_Atlantic_MI,
+       genome_Chrom == "Chr01N" |
+       genome_Chrom == "Chr02N" |
+       genome_Chrom == "Chr03N" |
+        genome_Chrom == "Chr04N" |
+        genome_Chrom == "Chr05N" |
+        genome_Chrom == "Chr06N" |
+        genome_Chrom == "Chr07N" |
+        genome_Chrom == "Chr08N" |
+        genome_Chrom == "Chr09N")
+
+N_AtlanticMI$subgenome <- "N"
+
+NK_AtlanticMI <- rbind(K_AtlanticMI, N_AtlanticMI)
+
+K_AtlanticTX <- filter(chrom_summ_Atlantic_TX,
+       genome_Chrom == "Chr01K" |
+       genome_Chrom == "Chr02K" |
+      genome_Chrom == "Chr03K" |
+        genome_Chrom == "Chr04K" |
+        genome_Chrom == "Chr05K" |
+        genome_Chrom == "Chr06K" |
+        genome_Chrom == "Chr07K" |
+        genome_Chrom == "Chr08K" |
+        genome_Chrom == "Chr09K")
+
+K_AtlanticTX$subgenome <- "K"
+
+N_AtlanticTX <- filter(chrom_summ_Atlantic_TX,
+       genome_Chrom == "Chr01N" |
+       genome_Chrom == "Chr02N" |
+       genome_Chrom == "Chr03N" |
+        genome_Chrom == "Chr04N" |
+        genome_Chrom == "Chr05N" |
+        genome_Chrom == "Chr06N" |
+        genome_Chrom == "Chr07N" |
+        genome_Chrom == "Chr08N" |
+        genome_Chrom == "Chr09N")
+
+N_AtlanticTX$subgenome <- "N"
+
+NK_AtlanticTX <- rbind(K_AtlanticTX, N_AtlanticTX)
+
+
+
+# Midwest MI 
+K_MidwestMI <- filter(chrom_summ_Midwest_MI,
+       genome_Chrom == "Chr01K" |
+       genome_Chrom == "Chr02K" |
+      genome_Chrom == "Chr03K" |
+        genome_Chrom == "Chr04K" |
+        genome_Chrom == "Chr05K" |
+        genome_Chrom == "Chr06K" |
+        genome_Chrom == "Chr07K" |
+        genome_Chrom == "Chr08K" |
+        genome_Chrom == "Chr09K")
+
+K_MidwestMI$subgenome <- "K"
+
+N_MidwestMI <- filter(chrom_summ_Midwest_MI,
+       genome_Chrom == "Chr01N" |
+       genome_Chrom == "Chr02N" |
+       genome_Chrom == "Chr03N" |
+        genome_Chrom == "Chr04N" |
+        genome_Chrom == "Chr05N" |
+        genome_Chrom == "Chr06N" |
+        genome_Chrom == "Chr07N" |
+        genome_Chrom == "Chr08N" |
+        genome_Chrom == "Chr09N")
+
+N_MidwestMI$subgenome <- "N"
+
+NK_MidwestMI <- rbind(K_MidwestMI, N_MidwestMI)
+
+K_MidwestTX <- filter(chrom_summ_Midwest_TX,
+       genome_Chrom == "Chr01K" |
+       genome_Chrom == "Chr02K" |
+      genome_Chrom == "Chr03K" |
+        genome_Chrom == "Chr04K" |
+        genome_Chrom == "Chr05K" |
+        genome_Chrom == "Chr06K" |
+        genome_Chrom == "Chr07K" |
+        genome_Chrom == "Chr08K" |
+        genome_Chrom == "Chr09K")
+
+K_MidwestTX$subgenome <- "K"
+
+N_MidwestTX <- filter(chrom_summ_Midwest_TX,
+       genome_Chrom == "Chr01N" |
+       genome_Chrom == "Chr02N" |
+       genome_Chrom == "Chr03N" |
+        genome_Chrom == "Chr04N" |
+        genome_Chrom == "Chr05N" |
+        genome_Chrom == "Chr06N" |
+        genome_Chrom == "Chr07N" |
+        genome_Chrom == "Chr08N" |
+        genome_Chrom == "Chr09N")
+
+N_MidwestTX$subgenome <- "N"
+
+NK_MidwestTX <- rbind(K_MidwestTX, N_MidwestTX)
+
+ggplot(NK_GulfTX,
+       aes(x = genome_Chrom,
+           y = n,
+           fill = subgenome,
+           col = subgenome)) +
+  geom_bar(stat="identity",
+           position = "dodge") +
+  facet_wrap(~type)
+
+ggplot(NK_GulfMI,
+       aes(x = genome_Chrom,
+           y = n,
+           fill = subgenome,
+           col = subgenome)) +
+  geom_bar(stat="identity",
+           position = "dodge") +
+  facet_wrap(~type)
+
+ggplot(NK_AtlanticTX,
+       aes(x = genome_Chrom,
+           y = n,
+           fill = subgenome,
+           col = subgenome)) +
+  geom_bar(stat="identity",
+           position = "dodge") +
+  facet_wrap(~type)
+
+ggplot(NK_MidwestTX,
+       aes(x = genome_Chrom,
+           y = n,
+           fill = subgenome,
+           col = subgenome)) +
+  geom_bar(stat="identity",
+           position = "dodge") +
+  facet_wrap(~type)
+
+NK_MidwestTX$pop <- "Midwest"
+NK_MidwestTX$hab <- "TX"
+
+NK_MidwestMI$pop <- "Midwest"
+NK_MidwestMI$hab <- "MI"
+
+NK_AtlanticTX$pop <- "Atlantic"
+NK_AtlanticTX$hab < "TX"
+
+NK_AtlanticMI$pop <- "Atlantic"
+NK_AtlanticMI$hab <- "MI"
+
+NK_GulfMI$pop <- "Gulf"
+NK_GulfMI$hab <- "MI"
+
+NK_GulfTX$pop <- "Gulf"
+NK_GulfTX$hab <- "TX"
+
+eQTL_all_chromSumm <- rbind(NK_MidwestTX,
+                            NK_MidwestMI,
+                            NK_AtlanticTX,
+                            NK_AtlanticMI,
+                            NK_GulfMI,
+                            NK_GulfTX)
+
+write.csv(eQTL_all_chromSumm,
+          "~/Dropbox/LowryLab/data/eQTL_output/eQTL_all_chromSumm.csv")
+
+```
+
+## explore leaf phosphorus candidate genes and GxE 
+```{r leaf phosphorus GxE}
+phos <- read.csv("~/Dropbox/LowryLab/P_gxe.csv")
+
+ggplot(phos,
+       aes(y = P31,
+           x = site,
+           col = pop,
+           group = PLANT_ID)) +
+  geom_point() +
+  geom_line() + 
+  facet_wrap(~pop)
+
+
+ggplot(phos,
+       aes(x = site,
+           y = P31,
+           col = pop)) +
+  stat_summary(aes(group = pop), fun.y = mean, geom = "path") +
+  stat_summary(aes(color = pop), fun.data = mean_cl_boot, geom = "errorbar", width = 0.1) +
+  stat_summary(aes(color = pop), fun.y = mean, geom = "point", size = 4) +
+  theme_bw() +
+  theme(axis.text.y = element_text(size = 12)) +
+  ylab("Leaf Phosphorus Content") +
+  xlab("Site")
+```
+
+# overlap phosphorus candidate genes with eQTL data 
+```{r P candidates}
+# read in Caio's candidates from all populations
+Gulf <- read.csv("~/Dropbox/LowryLab/CandidateGenes_Gulf.csv")
+Atlantic <- read.csv("~/Dropbox/LowryLab/CandidateGenes_Atlantic.csv")
+Midwest <- read.csv("~/Dropbox/LowryLab/CandidateGenes_Midwest.csv")
+
+# check whether candidate genes exhibit expression GxE
+intersect(Gulf_filtered$X, Gulf$locusName)
+intersect(Atlantic_filtered$X, Atlantic$locusName)
+intersect(Midwest_filtered$X, Midwest$locusName)
+
+# merge the Gulf candidate genes with Gulf eQTLs 
+# housekeeping -- label
+Gulf$geneid <- Gulf$locusName
+Atlantic$geneid <- Atlantic$locusName
+Midwest$geneid <- Midwest$locusName
+
+# merge
+Gulf_P_eQTL_merge <- merge(Gulf, Gulf_maf)
+Atlantic_P_eQTL_merge <- merge(Atlantic, Atlantic_maf)
+Midwest_P_eQTL_merge <- merge(Midwest, Atlantic_maf)
+
+# check how many Phosphorus candidate genes are regulated by eQTL
+length(unique(Gulf_P_eQTL_merge$geneid))
+length(unique(Atlantic_P_eQTL_merge$geneid))
+length(unique(Midwest_P_eQTL_merge$geneid))
+
+
+
+# combine and write the merged eQTL + P candidate genes
+write.csv(Gulf_P_eQTL_merge, "~/Dropbox/LowryLab/PhosCand_eQTL_Gulf.csv")
+write.csv(Atlantic_P_eQTL_merge, "~/Dropbox/LowryLab/PhosCand_eQTL_Atlantic.csv")
+write.csv(Midwest_P_eQTL_merge, "~/Dropbox/LowryLab/PhosCand_eQTL_Midwest.csv")
+
+# merge these candidate genes with the GxE eQTL
+Gulf_P_GxE <- merge(Gulf, Gulf_GxE_maf_)
+Atlantic_P_GxE <- merge(Atlantic, Atlantic_GxE_maf_)
+Midwest_P_GxE <- merge(Midwest, Atlantic_GxE_maf_)
+
+```
+
+# overlap phosphorus candidate genes with hotspots and trans eQTL
+```{r Phos_hotspot}
+library(GenomicRanges)
+
+# first add up how many genes each SNP regulates
+Gulf_summary <- filter(Gulf_maf, type == "trans") %>% 
+  group_by(genome_Chrom,
+           genome_bp,
+           type) %>% 
+  summarise(n = n())
+
+Midwest_summary <- filter(Midwest_maf, type == "trans") %>% 
+  group_by(genome_Chrom,
+           genome_bp,
+           type) %>% 
+  summarise(n = n())
+
+Atlantic_summary <- filter(Atlantic_maf, type == "trans") %>% 
+  group_by(genome_Chrom,
+           genome_bp,
+           type) %>% 
+  summarise(n = n())
+
+# now filter to just the SNPs that regulate more than 50 SNPs 
+Atlantic_hot <- filter(Atlantic_summary, n > 50)
+Gulf_hot <- filter(Gulf_summary, n > 50)
+Midwest_hot <- filter(Midwest_summary, n > 50)
+
+# using genomic ranges in R to check whether any candidate genes are near hotspots 
+# setting the genomic ranges to within 10 KB of a hotspot
+Mid_hotR <- GRanges(seqnames = Midwest_hot$genome_Chrom, ranges = IRanges(start = as.numeric(Midwest_hot$genome_bp) - 20000, end = as.numeric(Midwest_hot$genome_bp) + 2000))
+names(Mid_hotR) <- c(paste0(Midwest_hot$genome_Chrom, "_", Midwest_hot$genome_bp))
+
+Atl_hotR <- GRanges(seqnames = Atlantic_hot$genome_Chrom, ranges = IRanges(start = as.numeric(Atlantic_hot$genome_bp) - 20000, end = as.numeric(Atlantic_hot$genome_bp) + 2000))
+names(Atl_hotR) <- c(paste0(Atlantic_hot$genome_Chrom, "_", Atlantic_hot$genome_bp))
+
+Glf_hotR <- GRanges(seqnames = Gulf_hot$genome_Chrom, ranges = IRanges(start = as.numeric(Gulf_hot$genome_bp) - 20000, end = as.numeric(Gulf_hot$genome_bp) + 20000))
+names(Glf_hotR) <- c(paste0(Gulf_hot$genome_Chrom, "_", Gulf_hot$genome_bp))
+
+Glf_hotR
+
+# now make granges objects for the candidates, and name them
+Gulf_candSNPs <- GRanges(seqnames=Gulf$chr, ranges = IRanges(start = Gulf$pos, end = Gulf$pos))
+names(Gulf_candSNPs) <- c(paste0(Gulf$chr, "_", Gulf$pos))
+
+Atl_candSNPs <- GRanges(seqnames=Atlantic$chr, ranges = IRanges(start = Atlantic$pos, end = Atlantic$pos))
+names(Atl_candSNPs) <- c(paste0(Atlantic$chr, "_", Atlantic$pos))
+
+Mid_candSNPs <- GRanges(seqnames=Midwest$chr, ranges = IRanges(start = Midwest$pos, end = Midwest$pos))
+names(Mid_candSNPs) <- c(paste0(Midwest$chr, "_", Midwest$pos)) # GRanges names
+                    
+# Find overlaps
+Midwest_candHot_overlaps <- findOverlaps(Mid_candSNPs, Mid_hotR)
+Atlantic_candHot_overlaps <- findOverlaps(Atl_candSNPs, Atl_hotR)
+Gulf_candHot_overlaps <- findOverlaps(Gulf_candSNPs, Glf_hotR)
+
+# building a table of hotspot overlaps
+Gulf_hot_candTable <- data.frame(
+  query_idx   = queryHits(Gulf_candHot_overlaps),
+  subject_idx = subjectHits(Gulf_candHot_overlaps),
+  query_name   = names(Gulf_candSNPs)[queryHits(Gulf_candHot_overlaps)],
+  subject_name = names(Glf_hotR)[subjectHits(Gulf_candHot_overlaps)]
+)
+
+
+
+
+# now just do the same thing to check which candidate SNPs are in the vicinity of trans eQTL 
+Mid_summaryR <- GRanges(seqnames = Midwest_summary$genome_Chrom, ranges = IRanges(start = as.numeric(Midwest_summary$genome_bp) - 2000, end = as.numeric(Midwest_summary$genome_bp) + 2000))
+names(Mid_summaryR) <- c(paste0(Midwest_summary$genome_Chrom, "_", Midwest_summary$genome_bp))
+
+Atl_summaryR <- GRanges(seqnames = Atlantic_summary$genome_Chrom, ranges = IRanges(start = as.numeric(Atlantic_summary$genome_bp) - 2000, end = as.numeric(Atlantic_summary$genome_bp) + 2000))
+names(Atl_summaryR) <- c(paste0(Atlantic_summary$genome_Chrom, "_", Atlantic_summary$genome_bp))
+
+Glf_summaryR <- GRanges(seqnames = Gulf_summary$genome_Chrom, ranges = IRanges(start = as.numeric(Gulf_summary$genome_bp) - 2000, end = as.numeric(Gulf_summary$genome_bp) + 2000))
+names(Glf_summaryR) <- c(paste0(Gulf_summary$genome_Chrom, "_", Gulf_summary$genome_bp))
+
+# candidate genes and trans eQTL overlap
+Midwest_candTrans_overlaps <- findOverlaps(Mid_candSNPs, Mid_summaryR)
+Atlantic_candTrans_overlaps <- findOverlaps(Atl_candSNPs, Atl_summaryR)
+Gulf_candTrans_overlaps <- findOverlaps(Gulf_candSNPs, Glf_summaryR)
+
+# now building a table of hits 
+Atlantic_trans_candTable <- data.frame(
+  query_idx   = queryHits(Atlantic_candTrans_overlaps),
+  subject_idx = subjectHits(Atlantic_candTrans_overlaps),
+  query_name   = names(Atl_candSNPs)[queryHits(Atlantic_candTrans_overlaps)],
+  subject_name = names(Atl_summaryR)[subjectHits(Atlantic_candTrans_overlaps)]
+)
+
+Gulf_trans_candTable <- data.frame(
+  query_idx   = queryHits(Gulf_candTrans_overlaps),
+  subject_idx = subjectHits(Gulf_candTrans_overlaps),
+  query_name   = names(Gulf_candSNPs)[queryHits(Gulf_candTrans_overlaps)],
+  subject_name = names(Glf_summaryR)[subjectHits(Gulf_candTrans_overlaps)]
+)
+
+Midwest_trans_candTable <- data.frame(
+  query_idx   = queryHits(Midwest_candTrans_overlaps),
+  subject_idx = subjectHits(Midwest_candTrans_overlaps),
+  query_name   = names(Mid_candSNPs)[queryHits(Midwest_candTrans_overlaps)],
+  subject_name = names(Mid_summaryR)[subjectHits(Midwest_candTrans_overlaps)]
+)
+
+
+Atlantic_trans_candTable 
+# now making a table to further sort through the candidate genes that are near trans eQTL 
+
+# housekeeping -- changing column names for merging
+Gulf_trans_candTable$posName <- Gulf_trans_candTable$subject_name
+Atlantic_trans_candTable$posName <- Atlantic_trans_candTable$subject_name
+
+write.csv(merge(Atlantic_trans_candTable, Atlantic_maf),"~/Dropbox/LowryLab/PhosCand_transOverlap.csv")
+
+View(Atlantic_trans_candTable)
+
+59702071 - 59702834
+
+59701136	59702576
+
+filter(Gulf_summary, genome_bp == 59702834)
+
+Gulf_hot_candTable 
+
+
+filter(Gulf_maf, genome_Chrom == "Chr03K", genome_bp == 59702834)$geneid
+
+```
+
+# now do GO analyses of the GWAS hits
+```{r GWAS GO}
+# read in the genes with GO terms from the annotation 
+Pvirg_GOterms <- read.csv("~/Dropbox/LowryLab/data/expression/Pavir_GOterms_multiple.csv")
+
+# melt to make longer
+longer_GOterms <- unique(melt(Pvirg_GOterms,
+     id.vars=c("locusName")))
+
+# convert to clusterProfiler format
+GOterms_mult  <- as.data.frame(cbind(longer_GOterms$value,
+                    longer_GOterms$locusName))
+
+# extract names of GO terms
+# Extract a named vector of all GO terms and their names
+goterms <- Term(GOTERM)
+
+# Convert to a data frame for easier use
+term2name <- data.frame("GOID" = names(goterms), "term" = goterms)
+
+# Gulf GWAS results GO analysis
+Texas_hotSpot_GO <- enricher(filter(Gulf_maf, genome_Chrom == "Chr03K", genome_bp == 59702834)$geneid, 
+         pvalueCutoff = 0.05, 
+         pAdjustMethod = "BH", 
+         minGSSize = 10, 
+         maxGSSize = 500, qvalueCutoff = 0.2,
+         TERM2GENE=GOterms_mult, TERM2NAME = term2name)
+
+
+write.csv(filter(Gulf_maf, genome_Chrom == "Chr03K", genome_bp == 59702834), "~/Dropbox/LowryLab/eQTL_GulfHotspotGenes.csv")
+
+View(Texas_hotSpot_GO)
+```
+
+# make figure of leaf phosphorus GWAS plus eQTL
+```{r LPh gwas fig}
+# Atlantic
+MI_Atlantic_PhGWAS <- read.csv("/Users/coletteberg/Dropbox/LowryLab/SNPs_P31_Atlantic_KBSM.txt", sep = "\t")
+TX_Atlantic_PhGWAS <- read.csv("/Users/coletteberg/Dropbox/LowryLab/SNPs_P31_Atlantic_PKLE.txt", sep = "\t")
+# Gulf
+MI_Gulf_PhGWAS <- read.csv("/Users/coletteberg/Dropbox/LowryLab/SNPs_P31_Gulf_KBSM.txt", sep = "\t")
+TX_Gulf_PhGWAS <- read.csv("/Users/coletteberg/Dropbox/LowryLab/SNPs_P31_Gulf_PKLE.txt", sep = "\t")
+# Midwest
+MI_Midwest_PhGWAS <- read.csv("/Users/coletteberg/Dropbox/LowryLab/SNPs_P31_Midwest_KBSM.txt", sep = "\t")
+TX_Midwest_PhGWAS <- read.csv("/Users/coletteberg/Dropbox/LowryLab/SNPs_P31_Midwest_PKLE.txt", sep = "\t")
+
+ggplot(filter(TX_Atlantic_PhGWAS, chrom != 19), aes(x = pos,
+           y = -log10(p.value),
+           col = regulated,
+           shape = near_transeQTL)) +
+  facet_wrap(~chrom, nrow = 1, scales = "free_x") +
+  geom_point(size = 0.5) +
+  geom_hline(yintercept = 5.3,
+             linetype = "dashed") +
+  scale_color_viridis(discrete = TRUE)
+
+# making the chrom label into a factor to re-label
+MI_Atlantic_PhGWAS$chrom <- as.factor(MI_Atlantic_PhGWAS$chrom)
+TX_Atlantic_PhGWAS$chrom <- as.factor(TX_Atlantic_PhGWAS$chrom)
+
+MI_Gulf_PhGWAS$chrom <- as.factor(MI_Gulf_PhGWAS$chrom)
+TX_Gulf_PhGWAS$chrom <- as.factor(TX_Gulf_PhGWAS$chrom)
+
+MI_Midwest_PhGWAS$chrom <- as.factor(MI_Midwest_PhGWAS$chrom)
+TX_Midwest_PhGWAS$chrom <- as.factor(TX_Midwest_PhGWAS$chrom)
+
+
+       
+```
+
+# candidate gene investigations 
+# first, reading in the gff so I can get the locations of each gene 
+```{r}
+gff <- read.csv("~/Downloads/")
+filter(Midwest_presence_labeled, gene == "Pavir.1KG005400")
+
+gene_locs <- read.csv("/Users/coletteberg/Downloads/download.20260406.103402/Phytozome/PhytozomeV13/Pvirgatumvar_AP13HAP1/v6.1/annotation/Pvirgatumvar_AP13HAP1_772_v6.1.gene.gff3", sep = "\t", skip=6, header = FALSE)
+
+filt <-  filter(gene_locs, V3 == "gene")
+
+write.csv(filt, "~/Dropbox/LowryLab/AP13_geneLocs.csv")
+
+# using the list of fitness candidates from Lovell et al. 2021 
+
+filter(Atlantic_presence_labeled, gene == "Pavir.1KG005300")
+
+
+```
